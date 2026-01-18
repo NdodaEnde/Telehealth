@@ -15,7 +15,8 @@ import {
   Pill,
   PlayCircle,
   Menu,
-  X
+  X,
+  Stethoscope
 } from "lucide-react";
 import { ClinicianStats } from "@/components/clinician/ClinicianStats";
 import { PatientQueueList } from "@/components/clinician/PatientQueueList";
