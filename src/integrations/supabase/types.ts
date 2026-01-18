@@ -254,7 +254,12 @@ export type Database = {
     }
     Enums: {
       app_role: "patient" | "nurse" | "doctor" | "admin"
-      appointment_status: "pending" | "confirmed" | "cancelled" | "completed"
+      appointment_status:
+        | "pending"
+        | "confirmed"
+        | "in_progress"
+        | "cancelled"
+        | "completed"
       consultation_type: "video" | "phone" | "in_person"
       symptom_severity: "mild" | "moderate" | "severe"
     }
@@ -385,7 +390,13 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["patient", "nurse", "doctor", "admin"],
-      appointment_status: ["pending", "confirmed", "cancelled", "completed"],
+      appointment_status: [
+        "pending",
+        "confirmed",
+        "in_progress",
+        "cancelled",
+        "completed",
+      ],
       consultation_type: ["video", "phone", "in_person"],
       symptom_severity: ["mild", "moderate", "severe"],
     },
