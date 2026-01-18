@@ -383,7 +383,10 @@ metadata:
   run_ui: false
 
 test_plan:
-  current_focus: []
+  current_focus:
+    - "AI Symptom Assessment API"
+    - "Patient Onboarding API"
+    - "Nurse Triage API"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
@@ -393,3 +396,5 @@ agent_communication:
     message: "Implemented full REST API backend layer with 28 endpoints. Backend now handles: appointments CRUD, prescriptions CRUD, clinical notes CRUD, user profiles, clinician management, availability, password reset. JWT auth middleware validates Supabase tokens. Please test the new authenticated endpoints - focus on appointments and prescriptions APIs."
   - agent: "testing"
     message: "✅ COMPREHENSIVE BACKEND TESTING COMPLETE: All 28 REST API endpoints tested successfully. Health check working (200 OK). Password reset APIs working without revealing email existence (security compliant). All protected endpoints correctly return 401 without authentication. JWT auth middleware working perfectly. API documentation accessible. Supabase integration functional. All high-priority backend tasks are now working and verified."
+  - agent: "main"
+    message: "NEW FEATURES IMPLEMENTED: 1) AI Symptom Assessment using OpenAI GPT-4o-mini - POST /api/symptoms/assess with fallback to rule-based. 2) Patient Onboarding - SA ID validation, medical aid schemes list, full profile submission. 3) Nurse Triage - queue management, vitals entry, priority assignment. Please test these new APIs focusing on: GET /api/symptoms/common, GET /api/patient/medical-aid-schemes, GET /api/triage/queue"
