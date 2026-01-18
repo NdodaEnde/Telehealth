@@ -7,9 +7,12 @@ import { AISymptomCheckerForBooking } from "@/components/booking/AISymptomChecke
 import { ClinicianSelector } from "@/components/booking/ClinicianSelector";
 import { TimeSlotSelector } from "@/components/booking/TimeSlotSelector";
 import { BookingConfirmation } from "@/components/booking/BookingConfirmation";
-import { ArrowLeft, ArrowRight, Calendar, CheckCircle, Stethoscope, User, Clock, Brain, Sparkles } from "lucide-react";
+import { WalkInBooking, EmergencyBooking } from "@/components/appointments/SpecialBookings";
+import { ArrowLeft, ArrowRight, Calendar, CheckCircle, Stethoscope, User, Clock, Brain, Sparkles, AlertTriangle, Users } from "lucide-react";
 
-type BookingStep = "intro" | "symptoms" | "clinician" | "time" | "confirm";
+type BookingStep = "intro" | "symptoms" | "clinician" | "time" | "confirm" | "walk-in" | "emergency";
+
+type BookingType = "scheduled" | "walk-in" | "emergency";
 
 interface SymptomData {
   symptoms: string[];
