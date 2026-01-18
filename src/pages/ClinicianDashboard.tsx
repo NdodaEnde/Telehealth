@@ -8,18 +8,21 @@ import {
   FileText, 
   LogOut,
   Calendar,
-  RefreshCw
+  RefreshCw,
+  CalendarDays
 } from "lucide-react";
 import { ClinicianStats } from "@/components/clinician/ClinicianStats";
 import { PatientQueueList } from "@/components/clinician/PatientQueueList";
 import { UpcomingSchedule } from "@/components/clinician/UpcomingSchedule";
 import { usePatientQueue } from "@/hooks/usePatientQueue";
 import { AvailabilityDialog } from "@/components/availability/AvailabilityDialog";
+import { AppointmentManagerDialog } from "@/components/appointments/AppointmentManagerDialog";
 
 const ClinicianDashboard = () => {
   const { profile, role, signOut } = useAuth();
   const { queue, stats, loading, refetch } = usePatientQueue();
   const [availabilityOpen, setAvailabilityOpen] = useState(false);
+  const [appointmentsOpen, setAppointmentsOpen] = useState(false);
 
   const roleLabel = role === "doctor" ? "Doctor" : "Nurse";
   const roleColor = role === "doctor" ? "bg-primary" : "bg-success";
@@ -67,7 +70,22 @@ const ClinicianDashboard = () => {
         </div>
 
         {/* Quick Actions */}
-        <div className="grid md:grid-cols-3 gap-6 mb-8">
+        <div className="grid md:grid-cols-4 gap-6 mb-8">
+          <Card 
+            className="hover:shadow-lg transition-shadow cursor-pointer border-primary/20 hover:border-primary"
+            onClick={() => setAppointmentsOpen(true)}
+          >
+            <CardHeader className="flex flex-row items-center gap-4 pb-2">
+              <div className="p-3 rounded-xl bg-primary/10">
+                <CalendarDays className="w-6 h-6 text-primary" />
+              </div>
+              <div>
+                <CardTitle className="text-lg">Appointments</CardTitle>
+                <CardDescription>View & manage bookings</CardDescription>
+              </div>
+            </CardHeader>
+          </Card>
+
           <Card className="hover:shadow-lg transition-shadow cursor-pointer border-primary/20 hover:border-primary">
             <CardHeader className="flex flex-row items-center gap-4 pb-2">
               <div className="p-3 rounded-xl bg-primary/10">
@@ -75,7 +93,7 @@ const ClinicianDashboard = () => {
               </div>
               <div>
                 <CardTitle className="text-lg">Start Consultation</CardTitle>
-                <CardDescription>Begin a video call with patient</CardDescription>
+                <CardDescription>Begin a video call</CardDescription>
               </div>
             </CardHeader>
           </Card>
@@ -124,6 +142,11 @@ const ClinicianDashboard = () => {
         <AvailabilityDialog 
           open={availabilityOpen} 
           onOpenChange={setAvailabilityOpen} 
+        />
+
+        <AppointmentManagerDialog
+          open={appointmentsOpen}
+          onOpenChange={setAppointmentsOpen}
         />
       </main>
     </div>
