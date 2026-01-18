@@ -208,7 +208,7 @@ export const TimeSlotSelector = ({
             <div>
               <p className="font-medium">Your Selected Appointment</p>
               <p className="text-sm text-muted-foreground">
-                {format(selectedDate, "EEEE, MMMM d, yyyy")} at {selectedTime}
+                {formatFullDateSAST(selectedDate)} at {selectedTime} {TIMEZONE_ABBR}
               </p>
             </div>
             <Badge variant="secondary">
