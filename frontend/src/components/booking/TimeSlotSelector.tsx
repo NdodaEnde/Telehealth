@@ -4,8 +4,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Calendar } from "@/components/ui/calendar";
 import { Badge } from "@/components/ui/badge";
 import { ArrowRight, Clock, Video, Phone, Building } from "lucide-react";
-import { format, addDays, setHours, setMinutes, isBefore, startOfDay } from "date-fns";
+import { addDays, setHours, setMinutes, isBefore, startOfDay } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
+import { formatSAST, formatFullDateSAST, TIMEZONE_ABBR } from "@/lib/timezone";
 
 interface TimeSlotSelectorProps {
   clinicianId: string;
