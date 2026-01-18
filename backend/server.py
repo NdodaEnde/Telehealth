@@ -183,6 +183,11 @@ app.include_router(clinical_notes_router, prefix="/api")
 app.include_router(users_router, prefix="/api")
 app.include_router(auth_router, prefix="/api")
 
+# New feature routers for Phase 1 completion
+app.include_router(patient_onboarding_router, prefix="/api")
+app.include_router(symptom_assessment_router, prefix="/api")
+app.include_router(nurse_triage_router, prefix="/api")
+
 
 # ============ Middleware ============
 
