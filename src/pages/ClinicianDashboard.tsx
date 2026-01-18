@@ -9,7 +9,8 @@ import {
   LogOut,
   Calendar,
   RefreshCw,
-  CalendarDays
+  CalendarDays,
+  Pill
 } from "lucide-react";
 import { ClinicianStats } from "@/components/clinician/ClinicianStats";
 import { PatientQueueList } from "@/components/clinician/PatientQueueList";
@@ -17,12 +18,14 @@ import { UpcomingSchedule } from "@/components/clinician/UpcomingSchedule";
 import { usePatientQueue } from "@/hooks/usePatientQueue";
 import { AvailabilityDialog } from "@/components/availability/AvailabilityDialog";
 import { AppointmentManagerDialog } from "@/components/appointments/AppointmentManagerDialog";
+import { PrescriptionList } from "@/components/prescriptions/PrescriptionList";
 
 const ClinicianDashboard = () => {
   const { profile, role, signOut } = useAuth();
   const { queue, stats, loading, refetch } = usePatientQueue();
   const [availabilityOpen, setAvailabilityOpen] = useState(false);
   const [appointmentsOpen, setAppointmentsOpen] = useState(false);
+  const [showPrescriptions, setShowPrescriptions] = useState(false);
 
   const roleLabel = role === "doctor" ? "Doctor" : "Nurse";
   const roleColor = role === "doctor" ? "bg-primary" : "bg-success";
@@ -70,7 +73,7 @@ const ClinicianDashboard = () => {
         </div>
 
         {/* Quick Actions */}
-        <div className="grid md:grid-cols-4 gap-6 mb-8">
+        <div className="grid md:grid-cols-5 gap-6 mb-8">
           <Card 
             className="hover:shadow-lg transition-shadow cursor-pointer border-primary/20 hover:border-primary"
             onClick={() => setAppointmentsOpen(true)}
@@ -111,6 +114,21 @@ const ClinicianDashboard = () => {
           </Card>
 
           <Card 
+            className={`hover:shadow-lg transition-shadow cursor-pointer border-primary/20 hover:border-primary ${showPrescriptions ? 'ring-2 ring-primary' : ''}`}
+            onClick={() => setShowPrescriptions(!showPrescriptions)}
+          >
+            <CardHeader className="flex flex-row items-center gap-4 pb-2">
+              <div className="p-3 rounded-xl bg-warning/10">
+                <Pill className="w-6 h-6 text-warning" />
+              </div>
+              <div>
+                <CardTitle className="text-lg">E-Prescriptions</CardTitle>
+                <CardDescription>View & create prescriptions</CardDescription>
+              </div>
+            </CardHeader>
+          </Card>
+
+          <Card 
             className="hover:shadow-lg transition-shadow cursor-pointer border-primary/20 hover:border-primary"
             onClick={() => setAvailabilityOpen(true)}
           >
@@ -125,6 +143,13 @@ const ClinicianDashboard = () => {
             </CardHeader>
           </Card>
         </div>
+
+        {/* Prescriptions Section (toggleable) */}
+        {showPrescriptions && (
+          <div className="mb-8">
+            <PrescriptionList showPatient={true} />
+          </div>
+        )}
 
         {/* Main Content Grid */}
         <div className="grid lg:grid-cols-3 gap-8">

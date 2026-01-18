@@ -12,11 +12,13 @@ import {
   AlertTriangle,
   Play,
   CheckCircle,
-  FileText
+  FileText,
+  Pill
 } from "lucide-react";
 import { format } from "date-fns";
 import { QueuePatient } from "@/hooks/usePatientQueue";
 import { ClinicalNotesDialog } from "@/components/clinical/ClinicalNotesDialog";
+import { PrescriptionDialog } from "@/components/prescriptions/PrescriptionDialog";
 
 interface PatientQueueCardProps {
   patient: QueuePatient;
@@ -53,6 +55,7 @@ export const PatientQueueCard = ({
 }: PatientQueueCardProps) => {
   const navigate = useNavigate();
   const [notesOpen, setNotesOpen] = useState(false);
+  const [prescriptionOpen, setPrescriptionOpen] = useState(false);
   
   const ConsultationIcon = CONSULTATION_ICONS[patient.consultation_type];
   const statusConfig = STATUS_CONFIG[patient.status];
@@ -155,6 +158,14 @@ export const PatientQueueCard = ({
                   <Button 
                     size="sm" 
                     variant="outline"
+                    onClick={() => setPrescriptionOpen(true)}
+                  >
+                    <Pill className="w-4 h-4 mr-1" />
+                    Prescribe
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="outline"
                     onClick={() => onCompleteConsultation(patient)}
                     disabled={isUpdating}
                   >
@@ -168,6 +179,10 @@ export const PatientQueueCard = ({
                   <Button size="sm" variant="outline" onClick={() => setNotesOpen(true)}>
                     <FileText className="w-4 h-4 mr-1" />
                     View Notes
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => setPrescriptionOpen(true)}>
+                    <Pill className="w-4 h-4 mr-1" />
+                    Prescribe
                   </Button>
                   <Badge variant="secondary" className="ml-2">
                     <CheckCircle className="w-3 h-3 mr-1" />
@@ -186,6 +201,14 @@ export const PatientQueueCard = ({
         appointmentId={patient.id}
         patientId={patient.patient_id}
         patientName={patient.patient_name}
+      />
+
+      <PrescriptionDialog
+        open={prescriptionOpen}
+        onOpenChange={setPrescriptionOpen}
+        patientId={patient.patient_id}
+        patientName={patient.patient_name}
+        appointmentId={patient.id}
       />
     </Card>
   );

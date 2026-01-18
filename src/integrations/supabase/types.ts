@@ -316,6 +316,84 @@ export type Database = {
           },
         ]
       }
+      prescriptions: {
+        Row: {
+          appointment_id: string | null
+          clinical_note_id: string | null
+          clinician_id: string
+          created_at: string
+          dosage: string
+          duration: string
+          expires_at: string | null
+          frequency: string
+          id: string
+          instructions: string | null
+          medication_name: string
+          patient_id: string
+          pharmacy_notes: string | null
+          prescribed_at: string
+          quantity: number | null
+          refills: number | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          appointment_id?: string | null
+          clinical_note_id?: string | null
+          clinician_id: string
+          created_at?: string
+          dosage: string
+          duration: string
+          expires_at?: string | null
+          frequency: string
+          id?: string
+          instructions?: string | null
+          medication_name: string
+          patient_id: string
+          pharmacy_notes?: string | null
+          prescribed_at?: string
+          quantity?: number | null
+          refills?: number | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          appointment_id?: string | null
+          clinical_note_id?: string | null
+          clinician_id?: string
+          created_at?: string
+          dosage?: string
+          duration?: string
+          expires_at?: string | null
+          frequency?: string
+          id?: string
+          instructions?: string | null
+          medication_name?: string
+          patient_id?: string
+          pharmacy_notes?: string | null
+          prescribed_at?: string
+          quantity?: number | null
+          refills?: number | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prescriptions_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prescriptions_clinical_note_id_fkey"
+            columns: ["clinical_note_id"]
+            isOneToOne: false
+            referencedRelation: "clinical_notes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
