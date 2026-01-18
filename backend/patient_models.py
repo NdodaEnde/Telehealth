@@ -93,7 +93,13 @@ class PatientOnboardingCreate(BaseModel):
     # Basic Info
     first_name: str
     last_name: str
-    id_number: str  # SA ID number
+    
+    # Identification - support both SA ID and Passport
+    id_type: IdentificationType = IdentificationType.sa_id
+    id_number: Optional[str] = None  # SA ID number (13 digits) - required if id_type is sa_id
+    passport_number: Optional[str] = None  # Passport number - required if id_type is passport
+    passport_country: Optional[str] = None  # Country code for passport
+    
     date_of_birth: str
     gender: Gender
     email: str
