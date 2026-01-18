@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,10 +12,11 @@ import {
   AlertTriangle,
   Play,
   CheckCircle,
-  User
+  FileText
 } from "lucide-react";
 import { format } from "date-fns";
 import { QueuePatient } from "@/hooks/usePatientQueue";
+import { ClinicalNotesDialog } from "@/components/clinical/ClinicalNotesDialog";
 
 interface PatientQueueCardProps {
   patient: QueuePatient;
@@ -50,6 +52,8 @@ export const PatientQueueCard = ({
   isUpdating,
 }: PatientQueueCardProps) => {
   const navigate = useNavigate();
+  const [notesOpen, setNotesOpen] = useState(false);
+  
   const ConsultationIcon = CONSULTATION_ICONS[patient.consultation_type];
   const statusConfig = STATUS_CONFIG[patient.status];
   const severityConfig = SEVERITY_CONFIG[patient.severity];
@@ -142,6 +146,14 @@ export const PatientQueueCard = ({
                   </Button>
                   <Button 
                     size="sm" 
+                    variant="secondary"
+                    onClick={() => setNotesOpen(true)}
+                  >
+                    <FileText className="w-4 h-4 mr-1" />
+                    Notes
+                  </Button>
+                  <Button 
+                    size="sm" 
                     variant="outline"
                     onClick={() => onCompleteConsultation(patient)}
                     disabled={isUpdating}
@@ -152,15 +164,29 @@ export const PatientQueueCard = ({
                 </>
               )}
               {isCompleted && (
-                <Button size="sm" variant="outline" disabled>
-                  <CheckCircle className="w-4 h-4 mr-1" />
-                  Completed
-                </Button>
+                <>
+                  <Button size="sm" variant="outline" onClick={() => setNotesOpen(true)}>
+                    <FileText className="w-4 h-4 mr-1" />
+                    View Notes
+                  </Button>
+                  <Badge variant="secondary" className="ml-2">
+                    <CheckCircle className="w-3 h-3 mr-1" />
+                    Completed
+                  </Badge>
+                </>
               )}
             </div>
           </div>
         </div>
       </CardContent>
+
+      <ClinicalNotesDialog
+        open={notesOpen}
+        onOpenChange={setNotesOpen}
+        appointmentId={patient.id}
+        patientId={patient.patient_id}
+        patientName={patient.patient_name}
+      />
     </Card>
   );
 };
