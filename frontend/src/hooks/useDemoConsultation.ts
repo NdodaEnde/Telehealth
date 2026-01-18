@@ -35,10 +35,10 @@ export const useDemoConsultation = () => {
 
   // Create a simulated "remote" stream by mirroring local with effects
   const createSimulatedRemote = useCallback((localStream: MediaStream): MediaStream => {
-    // Create a canvas to apply effects to simulate remote
+    // Create a canvas to apply effects to simulate remote - use HD resolution
     const canvas = document.createElement("canvas");
-    canvas.width = 640;
-    canvas.height = 480;
+    canvas.width = 1280;
+    canvas.height = 720;
     canvasRef.current = canvas;
     
     const ctx = canvas.getContext("2d");
@@ -58,14 +58,14 @@ export const useDemoConsultation = () => {
         ctx.restore();
         
         // Add a subtle blue tint to differentiate
-        ctx.fillStyle = "rgba(0, 100, 200, 0.05)";
+        ctx.fillStyle = "rgba(0, 100, 200, 0.03)";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
       }
       requestAnimationFrame(drawFrame);
     };
     drawFrame();
 
-    // Create stream from canvas
+    // Create stream from canvas at higher framerate for better quality
     const remoteStream = canvas.captureStream(30);
     
     // Copy audio track if exists
