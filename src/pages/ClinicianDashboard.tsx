@@ -1,6 +1,8 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -21,11 +23,32 @@ import { AppointmentManagerDialog } from "@/components/appointments/AppointmentM
 import { PrescriptionList } from "@/components/prescriptions/PrescriptionList";
 
 const ClinicianDashboard = () => {
+  const navigate = useNavigate();
   const { profile, role, signOut } = useAuth();
   const { queue, stats, loading, refetch } = usePatientQueue();
   const [availabilityOpen, setAvailabilityOpen] = useState(false);
   const [appointmentsOpen, setAppointmentsOpen] = useState(false);
   const [showPrescriptions, setShowPrescriptions] = useState(false);
+
+  const handleStartConsultation = () => {
+    const inProgress = queue.find(apt => apt.status === "in_progress");
+    if (inProgress) {
+      navigate(`/consultation?appointment=${inProgress.id}`);
+      return;
+    }
+    
+    const confirmed = queue.find(apt => apt.status === "confirmed");
+    if (confirmed) {
+      toast.info("Select a patient from the queue below to start their consultation");
+      return;
+    }
+    
+    toast.info("No consultations ready. Confirm an appointment first from the queue below.");
+  };
+
+  const handleClinicalNotes = () => {
+    toast.info("Select a patient from the queue below to access their clinical notes");
+  };
 
   const roleLabel = role === "doctor" ? "Doctor" : "Nurse";
   const roleColor = role === "doctor" ? "bg-primary" : "bg-success";
@@ -89,7 +112,10 @@ const ClinicianDashboard = () => {
             </CardHeader>
           </Card>
 
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer border-primary/20 hover:border-primary">
+          <Card 
+            className="hover:shadow-lg transition-shadow cursor-pointer border-primary/20 hover:border-primary"
+            onClick={handleStartConsultation}
+          >
             <CardHeader className="flex flex-row items-center gap-4 pb-2">
               <div className="p-3 rounded-xl bg-primary/10">
                 <Video className="w-6 h-6 text-primary" />
@@ -101,7 +127,10 @@ const ClinicianDashboard = () => {
             </CardHeader>
           </Card>
 
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer border-primary/20 hover:border-primary">
+          <Card 
+            className="hover:shadow-lg transition-shadow cursor-pointer border-primary/20 hover:border-primary"
+            onClick={handleClinicalNotes}
+          >
             <CardHeader className="flex flex-row items-center gap-4 pb-2">
               <div className="p-3 rounded-xl bg-success/10">
                 <FileText className="w-6 h-6 text-success" />
