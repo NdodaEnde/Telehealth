@@ -238,6 +238,9 @@ def test_api_documentation():
         print(f"❌ FAILED: Request error - {str(e)}")
         return False
     except Exception as e:
+        print(f"❌ FAILED: Unexpected error - {str(e)}")
+        return False
+
 
 def test_prescription_pdf_generation():
     """Test the prescription PDF generation endpoint"""
