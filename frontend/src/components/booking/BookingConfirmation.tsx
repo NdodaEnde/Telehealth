@@ -4,10 +4,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Calendar, Clock, User, Video, Phone, Building, CheckCircle2, Loader2 } from "lucide-react";
-import { format, setHours, setMinutes } from "date-fns";
+import { setHours, setMinutes } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { formatFullDateSAST, formatDateSAST, TIMEZONE_ABBR } from "@/lib/timezone";
 
 interface BookingData {
   symptoms: string[];
