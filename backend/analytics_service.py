@@ -228,7 +228,7 @@ async def get_patient_growth(days: int = 30) -> List[PatientGrowth]:
                     total += 1
                 if created == date:
                     new += 1
-            except:
+            except Exception:
                 pass
         
         growth.append(PatientGrowth(date=date_str, total_patients=total, new_patients=new))
