@@ -5,8 +5,6 @@ import type { Database } from "@/integrations/supabase/types";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
 
-const BACKEND_URL = import.meta.env.REACT_APP_BACKEND_URL || '';
-
 interface Profile {
   id: string;
   first_name: string;
@@ -14,22 +12,13 @@ interface Profile {
   phone: string | null;
   avatar_url: string | null;
   id_number?: string | null;
-}
-
-interface PatientProfile {
-  id: string;
-  user_id: string;
-  onboarding_completed_at: string | null;
-  has_medical_aid: boolean;
-  medical_aid_scheme: string | null;
-  // Add other fields as needed
+  date_of_birth?: string | null;
 }
 
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   profile: Profile | null;
-  patientProfile: PatientProfile | null;
   role: AppRole | null;
   isLoading: boolean;
   onboardingComplete: boolean;
@@ -65,89 +54,68 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [patientProfile, setPatientProfile] = useState<PatientProfile | null>(null);
   const [role, setRole] = useState<AppRole | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [onboardingComplete, setOnboardingComplete] = useState(false);
 
   const fetchUserData = async (userId: string) => {
+    console.log("[AuthContext] Fetching user data for:", userId);
     try {
-      // Fetch profile
-      const { data: profileData } = await supabase
-        .from("profiles")
-        .select("id, first_name, last_name, phone, avatar_url, id_number")
-        .eq("id", userId)
-        .single();
-
-      if (profileData) {
-        setProfile(profileData);
-      }
-
-      // Fetch role
-      const { data: roleData } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", userId)
-        .single();
-
-      if (roleData) {
-        setRole(roleData.role);
-        
-        // Only fetch patient profile if user is a patient
-        if (roleData.role === "patient") {
-          await fetchPatientProfile(userId);
-        } else {
-          // Non-patients don't need onboarding
-          setOnboardingComplete(true);
-        }
-      }
-    } catch (error) {
-      console.error("Error fetching user data:", error);
-    }
-  };
-
-  const fetchPatientProfile = async (userId: string) => {
-    try {
-      // Check if patient has completed onboarding by checking if id_number is set in profiles
-      // Since patient_profiles table doesn't exist, we use profiles.id_number as the indicator
-      const { data: profileData, error } = await supabase
+      // Fetch profile with all fields including id_number
+      const { data: profileData, error: profileError } = await supabase
         .from("profiles")
         .select("id, first_name, last_name, phone, avatar_url, id_number, date_of_birth")
         .eq("id", userId)
         .single();
 
-      if (error) {
-        console.log("Profile check error:", error.message);
-        setPatientProfile(null);
-        setOnboardingComplete(false);
-        return;
+      if (profileError) {
+        console.error("[AuthContext] Profile fetch error:", profileError);
       }
 
       if (profileData) {
-        // Patient is onboarded if they have an ID number set
-        const isOnboarded = !!profileData.id_number;
-        setPatientProfile({
-          id: profileData.id,
-          user_id: profileData.id,
-          onboarding_completed_at: isOnboarded ? new Date().toISOString() : null,
-          has_medical_aid: false, // We can't know this from profiles table
-          medical_aid_scheme: null,
-        });
-        setOnboardingComplete(isOnboarded);
-      } else {
-        setPatientProfile(null);
-        setOnboardingComplete(false);
+        console.log("[AuthContext] Profile data:", profileData);
+        console.log("[AuthContext] id_number value:", profileData.id_number);
+        setProfile(profileData);
+      }
+
+      // Fetch role
+      const { data: roleData, error: roleError } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId)
+        .single();
+
+      if (roleError) {
+        console.error("[AuthContext] Role fetch error:", roleError);
+      }
+
+      if (roleData) {
+        console.log("[AuthContext] Role:", roleData.role);
+        setRole(roleData.role);
+        
+        // Check onboarding status based on role
+        if (roleData.role === "patient") {
+          // Patient is onboarded if they have an ID number set
+          const isOnboarded = !!(profileData?.id_number);
+          console.log("[AuthContext] Is patient onboarded:", isOnboarded);
+          setOnboardingComplete(isOnboarded);
+        } else {
+          // Non-patients (nurse, doctor, admin) don't need onboarding
+          console.log("[AuthContext] Non-patient role, marking as onboarded");
+          setOnboardingComplete(true);
+        }
       }
     } catch (error) {
-      console.error("Error fetching patient profile:", error);
-      setPatientProfile(null);
-      setOnboardingComplete(false);
+      console.error("[AuthContext] Error fetching user data:", error);
     }
   };
 
   const refreshProfile = async () => {
+    console.log("[AuthContext] Refreshing profile...");
     if (user) {
+      // Force a fresh fetch by clearing state first
       await fetchUserData(user.id);
+      console.log("[AuthContext] Profile refreshed, onboardingComplete:", onboardingComplete);
     }
   };
 
@@ -155,6 +123,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        console.log("[AuthContext] Auth state changed:", event);
         setSession(session);
         setUser(session?.user ?? null);
 
@@ -165,14 +134,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           }, 0);
         } else {
           setProfile(null);
-          setPatientProfile(null);
           setRole(null);
           setOnboardingComplete(false);
         }
 
         if (event === "SIGNED_OUT") {
           setProfile(null);
-          setPatientProfile(null);
           setRole(null);
           setOnboardingComplete(false);
         }
@@ -229,7 +196,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     setUser(null);
     setSession(null);
     setProfile(null);
-    setPatientProfile(null);
     setRole(null);
     setOnboardingComplete(false);
   };
@@ -240,7 +206,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         user,
         session,
         profile,
-        patientProfile,
         role,
         isLoading,
         onboardingComplete,
