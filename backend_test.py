@@ -828,14 +828,14 @@ def test_nurse_triage_ready_for_doctor_auth():
 
 def main():
     """Run all backend API tests"""
-    print("🚀 Starting HCF Telehealth Backend API Tests")
+    print("🚀 Starting HCF Telehealth Backend API Tests - Phase 1 Focus")
     print(f"Backend URL: {BASE_URL}")
     print("=" * 60)
     
     # Track test results
     test_results = {}
     
-    # Run all tests
+    # Run existing tests
     test_results['health_check'] = test_health_check()
     test_results['password_reset_request'] = test_password_reset_request()
     test_results['verify_token'] = test_verify_token()
@@ -845,6 +845,19 @@ def main():
     test_results['analytics_dashboard'] = test_analytics_dashboard()
     test_results['analytics_overview'] = test_analytics_overview()
     
+    # Run NEW Phase 1 API tests
+    print("\n" + "=" * 60)
+    print("🆕 PHASE 1 NEW FEATURES TESTING")
+    print("=" * 60)
+    
+    test_results['ai_symptom_common'] = test_ai_symptom_assessment_common()
+    test_results['ai_symptom_auth'] = test_ai_symptom_assessment_auth()
+    test_results['patient_medical_aid_schemes'] = test_patient_onboarding_medical_aid_schemes()
+    test_results['patient_id_validation'] = test_patient_onboarding_id_validation()
+    test_results['nurse_triage_queue_auth'] = test_nurse_triage_queue_auth()
+    test_results['nurse_triage_reference_ranges'] = test_nurse_triage_reference_ranges()
+    test_results['nurse_triage_ready_for_doctor_auth'] = test_nurse_triage_ready_for_doctor_auth()
+    
     # Summary
     print("\n" + "=" * 60)
     print("📊 TEST SUMMARY")
@@ -853,9 +866,30 @@ def main():
     passed = sum(1 for result in test_results.values() if result)
     total = len(test_results)
     
-    for test_name, result in test_results.items():
-        status = "✅ PASSED" if result else "❌ FAILED"
-        print(f"{test_name.replace('_', ' ').title()}: {status}")
+    # Group results by category
+    existing_tests = [
+        'health_check', 'password_reset_request', 'verify_token', 
+        'protected_endpoints', 'api_documentation', 'prescription_pdf',
+        'analytics_dashboard', 'analytics_overview'
+    ]
+    
+    phase1_tests = [
+        'ai_symptom_common', 'ai_symptom_auth', 'patient_medical_aid_schemes',
+        'patient_id_validation', 'nurse_triage_queue_auth', 
+        'nurse_triage_reference_ranges', 'nurse_triage_ready_for_doctor_auth'
+    ]
+    
+    print("EXISTING APIs:")
+    for test_name in existing_tests:
+        if test_name in test_results:
+            status = "✅ PASSED" if test_results[test_name] else "❌ FAILED"
+            print(f"  {test_name.replace('_', ' ').title()}: {status}")
+    
+    print("\nPHASE 1 NEW APIs:")
+    for test_name in phase1_tests:
+        if test_name in test_results:
+            status = "✅ PASSED" if test_results[test_name] else "❌ FAILED"
+            print(f"  {test_name.replace('_', ' ').title()}: {status}")
     
     print(f"\nOverall: {passed}/{total} tests passed")
     
