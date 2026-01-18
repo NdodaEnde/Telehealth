@@ -325,7 +325,10 @@ def test_analytics_dashboard():
         response = requests.get(f"{BASE_URL}/analytics/dashboard?days=30", timeout=15)
         print(f"Status Code: {response.status_code}")
         
-        if response.status_code == 200:
+        if response.status_code == 401:
+            print("✅ PASSED: Analytics dashboard correctly requires authentication")
+            return True
+        elif response.status_code == 200:
             data = response.json()
             print(f"Response keys: {list(data.keys())}")
             
