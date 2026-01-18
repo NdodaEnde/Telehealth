@@ -1,73 +1,128 @@
-# Welcome to your Lovable project
+# MediConnect - Telehealth Platform
 
-## Project info
+A comprehensive telehealth platform enabling virtual medical consultations between patients and healthcare providers.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## Features
 
-## How can I edit this code?
+### For Patients
+- **Symptom Assessment** - AI-guided symptom checker with severity recommendations
+- **Appointment Booking** - Book video, phone, or in-person consultations
+- **Video Consultations** - Real-time video calls with healthcare providers
+- **Prescription History** - View and track all prescriptions
+- **Clinical Records** - Access consultation notes and history
 
-There are several ways of editing your application.
+### For Clinicians (Nurses & Doctors)
+- **Patient Queue** - Manage daily patient appointments
+- **Video Consultations** - Conduct secure video consultations with in-call chat
+- **Clinical Notes** - Structured documentation with ICD-10 coding support
+- **E-Prescriptions** - Create and manage digital prescriptions
+- **Availability Management** - Set weekly availability schedules
+- **Demo Mode** - Test video consultations without a second account
 
-**Use Lovable**
+### For Administrators
+- **User Management** - Manage patients, clinicians, and staff
+- **System Analytics** - Monitor platform usage and performance
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+## Tech Stack
 
-Changes made via Lovable will be committed automatically to this repo.
+- **Frontend**: React 18, TypeScript, Vite
+- **Styling**: Tailwind CSS, shadcn/ui components
+- **Backend**: Lovable Cloud (Supabase)
+- **Database**: PostgreSQL with Row Level Security
+- **Authentication**: Email-based auth with role management
+- **Video**: WebRTC with real-time signaling
+- **State Management**: TanStack Query
 
-**Use your preferred IDE**
+## Getting Started
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### Prerequisites
+- Node.js 18+ 
+- npm or bun
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+### Installation
 
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
+```bash
+# Clone the repository
 git clone <YOUR_GIT_URL>
 
-# Step 2: Navigate to the project directory.
+# Navigate to project directory
 cd <YOUR_PROJECT_NAME>
 
-# Step 3: Install the necessary dependencies.
-npm i
+# Install dependencies
+npm install
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# Start development server
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+The app will be available at `http://localhost:5173`
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## Project Structure
 
-**Use GitHub Codespaces**
+```
+src/
+├── components/
+│   ├── appointments/    # Appointment management
+│   ├── auth/           # Authentication guards
+│   ├── availability/   # Clinician availability
+│   ├── booking/        # Patient booking flow
+│   ├── clinical/       # Clinical notes & history
+│   ├── clinician/      # Clinician dashboard components
+│   ├── landing/        # Landing page sections
+│   ├── layout/         # Header, navigation
+│   ├── prescriptions/  # Prescription management
+│   ├── ui/             # shadcn/ui components
+│   └── video/          # Video consultation components
+├── contexts/           # React contexts (Auth)
+├── hooks/              # Custom React hooks
+├── pages/              # Route pages
+└── integrations/       # Supabase client & types
+```
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## User Roles
 
-## What technologies are used for this project?
+| Role | Access |
+|------|--------|
+| **Patient** | Book appointments, join consultations, view prescriptions |
+| **Nurse** | Triage patients, conduct consultations, create notes |
+| **Doctor** | Full clinical access, prescriptions, escalated cases |
+| **Admin** | System administration, user management |
 
-This project is built with:
+## Clinical Workflow
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+1. **Patient Self-Service** - Symptom assessment and appointment booking
+2. **Nurse Triage** - Initial assessment and prioritization
+3. **Doctor Escalation** - Complex cases referred to doctors
+4. **Video Consultation** - Real-time consultation with documentation
+5. **Follow-up** - Prescriptions, clinical notes, and scheduling
 
-## How can I deploy this project?
+## Development
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+```bash
+# Run development server
+npm run dev
 
-## Can I connect a custom domain to my Lovable project?
+# Run tests
+npm run test
 
-Yes, you can!
+# Build for production
+npm run build
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+# Preview production build
+npm run preview
+```
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+## Deployment
+
+Deploy via [Lovable](https://lovable.dev):
+1. Open your project in Lovable
+2. Click **Share → Publish**
+3. Optionally connect a custom domain in Settings → Domains
+
+## License
+
+This project is private and proprietary.
+
+---
+
+Built with [Lovable](https://lovable.dev)
