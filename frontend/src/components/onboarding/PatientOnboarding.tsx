@@ -96,7 +96,10 @@ const COMMON_CONDITIONS = [
 
 interface PatientOnboardingProps {
   onComplete?: () => void;
+  prefilledIdType?: "sa_id" | "passport";
   prefilledIdNumber?: string;
+  prefilledPassportNumber?: string;
+  prefilledPassportCountry?: string;
   prefilledData?: {
     date_of_birth?: string;
     gender?: string;
@@ -104,7 +107,14 @@ interface PatientOnboardingProps {
   };
 }
 
-export const PatientOnboarding = ({ onComplete, prefilledIdNumber, prefilledData }: PatientOnboardingProps) => {
+export const PatientOnboarding = ({ 
+  onComplete, 
+  prefilledIdType = "sa_id",
+  prefilledIdNumber, 
+  prefilledPassportNumber,
+  prefilledPassportCountry,
+  prefilledData 
+}: PatientOnboardingProps) => {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [medicalAidSchemes, setMedicalAidSchemes] = useState<MedicalAidScheme[]>([]);
@@ -113,7 +123,10 @@ export const PatientOnboarding = ({ onComplete, prefilledIdNumber, prefilledData
   const [data, setData] = useState<OnboardingData>({
     first_name: "",
     last_name: "",
+    id_type: prefilledIdType,
     id_number: prefilledIdNumber || "",
+    passport_number: prefilledPassportNumber || "",
+    passport_country: prefilledPassportCountry || "",
     date_of_birth: prefilledData?.date_of_birth || "",
     gender: prefilledData?.gender || "",
     email: "",
@@ -146,18 +159,19 @@ export const PatientOnboarding = ({ onComplete, prefilledIdNumber, prefilledData
 
   // Update data if prefilled props change
   useEffect(() => {
-    if (prefilledIdNumber) {
-      setData(prev => ({ ...prev, id_number: prefilledIdNumber }));
-    }
+    setData(prev => ({
+      ...prev,
+      id_type: prefilledIdType,
+      id_number: prefilledIdNumber || prev.id_number,
+      passport_number: prefilledPassportNumber || prev.passport_number,
+      passport_country: prefilledPassportCountry || prev.passport_country,
+      date_of_birth: prefilledData?.date_of_birth || prev.date_of_birth,
+      gender: prefilledData?.gender || prev.gender,
+    }));
     if (prefilledData) {
       setIdValidation(prefilledData);
-      setData(prev => ({
-        ...prev,
-        date_of_birth: prefilledData.date_of_birth || prev.date_of_birth,
-        gender: prefilledData.gender || prev.gender,
-      }));
     }
-  }, [prefilledIdNumber, prefilledData]);
+  }, [prefilledIdType, prefilledIdNumber, prefilledPassportNumber, prefilledPassportCountry, prefilledData]);
 
   useEffect(() => {
     fetchMedicalAidSchemes();
