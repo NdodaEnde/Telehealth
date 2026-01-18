@@ -130,7 +130,7 @@ async def get_appointment_trends(days: int = 30) -> List[AppointmentTrend]:
                     trends[apt_date]['completed'] += 1
                 elif apt.get('status') == 'cancelled':
                     trends[apt_date]['cancelled'] += 1
-        except:
+        except Exception:
             pass
     
     return [
