@@ -168,7 +168,7 @@ export const BookingConfirmation = ({
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Date</p>
-                <p className="font-medium">{format(data.date, "MMM d, yyyy")}</p>
+                <p className="font-medium">{formatDateSAST(data.date)}</p>
               </div>
             </div>
 
@@ -177,7 +177,7 @@ export const BookingConfirmation = ({
                 <Clock className="w-5 h-5 text-primary" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Time</p>
+                <p className="text-sm text-muted-foreground">Time ({TIMEZONE_ABBR})</p>
                 <p className="font-medium">{data.time}</p>
               </div>
             </div>
