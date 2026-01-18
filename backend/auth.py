@@ -61,7 +61,8 @@ async def get_current_user(
             user_id=user_id,
             email=email,
             role=role,
-            profile=profile
+            profile=profile,
+            access_token=token  # Pass the token for subsequent authenticated requests
         )
         
     except JWTError as e:
