@@ -3,11 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { SymptomChecker } from "@/components/booking/SymptomChecker";
+import { AISymptomCheckerForBooking } from "@/components/booking/AISymptomCheckerForBooking";
 import { ClinicianSelector } from "@/components/booking/ClinicianSelector";
 import { TimeSlotSelector } from "@/components/booking/TimeSlotSelector";
 import { BookingConfirmation } from "@/components/booking/BookingConfirmation";
-import { ArrowLeft, ArrowRight, Calendar, CheckCircle, Stethoscope, User, Clock } from "lucide-react";
+import { ArrowLeft, ArrowRight, Calendar, CheckCircle, Stethoscope, User, Clock, Brain, Sparkles } from "lucide-react";
 
 type BookingStep = "intro" | "symptoms" | "clinician" | "time" | "confirm";
 
@@ -16,6 +16,12 @@ interface SymptomData {
   severity: "mild" | "moderate" | "severe";
   description: string;
   recommendedSpecialization: string | null;
+  aiAssessment?: {
+    urgency: string;
+    urgency_score: number;
+    care_pathway: string;
+    assessment_summary: string;
+  };
 }
 
 interface ClinicianData {
@@ -36,7 +42,7 @@ interface TimeData {
 }
 
 const STEPS = [
-  { id: "symptoms", label: "Symptoms", icon: Stethoscope },
+  { id: "symptoms", label: "Symptoms", icon: Brain },
   { id: "clinician", label: "Clinician", icon: User },
   { id: "time", label: "Schedule", icon: Clock },
   { id: "confirm", label: "Confirm", icon: CheckCircle },
@@ -83,31 +89,32 @@ const BookAppointment = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b border-border bg-card">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+      <header className="border-b border-border bg-card sticky top-0 z-40">
+        <div className="container mx-auto px-4 py-3 sm:py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-lg">H</span>
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl gradient-primary flex items-center justify-center">
+              <span className="text-primary-foreground font-bold text-sm sm:text-lg">H</span>
             </div>
-            <span className="font-bold text-lg">HCF Telehealth</span>
+            <span className="font-bold text-base sm:text-lg hidden xs:block">HCF Telehealth</span>
           </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-muted-foreground">
+          <div className="flex items-center gap-2 sm:gap-4">
+            <span className="text-xs sm:text-sm text-muted-foreground hidden sm:block">
               {profile?.first_name || "Patient"}
             </span>
-            <Button variant="ghost" size="sm" onClick={() => navigate("/patient")}>
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Dashboard
+            <Button variant="ghost" size="sm" onClick={() => navigate("/patient")} className="text-xs sm:text-sm">
+              <ArrowLeft className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Back to Dashboard</span>
+              <span className="sm:hidden">Back</span>
             </Button>
           </div>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8 max-w-4xl">
+      <main className="container mx-auto px-4 py-4 sm:py-8 max-w-4xl">
         {/* Progress Steps */}
         {currentStep !== "intro" && (
-          <div className="mb-8">
-            <div className="flex items-center justify-between">
+          <div className="mb-6 sm:mb-8 overflow-x-auto">
+            <div className="flex items-center justify-between min-w-[300px]">
               {STEPS.map((step, index) => {
                 const Icon = step.icon;
                 const isActive = getStepIndex() === index;
@@ -117,7 +124,7 @@ const BookAppointment = () => {
                   <div key={step.id} className="flex items-center">
                     <div className="flex flex-col items-center">
                       <div
-                        className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
+                        className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-colors ${
                           isComplete
                             ? "bg-success text-success-foreground"
                             : isActive
@@ -126,13 +133,13 @@ const BookAppointment = () => {
                         }`}
                       >
                         {isComplete ? (
-                          <CheckCircle className="w-5 h-5" />
+                          <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5" />
                         ) : (
-                          <Icon className="w-5 h-5" />
+                          <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
                         )}
                       </div>
                       <span
-                        className={`text-xs mt-2 ${
+                        className={`text-xs mt-1 sm:mt-2 ${
                           isActive ? "text-primary font-medium" : "text-muted-foreground"
                         }`}
                       >
@@ -141,7 +148,7 @@ const BookAppointment = () => {
                     </div>
                     {index < STEPS.length - 1 && (
                       <div
-                        className={`h-1 w-16 md:w-24 mx-2 rounded ${
+                        className={`h-1 w-8 sm:w-16 md:w-24 mx-1 sm:mx-2 rounded ${
                           isComplete ? "bg-success" : "bg-muted"
                         }`}
                       />
@@ -157,33 +164,47 @@ const BookAppointment = () => {
         {currentStep === "intro" && (
           <Card className="text-center">
             <CardHeader>
-              <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                <Calendar className="w-10 h-10 text-primary" />
+              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                <Calendar className="w-8 h-8 sm:w-10 sm:h-10 text-primary" />
               </div>
-              <CardTitle className="text-2xl">Book a Consultation</CardTitle>
-              <CardDescription className="text-base max-w-md mx-auto">
-                Tell us about your symptoms and we'll help you find the right clinician and schedule an appointment.
+              <CardTitle className="text-xl sm:text-2xl">Book a Consultation</CardTitle>
+              <CardDescription className="text-sm sm:text-base max-w-md mx-auto">
+                Our AI-powered system will assess your symptoms and help you find the right clinician.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid md:grid-cols-3 gap-4 mb-8">
-                <div className="p-4 bg-muted/50 rounded-lg">
-                  <Stethoscope className="w-8 h-8 text-primary mx-auto mb-2" />
-                  <h3 className="font-medium">Symptom Check</h3>
-                  <p className="text-sm text-muted-foreground">Tell us what you're experiencing</p>
+              <div className="grid sm:grid-cols-3 gap-3 sm:gap-4 mb-6 sm:mb-8">
+                <div className="p-3 sm:p-4 bg-muted/50 rounded-lg">
+                  <div className="flex items-center justify-center gap-2 mb-2">
+                    <Brain className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
+                    <Sparkles className="w-4 h-4 text-yellow-500" />
+                  </div>
+                  <h3 className="font-medium text-sm sm:text-base">AI Symptom Check</h3>
+                  <p className="text-xs sm:text-sm text-muted-foreground">AI-powered assessment</p>
                 </div>
-                <div className="p-4 bg-muted/50 rounded-lg">
-                  <User className="w-8 h-8 text-primary mx-auto mb-2" />
-                  <h3 className="font-medium">Choose Clinician</h3>
-                  <p className="text-sm text-muted-foreground">Select your preferred doctor</p>
+                <div className="p-3 sm:p-4 bg-muted/50 rounded-lg">
+                  <User className="w-6 h-6 sm:w-8 sm:h-8 text-primary mx-auto mb-2" />
+                  <h3 className="font-medium text-sm sm:text-base">Choose Clinician</h3>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Select your preferred doctor</p>
                 </div>
-                <div className="p-4 bg-muted/50 rounded-lg">
-                  <Clock className="w-8 h-8 text-primary mx-auto mb-2" />
-                  <h3 className="font-medium">Schedule</h3>
-                  <p className="text-sm text-muted-foreground">Pick a convenient time</p>
+                <div className="p-3 sm:p-4 bg-muted/50 rounded-lg">
+                  <Clock className="w-6 h-6 sm:w-8 sm:h-8 text-primary mx-auto mb-2" />
+                  <h3 className="font-medium text-sm sm:text-base">Schedule</h3>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Pick a convenient time</p>
                 </div>
               </div>
-              <Button size="lg" onClick={() => setCurrentStep("symptoms")}>
+              
+              <div className="p-4 bg-primary/5 rounded-lg mb-6 text-left">
+                <h4 className="font-medium flex items-center gap-2 text-sm sm:text-base">
+                  <Sparkles className="w-4 h-4 text-primary" />
+                  Powered by AI
+                </h4>
+                <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+                  Our AI assistant will analyze your symptoms to determine urgency and recommend the best care pathway for you.
+                </p>
+              </div>
+
+              <Button size="lg" onClick={() => setCurrentStep("symptoms")} className="w-full sm:w-auto">
                 Start Booking
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
@@ -191,9 +212,9 @@ const BookAppointment = () => {
           </Card>
         )}
 
-        {/* Symptom Checker Step */}
+        {/* AI Symptom Checker Step */}
         {currentStep === "symptoms" && (
-          <SymptomChecker
+          <AISymptomCheckerForBooking
             onComplete={handleSymptomComplete}
             onBack={() => setCurrentStep("intro")}
           />
