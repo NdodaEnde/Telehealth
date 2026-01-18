@@ -19,7 +19,7 @@ from datetime import datetime
 import os
 
 # Get backend URL from environment
-BACKEND_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://medplus-virtual.preview.emergentagent.com')
+BACKEND_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://vitacare-bridge.preview.emergentagent.com')
 BASE_URL = f"{BACKEND_URL}/api"
 
 def test_health_check():

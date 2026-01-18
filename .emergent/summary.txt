@@ -1,75 +1,76 @@
-<analysis>**original_problem_statement**: The user wants to build a comprehensive Telehealth platform.
+<analysis>original_problem_statement:
+The user wants to build a comprehensive Telehealth platform. The initial request involved analyzing an existing codebase and providing recommendations.
 
-The initial request was to analyze an existing codebase and provide recommendations. The user then approved the following tasks:
-- **Prescription PDF Export**: Allow downloading prescriptions as PDFs.
-- **Backend API Layer**: Move critical business logic from the frontend (calling Supabase directly) to a FastAPI backend.
-- **Admin Analytics**: Add charts and reports to the admin dashboard.
-- **Mobile Responsiveness Improvements**: Enhance the mobile user experience.
-- **UI/UX Feel**: General improvements to the design.
-- **Timezone**: Ensure all times are displayed in South African Standard Time (SAST, GMT+2).
-
-After a gap analysis against planning documents provided by the user, the user prioritized the next set of features to complete Phase 1:
+The user then prioritized the following features for Phase 1:
 1.  **Patient Onboarding Enhancement**: Forms for ID, medical history, allergies, chronic conditions.
 2.  **Medical Aid Integration**: Capture medical aid details.
 3.  **AI Symptom Assessment**: Use an LLM to analyze symptoms and determine urgency.
 4.  **Nurse Triage Workflow**: A form for nurses to capture patient vitals before a consultation.
 
-The user specified that integration with HealthBridge (a South African healthcare switching company) is a future requirement, and these features should be built with placeholder integration points for now.
+Later, the user requested the addition of the following booking features:
+1.  **Walk-in Bookings**
+2.  **Emergency Bookings**
+3.  **Booking Cancellation**
+4.  **Image/Video Upload** for symptoms during booking.
+
+The user also clarified that HealthBridge serves a dual role as both an EHR and a medical aid switching company, which simplifies the future integration architecture. The user also requested support for non-South African patients using passports for identification.
 
 **User's preferred language**: English
 
 **what currently exists?**
-The project is a full-stack Telehealth application using React (with TypeScript, Vite, and TailwindCSS) for the frontend and FastAPI for the backend. Authentication and the initial database layer were handled by Supabase.
+The project is a full-stack Telehealth application using React (Vite, TypeScript, TailwindCSS) for the frontend and FastAPI for the backend. The database layer is a hybrid model: Supabase (PostgreSQL) is used for primary data like users, appointments, and profiles, while MongoDB is used for storing extended patient data (medical history, allergies) and logs.
 
-A significant architectural migration is in progress. The agent has built a comprehensive FastAPI REST API layer to move business logic away from direct frontend-to-Supabase calls. This new backend handles user management, appointments, clinical notes, prescriptions, analytics, and the newly requested features. The application now has a total of 45 API endpoints.
-
-The frontend has been updated with an Admin Analytics dashboard, PDF generation for prescriptions, mobile responsiveness enhancements, and standardized South African timezones (SAST). The backend infrastructure and frontend components for the latest user requests (Onboarding, AI Symptom Assessment, Nurse Triage) have been created but are not yet fully integrated into the user flow.
+A significant amount of work has been done to build out a FastAPI backend to centralize business logic. Key features implemented include:
+-   **AI Symptom Assessment**: Integrated with a user-provided OpenAI API key.
+-   **Smart Patient Onboarding**: A multi-step flow that now supports both South African IDs and foreign passports. It correctly persists the user's onboarding status to prevent repeated onboarding sessions.
+-   **Frontend Integration**: The new onboarding, AI symptom checker, and nurse triage components have been integrated into the user flow.
+-   **Backend for New Booking Features**: API endpoints for walk-in, emergency bookings, and cancellations have been created.
 
 **Last working item**:
--   **Last item agent was working**: Building the four prioritized features (Patient Onboarding, Medical Aid Integration, AI Symptom Assessment, Nurse Triage) with placeholder integration points for the HealthBridge system. The agent successfully created the backend routes, services (including an AI service using the Emergent LLM Key), and data models. It also created the primary frontend components for these features.
--   **Status**: IN PROGRESS
--   **Agent Testing Done**: Y (for the backend endpoints only)
--   **Which testing method agent to use?**: both
--   **User Testing Done**: N
+-   Last item agent was working: Implementing the four new booking-related features: Walk-in Bookings, Emergency Bookings, Booking Cancellation, and Image/Video Upload. The agent successfully created the backend API endpoints and the necessary frontend components.
+-   Status: IN PROGRESS
+-   Agent Testing Done: N
+-   Which testing method agent to use? both
+-   User Testing Done: N
 
 **All Pending/In progress Issue list**:
-There are no outstanding bugs or issues. The current work is a set of in-progress tasks.
+There are no known pending issues. The critical onboarding loop bug has been resolved.
 
 **In progress Task List**:
--   **Task 1**: Integrate New Frontend Components (P0)
-    -   **Where to resume**: The agent has created , , and . The next step is to integrate these components into the application's user flow.
-        -   Integrate  into the patient registration or post-login workflow.
-        -   Replace the existing basic symptom selector in the appointment booking flow with .
-        -   Add the  to the clinician (nurse) dashboard for pre-consultation data entry.
-    -   **What will be achieved with this?**: This will complete the implementation of the four high-priority features requested by the user, creating a more robust and clinically relevant workflow.
-    -   **Status**: IN PROGRESS
-    -   **Should Test frontend/backend/both after fix?**: both
-    -   **Blocked on something**: No.
+-   Task 1: Complete Frontend Integration for New Booking Features (P0)
+    -   Where to resume: The agent has created the backend routes () and new frontend components (, , ). The next step is to fully integrate these components into the frontend user interface.
+        -   Integrate  into the  to allow users to cancel their appointments.
+        -   Integrate  into  to provide Walk-in and Emergency booking options.
+        -   Integrate  into the booking flow to allow users to upload images/videos of their symptoms.
+    -   What will be achieved with this?: Users will be able to cancel appointments and make special booking types (walk-in/emergency), enhancing the platform's flexibility.
+    -   Status: IN PROGRESS
+    -   Should Test frontend/backend/both after fix?: both
+    -   Blocked on something: No.
 
 **Upcoming and Future Tasks**
 -   **Upcoming Tasks:**
-    -   **P0: Refactor Frontend to use FastAPI**: Systematically refactor existing frontend data-fetching logic (currently calling Supabase directly) to use the newly created  service and the FastAPI backend.
-    -   **P1: Implement Password Reset Flow**: The backend API () and frontend component () exist, but the email sending mechanism is not yet implemented.
+    -   **P0: Refactor Frontend to use FastAPI**: Systematically refactor any remaining frontend data-fetching logic (that might still call Supabase directly) to use the  service and the FastAPI backend.
+    -   **P1: Implement Password Reset Flow**: The backend API () exists, but the email sending mechanism is not yet implemented.
     -   **P1: Screen Sharing**: Add screen sharing functionality to the WebRTC video consultation component.
     -   **P1: Implement Email/SMS Notifications**: Integrate a service (e.g., SendGrid, Twilio) for sending appointment reminders and confirmations.
 -   **Future Tasks:**
-    -   **HealthBridge Integration**: Replace the placeholder  with a real API client once credentials are provided. This will handle patient lookup, medical aid verification, and data syncing.
+    -   **HealthBridge Integration**: Replace the placeholder  with a real API client once credentials are provided. This will handle patient lookup, medical aid verification, claims submission, and data syncing.
     -   **Pharmacy Integration**: Connect to pharmacy networks to transmit e-prescriptions electronically.
-    -   **Billing & Payments**: Integrate a payment gateway (like Stripe) and the HealthBridge API for processing medical aid claims.
+    -   **Billing & Payments**: Integrate a payment gateway (like Stripe or PayGate) and the HealthBridge API for processing medical aid claims.
     -   **AI Clinical Decision Support**: Implement advanced AI features to assist clinicians with diagnoses and treatment plans.
     -   **Push Notifications**: Implement native push notifications using FCM/APNs.
 
 **Completed work in this session**
--   **Architectural Migration**: Initiated and substantially built out a FastAPI REST API to serve as the primary backend, reducing direct frontend dependency on Supabase.
--   **Admin Analytics**: Implemented backend endpoints and a frontend dashboard with charts for analytics. (Files: , ).
--   **Prescription PDF Export**: Added a backend endpoint and a download button on the frontend to generate PDFs for prescriptions. (Files: , ).
--   **South African Timezone (SAST)**: Standardized all date and time displays across the application to GMT+2. (Files: , various UI components).
--   **Mobile Responsiveness**: Improved layout and navigation on smaller screens for all major pages.
--   **Backend for Phase 1 Features**: Created all necessary backend models, services, and API endpoints for Patient Onboarding, AI Symptom Assessment, and Nurse Triage. (Files: , , , etc.).
--   **Frontend Components for Phase 1**: Created the new React components for the upcoming features. (Files: , etc.).
+-   **Switched to User's OpenAI Key**: Replaced the Emergent LLM integration with a direct OpenAI client using the user-provided API key. Updated .
+-   **Smart Onboarding Workflow**: Implemented a robust onboarding flow that correctly detects if a user has completed onboarding, preventing them from seeing the form on every login.
+-   **Fixed Critical Onboarding Bug**: Diagnosed and fixed a bug where onboarding status wasn't saved. The root cause was an empty  in the backend environment, leading to RLS policy failures. The fix involved updating the backend to use the user's JWT for profile updates.
+-   **Passport/Foreign National Support**: Updated the backend and frontend to allow users to sign up and onboard using a passport in addition to a South African ID.
+-   **Integration of Core Components**: The , , and  components were successfully integrated into the main application flow.
+-   **Backend for New Booking Features**: Created API endpoints for walk-in, emergency, and cancellation bookings in .
+-   **Created Project Documentation**: Generated several markdown files to document progress and architecture (, , ).
 
 **Earlier issues found/mentioned but not fixed**
--   The  command returned numerous parsing errors (). The agent dismissed these as linter config issues, not actual code errors, and did not fix them. This could indicate a misconfiguration in the ESLint/TypeScript setup.
+-   The  command previously returned numerous parsing errors (). The agent dismissed these as linter config issues and did not fix them. This could indicate a misconfiguration in the ESLint/TypeScript setup.
 
 **Known issue recurrence from previous fork**
 -   None.
@@ -79,85 +80,123 @@ There are no outstanding bugs or issues. The current work is a set of in-progres
 
 **Key Technical Concepts**
 -   **Full-Stack Frameworks**: React (Frontend) & FastAPI (Backend).
--   **Database & Auth**: Supabase (PostgreSQL DB, JWT-based Authentication, Realtime for signaling).
--   **Architecture**: Migrating from a Backend for Frontend (BFF) pattern where the frontend calls Supabase directly, to a robust three-tier architecture (Frontend -> FastAPI -> Database).
+-   **Database & Auth**: Supabase (PostgreSQL for main DB, JWT for Auth), MongoDB (for extended patient data/logs).
+-   **Architecture**: Three-tier architecture (Frontend -> FastAPI -> Databases).
 -   **API**: RESTful API built with FastAPI, using Pydantic for data validation.
 -   **Styling**: TailwindCSS with shadcn/ui components.
--   **AI Integration**: Using  library with an Emergent LLM Key to call an OpenAI model for symptom assessment.
--   **Timezones**: Using  to handle and display all times in a specific timezone (SAST).
+-   **AI Integration**: Direct integration with OpenAI API using a user-provided key for symptom assessment.
+-   **Identity**: Supports both South African ID numbers (with validation) and foreign Passports.
 
 **key DB schema**
-The application uses Supabase (PostgreSQL). While the exact schema is not listed, the Pydantic models in the backend act as a proxy for the database structure. Key tables implied by the models include:
--   : Stores user profile information.
--   : Stores appointment details, including status, time, and participants.
--   : Stores SOAP notes linked to consultations.
--   : Stores prescription data.
--   : Stores extended patient information like ID number and medical aid details.
--   , , : Linked to patient profiles.
--   : Stores vitals captured by a nurse.
+-   **Supabase ( table)**: Stores core user data including uid=0(root) gid=0(root) groups=0(root), , , and the crucial  field, which is used to determine if onboarding is complete.
+-   **MongoDB ( database)**:
+    -   : Stores detailed medical history (allergies, conditions, etc.) linked by .
+    -   : Stores consent form data.
+-   Other Supabase tables (inferred): , , , .
+
+**changes in tech stack**
+-   **AI Service**: Migrated from  (Emergent LLM Key) to a direct usage: openai [-h] [-v] [-b API_BASE] [-k API_KEY] [-p PROXY [PROXY ...]]
+              [-o ORGANIZATION] [-t {openai,azure}]
+              [--api-version API_VERSION] [--azure-endpoint AZURE_ENDPOINT]
+              [--azure-ad-token AZURE_AD_TOKEN] [-V]
+              {api,tools,migrate,grit} ...
+
+positional arguments:
+  {api,tools,migrate,grit}
+    api                 Direct API calls
+    tools               Client side tools for convenience
+
+options:
+  -h, --help            show this help message and exit
+  -v, --verbose         Set verbosity.
+  -b API_BASE, --api-base API_BASE
+                        What API base url to use.
+  -k API_KEY, --api-key API_KEY
+                        What API key to use.
+  -p PROXY [PROXY ...], --proxy PROXY [PROXY ...]
+                        What proxy to use.
+  -o ORGANIZATION, --organization ORGANIZATION
+                        Which organization to run as (will use your default
+                        organization if not specified)
+  -t {openai,azure}, --api-type {openai,azure}
+                        The backend API to call, must be `openai` or `azure`
+  --api-version API_VERSION
+                        The Azure API version, e.g.
+                        'https://learn.microsoft.com/en-us/azure/ai-
+                        services/openai/reference#rest-api-versioning'
+  --azure-endpoint AZURE_ENDPOINT
+                        The Azure endpoint, e.g.
+                        'https://endpoint.openai.azure.com'
+  --azure-ad-token AZURE_AD_TOKEN
+                        A token from Azure Active Directory,
+                        https://www.microsoft.com/en-
+                        us/security/business/identity-access/microsoft-entra-
+                        id
+  -V, --version         show program's version number and exit client implementation using a user-provided API key.
 
 **All files of reference**
--   **/app/backend/server.py**: Main FastAPI application file, ties all routes and middleware together.
--   **/app/backend/routes/**: This directory contains the logic for all API endpoints.
--   **/app/backend/symptom_assessment.py**: Contains the logic for the AI Symptom Checker, including the prompt and LLM call.
--   **/app/backend/healthbridge_service.py**: The placeholder service that will eventually contain the HealthBridge API integration logic.
--   **/app/frontend/src/lib/api.ts**: A new Axios-based service layer for making calls to the FastAPI backend. This is central to the ongoing refactoring effort.
--   **/app/frontend/src/lib/timezone.ts**: Utility for ensuring all times are displayed in the correct SAST timezone.
--   **/app/frontend/src/components/onboarding/PatientOnboarding.tsx**: New component for the enhanced patient registration flow.
--   **/app/frontend/src/components/symptoms/AISymptomChecker.tsx**: New AI-powered component to replace the basic symptom checklist.
--   **/app/frontend/src/components/triage/NurseTriageForm.tsx**: New component for the nurse triage workflow.
--   **/app/.env**: Contains the Supabase service role key, crucial for the backend to communicate with the database.
+-   **/app/backend/routes/appointments.py**: Updated with endpoints for cancellation, walk-in, and emergency bookings.
+-   **/app/backend/routes/patient_onboarding.py**: Modified to handle both SA IDs and passports and to correctly update the  table.
+-   **/app/backend/healthbridge_service.py**: Updated to reflect HealthBridge's dual role as EHR and medical aid switch.
+-   **/app/backend/symptom_assessment.py**: Refactored to use the OpenAI API directly.
+-   **/app/frontend/src/contexts/AuthContext.tsx**: Heavily modified to fix the onboarding bug by correctly fetching and managing the user's profile and onboarding status.
+-   **/app/frontend/src/pages/Onboarding.tsx**: Overhauled to support ID/Passport selection and a smarter pre-fill/lookup workflow.
+-   **/app/frontend/src/pages/PatientDashboard.tsx**: Updated to include a link for appointment cancellation.
+-   **/app/frontend/src/pages/BookAppointment.tsx**: Updated to include special booking types.
+-   **/app/IMPLEMENTATION_STATUS.md**: New documentation file comparing project progress against initial plans.
 
 **key api endpoints**
-The application now has 45 total endpoints. Key new endpoints include:
--   : Creates or updates a patient's extended profile.
--   : (Placeholder) Looks up a patient in HealthBridge.
+-   : Books an immediate walk-in appointment.
+-   : Flags an appointment booking as an emergency.
+-   : Cancels an existing appointment.
+-   : The main endpoint for submitting onboarding data (now handles ID/Passport).
+-   : Validates SA ID or Passport details.
 -   : The AI endpoint that takes symptoms and returns an analysis.
--   : Creates a new nurse triage record with patient vitals.
--   : Gets a list of patients who have been triaged and are ready for a doctor.
--   : Initiates the password reset flow.
--   : Fetches data for the admin analytics dashboard.
--   : Generates a PDF for a prescription.
 
 **Critical Info for New Agent**
--   **Architectural Shift is Key**: The most critical task is to continue migrating the application to use the new FastAPI backend. Avoid adding new logic that calls Supabase directly from the frontend. All data fetching and mutations should go through the FastAPI layer via the functions in .
--   **HealthBridge is a Placeholder**: The  is currently a mock. Do not attempt to implement real logic there until the user provides API credentials. All features related to it should be treated as placeholders.
--   **Use Emergent LLM Key**: The AI Symptom Assessment feature relies on the Emergent LLM Key, which has been successfully retrieved and used. Continue to use this for any future LLM-based features.
--   **Unintegrated Components**: The components for Onboarding, AI Symptom Checking, and Nurse Triage exist but are not yet wired into the application. Your immediate task is to integrate them.
+-   **Onboarding Bug Fix**: The critical bug where users were stuck in an onboarding loop has been resolved. The fix involved using the user's own JWT to update their profile via the backend, bypassing a Supabase RLS issue caused by an empty service key. The application now correctly tracks onboarding completion by checking if  is present in the user's  record.
+-   **Hybrid Database Model**: Remember that core profile data is in Supabase (PostgreSQL), while detailed medical history (allergies, chronic conditions, etc.) submitted during onboarding is stored in MongoDB.
+-   **HealthBridge is a Placeholder**: The  is a mock. All related functionality is a placeholder for future implementation.
+-   **OpenAI Key is in Use**: The application no longer uses the Emergent LLM key. It uses a user-provided OpenAI key stored in .
+-   **Focus on Frontend Integration**: The immediate next task is to finish wiring up the newly created booking components (, , etc.) into the frontend pages (, ).
+
+**documents and test reports created in this job**
+-   /app/IMPLEMENTATION_STATUS.md
+-   /app/WHATSAPP_MIGRATION.md
+-   /app/HEALTHBRIDGE_INTEGRATION.md
+-   /app/test_result.md (updated)
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User**: Asks for a gap analysis based on uploaded planning documents.
-2.  **Agent**: Provides a detailed gap analysis report, highlighting implemented, partial, and missing features.
-3.  **User**: Asks if a full REST API is possible even with Supabase.
-4.  **Agent**: Confirms that a full FastAPI REST API is the recommended approach for better security and scalability, with Supabase being used for the database and authentication token generation. Proposes a plan to build it.
-5.  **User**: proceed
-6.  **Agent**: Implements the full FastAPI backend, including 45 endpoints and new frontend components.
-7.  **User**: Asks if a specific 6-step workflow (including AI assessment and billing) is the current state of the MVP.
-8.  **Agent**: Provides an honest gap analysis, clarifying that the intended workflow is not fully implemented and lists the missing pieces (ID verification, AI analysis, billing, etc.).
-9.  **User**: Provides context about HealthBridge for EHR and medical aid billing and agrees to implement features 1-4 (Onboarding, Medical Aid, AI Assessment, Triage).
-10. **Agent**: Clarifies the integration approach with HealthBridge and asks if it should build placeholder integration points.
-11. **User**: build the features with placeholder integration points that can connect to HealthBridge later. yes proceed with the assumption that HealthBridge integration will be added once you have API credentials (This is the last directive).
+1.  **User**: Reports the onboarding bug is still present after the first fix attempt.
+2.  **Agent**: Acknowledges the recurrence and investigates backend logs.
+3.  **User**: Reports the onboarding works for the first session but fails on re-login.
+4.  **Agent**: Identifies the root cause as a Supabase RLS issue due to a missing service key and proposes a fix.
+5.  **User**: Confirms the onboarding bug is finally fixed and asks to add support for foreign nationals with passports.
+6.  **Agent**: Implements passport support in the onboarding flow.
+7.  **User**: Asks for a write-up comparing what has been built against the initial project plan.
+8.  **Agent**: Creates the  document.
+9.  **User**: Provides context on HealthBridge's dual role (EHR + medical aid switch).
+10. **Agent**: Acknowledges the critical clarification and updates the architecture documents.
+11. **User**: Requests the implementation of Walk-in, Emergency, Cancellation, and Image Upload booking features. (This is the last directive).
 
 **Project Health Check:**
--   **Broken**: No features are explicitly broken, but the application is in a transitional state. Some parts of the frontend call the new backend, while others may still call Supabase directly. This needs to be unified.
+-   **Broken**: No features are explicitly broken. The onboarding loop has been fixed.
 -   **Mocked**:
-    -   : This entire service is a placeholder and makes no real external calls. It returns mock data.
-    -   The remote video stream in the demo consultation is a mirrored version of the local user's camera feed.
+    -   : This entire service is a placeholder and makes no real external calls. It returns mock data for patient lookups and medical aid verification.
 
 **3rd Party Integrations**
 -   **Supabase**: Used for PostgreSQL database, user authentication (JWT), and real-time messaging for WebRTC signaling.
--   **OpenAI (via Emergent)**: Used for the AI Symptom Assessment feature. This integration uses the **Emergent LLM Key**.
+-   **OpenAI**: Used for the AI Symptom Assessment feature. This integration uses a **User-provided API Key**.
+-   **MongoDB**: Used for storing extended patient data and application logs.
 
 **Testing status**
--   **Testing agent used after significant changes**: YES (Backend testing was used after adding the new API endpoints).
+-   **Testing agent used after significant changes**: YES (Backend testing was used after the initial features were added).
 -   **Troubleshoot agent used after agent stuck in loop**: NO
--   **Test files created**: The  agent generated and used temporary test scripts, but no permanent test files like  were committed to the workspace.
+-   **Test files created**: None committed.
 -   **Known regressions**: None identified.
 
 **Credentials to test flow:**
-No specific user credentials are required to be created manually. User registration can be done through the application's UI. The necessary Supabase API keys for the application to function are already present in the  files.
+User registration can be done through the application's UI. No manual credential creation is needed. The necessary API keys (Supabase, OpenAI) are in the  files.
 
 **What agent forgot to execute**
--   The agent created the new frontend components for Onboarding, AI Symptom Assessment, and Triage, but **forgot to integrate them into the application's UI flow**. This is the most critical pending step.
--   The agent did not fully refactor all existing frontend data fetching logic to use the new FastAPI backend. The groundwork is laid with , but the migration is incomplete.
--   The agent did not address the numerous ESLint parsing errors, which could point to a project configuration issue.</analysis>
+-   The agent started implementing the four new booking features (Walk-in, Emergency, Cancellation, Media Upload) but did not complete the frontend integration. The backend routes and frontend components were created, but they are not fully wired into the user experience on the  and  pages. This is the main piece of unfinished work.</analysis>
