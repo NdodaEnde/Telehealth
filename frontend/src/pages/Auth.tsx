@@ -233,6 +233,14 @@ const Auth = () => {
                 <Button type="submit" className="w-full" size="lg" disabled={isSubmitting}>
                   {isSubmitting ? "Signing in..." : "Sign In"}
                 </Button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowPasswordReset(true)}
+                  className="w-full text-sm text-primary hover:underline mt-2"
+                >
+                  Forgot your password?
+                </button>
               </form>
             ) : (
               <form onSubmit={signupForm.handleSubmit(handleSignup)} className="space-y-4">
