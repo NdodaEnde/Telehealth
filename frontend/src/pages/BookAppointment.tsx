@@ -55,6 +55,7 @@ const BookAppointment = () => {
   const navigate = useNavigate();
   const { profile, signOut } = useAuth();
   const [currentStep, setCurrentStep] = useState<BookingStep>("intro");
+  const [bookingType, setBookingType] = useState<BookingType>("scheduled");
   const [symptomData, setSymptomData] = useState<SymptomData | null>(null);
   const [clinicianData, setClinicianData] = useState<ClinicianData | null>(null);
   const [timeData, setTimeData] = useState<TimeData | null>(null);
@@ -66,6 +67,8 @@ const BookAppointment = () => {
       clinician: 1,
       time: 2,
       confirm: 3,
+      "walk-in": -1,
+      "emergency": -1,
     };
     return stepMap[currentStep];
   };
