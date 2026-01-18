@@ -109,11 +109,19 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const fetchPatientProfile = async (userId: string) => {
     try {
       // Check if patient has completed onboarding
-      const { data: patientData } = await supabase
+      const { data: patientData, error } = await supabase
         .from("patient_profiles")
         .select("id, user_id, onboarding_completed_at, has_medical_aid, medical_aid_scheme")
         .eq("user_id", userId)
         .single();
+
+      if (error) {
+        // Table might not exist or no record found - treat as not onboarded
+        console.log("Patient profile check:", error.message);
+        setPatientProfile(null);
+        setOnboardingComplete(false);
+        return;
+      }
 
       if (patientData) {
         setPatientProfile(patientData);
@@ -125,6 +133,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       }
     } catch (error) {
       // No patient profile found - this is expected for new patients
+      console.error("Error fetching patient profile:", error);
       setPatientProfile(null);
       setOnboardingComplete(false);
     }
