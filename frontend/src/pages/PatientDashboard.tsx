@@ -186,14 +186,17 @@ const PatientDashboard = () => {
             </CardHeader>
           </Card>
 
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer border-primary/20 hover:border-primary col-span-2 sm:col-span-1">
+          <Card 
+            className="hover:shadow-lg transition-shadow cursor-pointer border-primary/20 hover:border-primary col-span-2 sm:col-span-1"
+            onClick={() => navigate("/onboarding")}
+          >
             <CardHeader className="p-3 sm:p-4 flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 pb-2">
               <div className="p-2 sm:p-3 rounded-xl bg-accent/50">
                 <User className="w-5 h-5 sm:w-6 sm:h-6 text-accent-foreground" />
               </div>
               <div>
                 <CardTitle className="text-sm sm:text-lg">Profile</CardTitle>
-                <CardDescription className="text-xs sm:text-sm hidden sm:block">Update details</CardDescription>
+                <CardDescription className="text-xs sm:text-sm hidden sm:block">Complete profile</CardDescription>
               </div>
             </CardHeader>
           </Card>
