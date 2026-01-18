@@ -94,9 +94,10 @@ export const UpcomingSchedule = ({ todayAppointments }: UpcomingScheduleProps) =
         <CardTitle className="flex items-center gap-2">
           <Calendar className="w-5 h-5 text-primary" />
           Today's Schedule
+          <Badge variant="outline" className="ml-2 text-xs">{TIMEZONE_ABBR}</Badge>
         </CardTitle>
         <CardDescription>
-          {format(new Date(), "EEEE, MMMM d, yyyy")}
+          {formatFullDateSAST(new Date())}
         </CardDescription>
       </CardHeader>
       <CardContent>
