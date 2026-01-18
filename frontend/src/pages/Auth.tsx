@@ -171,6 +171,10 @@ const Auth = () => {
           </div>
         </div>
 
+        {/* Password Reset View */}
+        {showPasswordReset ? (
+          <PasswordReset onBack={() => setShowPasswordReset(false)} />
+        ) : (
         <Card className="border-border/50 shadow-xl">
           <CardHeader className="text-center">
             <CardTitle className="text-2xl">
