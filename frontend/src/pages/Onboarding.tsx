@@ -5,8 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PatientOnboarding } from "@/components/onboarding/PatientOnboarding";
-import { ArrowLeft, CheckCircle2, User, FileText, Heart, Loader2, Search, AlertCircle } from "lucide-react";
+import { ArrowLeft, CheckCircle2, User, FileText, Heart, Loader2, Search, AlertCircle, Globe } from "lucide-react";
 import { toast } from "sonner";
 
 const BACKEND_URL = import.meta.env.REACT_APP_BACKEND_URL || '';
@@ -29,14 +31,36 @@ interface EHRPatientData {
   chronic_conditions?: string[];
 }
 
+interface Country {
+  code: string;
+  name: string;
+}
+
 const OnboardingPage = () => {
   const navigate = useNavigate();
   const { profile, onboardingComplete, refreshProfile, isLoading } = useAuth();
   const [step, setStep] = useState<"check" | "onboarding" | "confirm">("check");
+  
+  // ID Type selection
+  const [idType, setIdType] = useState<"sa_id" | "passport">("sa_id");
+  
+  // SA ID fields
   const [idNumber, setIdNumber] = useState("");
+  
+  // Passport fields
+  const [passportNumber, setPassportNumber] = useState("");
+  const [passportCountry, setPassportCountry] = useState("");
+  const [dateOfBirth, setDateOfBirth] = useState("");
+  
   const [checking, setChecking] = useState(false);
   const [ehrData, setEhrData] = useState<EHRPatientData | null>(null);
   const [idValidation, setIdValidation] = useState<any>(null);
+  const [countries, setCountries] = useState<Country[]>([]);
+
+  // Fetch countries list on mount
+  useEffect(() => {
+    fetchCountries();
+  }, []);
 
   // If already onboarded, redirect to dashboard
   useEffect(() => {
@@ -45,62 +69,104 @@ const OnboardingPage = () => {
     }
   }, [isLoading, onboardingComplete, navigate]);
 
-  const validateAndCheckEHR = async () => {
-    if (idNumber.length !== 13) {
-      toast.error("Please enter a valid 13-digit SA ID number");
-      return;
+  const fetchCountries = async () => {
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/patient/countries`);
+      const data = await response.json();
+      setCountries(data.countries || []);
+    } catch (error) {
+      console.error("Failed to fetch countries:", error);
+      // Fallback list
+      setCountries([
+        { code: "ZW", name: "Zimbabwe" },
+        { code: "MZ", name: "Mozambique" },
+        { code: "MW", name: "Malawi" },
+        { code: "LS", name: "Lesotho" },
+        { code: "NG", name: "Nigeria" },
+        { code: "OTHER", name: "Other" },
+      ]);
     }
+  };
 
+  const validateAndCheckEHR = async () => {
     setChecking(true);
     try {
-      // First validate the ID number
-      const validateResponse = await fetch(`${BACKEND_URL}/api/patient/validate-id?id_number=${idNumber}`, {
-        method: 'POST'
-      });
+      let validateUrl = `${BACKEND_URL}/api/patient/validate-id?id_type=${idType}`;
+      
+      if (idType === "sa_id") {
+        if (idNumber.length !== 13) {
+          toast.error("Please enter a valid 13-digit SA ID number");
+          setChecking(false);
+          return;
+        }
+        validateUrl += `&id_number=${idNumber}`;
+      } else {
+        if (!passportNumber || passportNumber.length < 5) {
+          toast.error("Please enter a valid passport number");
+          setChecking(false);
+          return;
+        }
+        if (!passportCountry) {
+          toast.error("Please select your country of citizenship");
+          setChecking(false);
+          return;
+        }
+        if (!dateOfBirth) {
+          toast.error("Please enter your date of birth");
+          setChecking(false);
+          return;
+        }
+        validateUrl += `&passport_number=${passportNumber}&country_code=${passportCountry}&date_of_birth=${dateOfBirth}`;
+      }
+
+      // Validate the ID/Passport
+      const validateResponse = await fetch(validateUrl, { method: 'POST' });
       const validation = await validateResponse.json();
       
       if (!validation.valid) {
-        toast.error(validation.error || "Invalid ID number");
+        toast.error(validation.error || "Invalid identification");
         setChecking(false);
         return;
       }
       
       setIdValidation(validation);
 
-      // Then check HealthBridge EHR for existing patient
-      const { supabase } = await import('@/integrations/supabase/client');
-      const { data: { session } } = await supabase.auth.getSession();
+      // For SA ID, try to look up in HealthBridge EHR
+      if (idType === "sa_id") {
+        const { supabase } = await import('@/integrations/supabase/client');
+        const { data: { session } } = await supabase.auth.getSession();
 
-      if (session?.access_token) {
-        const lookupResponse = await fetch(`${BACKEND_URL}/api/patient/lookup-existing?id_number=${idNumber}`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${session.access_token}`
+        if (session?.access_token) {
+          try {
+            const lookupResponse = await fetch(`${BACKEND_URL}/api/patient/lookup-existing?id_number=${idNumber}`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${session.access_token}`
+              }
+            });
+            
+            if (lookupResponse.ok) {
+              const ehrResult = await lookupResponse.json();
+              setEhrData(ehrResult);
+              
+              if (ehrResult.found) {
+                toast.success("We found your existing records! Please confirm your details.");
+                setStep("confirm");
+                return;
+              }
+            }
+          } catch (e) {
+            console.log("EHR lookup not available");
           }
-        });
-        
-        if (lookupResponse.ok) {
-          const ehrResult = await lookupResponse.json();
-          setEhrData(ehrResult);
-          
-          if (ehrResult.found) {
-            toast.success("We found your existing records! Please confirm your details.");
-            setStep("confirm");
-          } else {
-            toast.info("No existing records found. Please complete your profile.");
-            setStep("onboarding");
-          }
-        } else {
-          // EHR lookup failed, proceed with manual onboarding
-          setStep("onboarding");
         }
-      } else {
-        setStep("onboarding");
       }
-    } catch (error) {
-      console.error("EHR check failed:", error);
-      toast.error("Could not check existing records. Please complete your profile manually.");
+
+      // No EHR record found or passport user - proceed to full onboarding
+      toast.info("Please complete your profile.");
       setStep("onboarding");
+    } catch (error) {
+      console.error("Validation failed:", error);
+      toast.error("Could not validate identification. Please try again.");
     } finally {
       setChecking(false);
     }
@@ -110,13 +176,10 @@ const OnboardingPage = () => {
     console.log("[Onboarding] Onboarding complete, refreshing profile...");
     await refreshProfile();
     toast.success("Profile completed successfully!");
-    // Navigate with state to indicate onboarding was just completed
     navigate("/patient", { replace: true, state: { justOnboarded: true } });
   };
 
   const handleConfirmEHRData = async () => {
-    // In a real implementation, this would save the confirmed EHR data
-    // and mark onboarding as complete
     setChecking(true);
     try {
       const { supabase } = await import('@/integrations/supabase/client');
@@ -127,10 +190,10 @@ const OnboardingPage = () => {
         return;
       }
 
-      // Create minimal onboarding record to mark as complete
       const payload = {
         first_name: ehrData?.first_name || profile?.first_name,
         last_name: ehrData?.last_name || profile?.last_name,
+        id_type: "sa_id",
         id_number: idNumber,
         date_of_birth: ehrData?.date_of_birth || idValidation?.date_of_birth,
         gender: ehrData?.gender || idValidation?.gender,
@@ -141,7 +204,6 @@ const OnboardingPage = () => {
         consent_telehealth: true,
         consent_data_processing: true,
         consent_marketing: false,
-        // Note: In real implementation, this would pull from EHR
         medical_history: {
           allergies: (ehrData?.allergies || []).map(a => ({ allergen: a, reaction: "", severity: "mild" })),
           chronic_conditions: (ehrData?.chronic_conditions || []).map(c => ({ condition: c })),
@@ -166,7 +228,6 @@ const OnboardingPage = () => {
 
       await refreshProfile();
       toast.success("Profile confirmed successfully!");
-      // Navigate with state to indicate onboarding was just completed
       navigate("/patient", { replace: true, state: { justOnboarded: true } });
     } catch (error) {
       console.error("Confirmation failed:", error);
@@ -211,30 +272,93 @@ const OnboardingPage = () => {
               </div>
               <CardTitle className="text-xl sm:text-2xl">Welcome, {profile?.first_name}!</CardTitle>
               <CardDescription className="text-sm sm:text-base">
-                Let's check if you have existing records with us.
+                Let's verify your identity and check for existing records.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="id_number">South African ID Number</Label>
-                <Input
-                  id="id_number"
-                  value={idNumber}
-                  onChange={(e) => setIdNumber(e.target.value.replace(/\D/g, '').slice(0, 13))}
-                  placeholder="Enter your 13-digit ID number"
-                  maxLength={13}
-                  className="text-lg tracking-wider"
-                />
-                <p className="text-xs text-muted-foreground">
-                  We'll use this to check for your existing medical records.
-                </p>
+              {/* ID Type Selection */}
+              <div className="space-y-3">
+                <Label>Type of Identification</Label>
+                <RadioGroup 
+                  value={idType} 
+                  onValueChange={(v) => setIdType(v as "sa_id" | "passport")}
+                  className="grid grid-cols-2 gap-3"
+                >
+                  <div className="flex items-center space-x-2 p-3 rounded-lg border hover:border-primary cursor-pointer">
+                    <RadioGroupItem value="sa_id" id="sa_id" />
+                    <Label htmlFor="sa_id" className="flex items-center gap-2 cursor-pointer">
+                      <FileText className="w-4 h-4" />
+                      SA ID
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2 p-3 rounded-lg border hover:border-primary cursor-pointer">
+                    <RadioGroupItem value="passport" id="passport" />
+                    <Label htmlFor="passport" className="flex items-center gap-2 cursor-pointer">
+                      <Globe className="w-4 h-4" />
+                      Passport
+                    </Label>
+                  </div>
+                </RadioGroup>
               </div>
 
-              {idNumber.length === 13 && (
-                <div className="p-3 bg-muted rounded-lg text-sm">
-                  <p className="text-muted-foreground">
-                    ID entered: <span className="font-mono">{idNumber}</span>
-                  </p>
+              {/* SA ID Input */}
+              {idType === "sa_id" && (
+                <div className="space-y-2">
+                  <Label htmlFor="id_number">South African ID Number</Label>
+                  <Input
+                    id="id_number"
+                    value={idNumber}
+                    onChange={(e) => setIdNumber(e.target.value.replace(/\D/g, '').slice(0, 13))}
+                    placeholder="Enter your 13-digit ID number"
+                    maxLength={13}
+                    className="text-lg tracking-wider"
+                  />
+                  {idNumber.length > 0 && idNumber.length < 13 && (
+                    <p className="text-xs text-muted-foreground">{13 - idNumber.length} digits remaining</p>
+                  )}
+                </div>
+              )}
+
+              {/* Passport Input */}
+              {idType === "passport" && (
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="passport_country">Country of Citizenship</Label>
+                    <Select value={passportCountry} onValueChange={setPassportCountry}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select your country" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {countries.filter(c => c.code !== "ZA").map((country) => (
+                          <SelectItem key={country.code} value={country.code}>
+                            {country.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="passport_number">Passport Number</Label>
+                    <Input
+                      id="passport_number"
+                      value={passportNumber}
+                      onChange={(e) => setPassportNumber(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+                      placeholder="Enter your passport number"
+                      className="text-lg tracking-wider uppercase"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="date_of_birth">Date of Birth</Label>
+                    <Input
+                      id="date_of_birth"
+                      type="date"
+                      value={dateOfBirth}
+                      onChange={(e) => setDateOfBirth(e.target.value)}
+                      max={new Date().toISOString().split('T')[0]}
+                    />
+                  </div>
                 </div>
               )}
 
@@ -242,12 +366,16 @@ const OnboardingPage = () => {
                 className="w-full" 
                 size="lg" 
                 onClick={validateAndCheckEHR}
-                disabled={idNumber.length !== 13 || checking}
+                disabled={
+                  checking || 
+                  (idType === "sa_id" && idNumber.length !== 13) ||
+                  (idType === "passport" && (!passportNumber || !passportCountry || !dateOfBirth))
+                }
               >
                 {checking ? (
-                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Checking records...</>
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Verifying...</>
                 ) : (
-                  <><Search className="w-4 h-4 mr-2" /> Check My Records</>
+                  <><Search className="w-4 h-4 mr-2" /> Verify & Continue</>
                 )}
               </Button>
 
@@ -374,7 +502,7 @@ const OnboardingPage = () => {
     );
   }
 
-  // Step 2b: Full onboarding form (if not found in EHR)
+  // Step 2b: Full onboarding form (if not found in EHR or passport user)
   if (step === "onboarding") {
     return (
       <div className="min-h-screen bg-background">
@@ -402,14 +530,20 @@ const OnboardingPage = () => {
             {idValidation && (
               <div className="mt-3 p-3 bg-success/10 rounded-lg text-sm">
                 <p className="text-success">
-                  ✓ ID Verified: {idValidation.date_of_birth} • {idValidation.gender} • Age {idValidation.age}
+                  ✓ {idType === "sa_id" ? "ID" : "Passport"} Verified
+                  {idValidation.date_of_birth && ` • DOB: ${idValidation.date_of_birth}`}
+                  {idValidation.gender && ` • ${idValidation.gender}`}
+                  {idValidation.age && ` • Age ${idValidation.age}`}
                 </p>
               </div>
             )}
           </div>
           <PatientOnboarding 
             onComplete={handleOnboardingComplete} 
-            prefilledIdNumber={idNumber}
+            prefilledIdType={idType}
+            prefilledIdNumber={idType === "sa_id" ? idNumber : undefined}
+            prefilledPassportNumber={idType === "passport" ? passportNumber : undefined}
+            prefilledPassportCountry={idType === "passport" ? passportCountry : undefined}
             prefilledData={idValidation}
           />
         </main>
