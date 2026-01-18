@@ -108,31 +108,37 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const fetchPatientProfile = async (userId: string) => {
     try {
-      // Check if patient has completed onboarding
-      const { data: patientData, error } = await supabase
-        .from("patient_profiles")
-        .select("id, user_id, onboarding_completed_at, has_medical_aid, medical_aid_scheme")
-        .eq("user_id", userId)
+      // Check if patient has completed onboarding by checking if id_number is set in profiles
+      // Since patient_profiles table doesn't exist, we use profiles.id_number as the indicator
+      const { data: profileData, error } = await supabase
+        .from("profiles")
+        .select("id, first_name, last_name, phone, avatar_url, id_number, date_of_birth")
+        .eq("id", userId)
         .single();
 
       if (error) {
-        // Table might not exist or no record found - treat as not onboarded
-        console.log("Patient profile check:", error.message);
+        console.log("Profile check error:", error.message);
         setPatientProfile(null);
         setOnboardingComplete(false);
         return;
       }
 
-      if (patientData) {
-        setPatientProfile(patientData);
-        setOnboardingComplete(!!patientData.onboarding_completed_at);
+      if (profileData) {
+        // Patient is onboarded if they have an ID number set
+        const isOnboarded = !!profileData.id_number;
+        setPatientProfile({
+          id: profileData.id,
+          user_id: profileData.id,
+          onboarding_completed_at: isOnboarded ? new Date().toISOString() : null,
+          has_medical_aid: false, // We can't know this from profiles table
+          medical_aid_scheme: null,
+        });
+        setOnboardingComplete(isOnboarded);
       } else {
-        // No patient profile yet - not onboarded
         setPatientProfile(null);
         setOnboardingComplete(false);
       }
     } catch (error) {
-      // No patient profile found - this is expected for new patients
       console.error("Error fetching patient profile:", error);
       setPatientProfile(null);
       setOnboardingComplete(false);
