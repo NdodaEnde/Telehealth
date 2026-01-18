@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { VideoStream } from "./VideoStream";
 import { VideoControls } from "./VideoControls";
 import { WaitingRoom } from "./WaitingRoom";
+import { InCallChat } from "./InCallChat";
 import { ArrowLeft, Maximize2, Minimize2, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -310,6 +311,13 @@ export const VideoConsultation = () => {
             className="w-full h-full"
           />
         </div>
+
+        {/* In-Call Chat */}
+        <InCallChat
+          sessionId={sessionId}
+          currentUserId={user?.id || ""}
+          isPatient={isPatient}
+        />
       </div>
 
       {/* Controls */}
