@@ -12,7 +12,8 @@ import {
   Calendar,
   RefreshCw,
   CalendarDays,
-  Pill
+  Pill,
+  PlayCircle
 } from "lucide-react";
 import { ClinicianStats } from "@/components/clinician/ClinicianStats";
 import { PatientQueueList } from "@/components/clinician/PatientQueueList";
@@ -96,7 +97,7 @@ const ClinicianDashboard = () => {
         </div>
 
         {/* Quick Actions */}
-        <div className="grid md:grid-cols-5 gap-6 mb-8">
+        <div className="grid md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
           <Card 
             className="hover:shadow-lg transition-shadow cursor-pointer border-primary/20 hover:border-primary"
             onClick={() => setAppointmentsOpen(true)}
@@ -138,6 +139,21 @@ const ClinicianDashboard = () => {
               <div>
                 <CardTitle className="text-lg">Clinical Notes</CardTitle>
                 <CardDescription>Complete pending documentation</CardDescription>
+              </div>
+            </CardHeader>
+          </Card>
+
+          <Card 
+            className="hover:shadow-lg transition-shadow cursor-pointer border-warning/20 hover:border-warning"
+            onClick={() => navigate("/demo-consultation")}
+          >
+            <CardHeader className="flex flex-row items-center gap-4 pb-2">
+              <div className="p-3 rounded-xl bg-warning/10">
+                <PlayCircle className="w-6 h-6 text-warning" />
+              </div>
+              <div>
+                <CardTitle className="text-lg">Demo Mode</CardTitle>
+                <CardDescription>Test video consultation</CardDescription>
               </div>
             </CardHeader>
           </Card>
