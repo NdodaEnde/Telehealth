@@ -3,18 +3,20 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { 
-  Calendar, 
-  Clock, 
-  Users, 
   Video, 
   FileText, 
   LogOut,
-  Stethoscope,
-  ClipboardList
+  Settings,
+  RefreshCw
 } from "lucide-react";
+import { ClinicianStats } from "@/components/clinician/ClinicianStats";
+import { PatientQueueList } from "@/components/clinician/PatientQueueList";
+import { UpcomingSchedule } from "@/components/clinician/UpcomingSchedule";
+import { usePatientQueue } from "@/hooks/usePatientQueue";
 
 const ClinicianDashboard = () => {
   const { profile, role, signOut } = useAuth();
+  const { queue, stats, loading, refetch } = usePatientQueue();
 
   const roleLabel = role === "doctor" ? "Doctor" : "Nurse";
   const roleColor = role === "doctor" ? "bg-primary" : "bg-success";
@@ -31,9 +33,13 @@ const ClinicianDashboard = () => {
             <span className="font-bold text-lg">HCF Telehealth</span>
           </div>
           <div className="flex items-center gap-4">
+            <Button variant="ghost" size="sm" onClick={refetch} disabled={loading}>
+              <RefreshCw className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`} />
+              Refresh
+            </Button>
             <Badge className={`${roleColor} text-white`}>{roleLabel}</Badge>
             <span className="text-sm text-muted-foreground">
-              {profile?.first_name} {profile?.last_name}
+              Dr. {profile?.first_name} {profile?.last_name}
             </span>
             <Button variant="ghost" size="sm" onClick={signOut}>
               <LogOut className="w-4 h-4 mr-2" />
@@ -53,62 +59,8 @@ const ClinicianDashboard = () => {
         </div>
 
         {/* Stats Overview */}
-        <div className="grid md:grid-cols-4 gap-6 mb-8">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Today's Queue</p>
-                  <p className="text-3xl font-bold text-foreground">0</p>
-                </div>
-                <div className="p-3 rounded-xl bg-primary/10">
-                  <Users className="w-6 h-6 text-primary" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Completed Today</p>
-                  <p className="text-3xl font-bold text-foreground">0</p>
-                </div>
-                <div className="p-3 rounded-xl bg-success/10">
-                  <Stethoscope className="w-6 h-6 text-success" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Pending Notes</p>
-                  <p className="text-3xl font-bold text-foreground">0</p>
-                </div>
-                <div className="p-3 rounded-xl bg-warning/10">
-                  <ClipboardList className="w-6 h-6 text-warning" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Scheduled</p>
-                  <p className="text-3xl font-bold text-foreground">0</p>
-                </div>
-                <div className="p-3 rounded-xl bg-secondary/20">
-                  <Calendar className="w-6 h-6 text-secondary-foreground" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+        <div className="mb-8">
+          <ClinicianStats stats={stats} pendingNotes={0} />
         </div>
 
         {/* Quick Actions */}
@@ -140,50 +92,28 @@ const ClinicianDashboard = () => {
           <Card className="hover:shadow-lg transition-shadow cursor-pointer border-primary/20 hover:border-primary">
             <CardHeader className="flex flex-row items-center gap-4 pb-2">
               <div className="p-3 rounded-xl bg-secondary/20">
-                <Users className="w-6 h-6 text-secondary-foreground" />
+                <Settings className="w-6 h-6 text-secondary-foreground" />
               </div>
               <div>
-                <CardTitle className="text-lg">Patient Queue</CardTitle>
-                <CardDescription>View waiting patients</CardDescription>
+                <CardTitle className="text-lg">Availability</CardTitle>
+                <CardDescription>Manage your schedule</CardDescription>
               </div>
             </CardHeader>
           </Card>
         </div>
 
-        {/* Patient Queue */}
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Clock className="w-5 h-5 text-primary" />
-              Patient Queue
-            </CardTitle>
-            <CardDescription>Patients waiting for consultation</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-center py-8 text-muted-foreground">
-              <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
-              <p>No patients in queue</p>
-              <p className="text-sm mt-2">Patients will appear here when they join</p>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Main Content Grid */}
+        <div className="grid lg:grid-cols-3 gap-8">
+          {/* Patient Queue - Takes 2 columns */}
+          <div className="lg:col-span-2">
+            <PatientQueueList />
+          </div>
 
-        {/* Today's Schedule */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-primary" />
-              Today's Schedule
-            </CardTitle>
-            <CardDescription>Your appointments for today</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-center py-8 text-muted-foreground">
-              <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
-              <p>No appointments scheduled for today</p>
-            </div>
-          </CardContent>
-        </Card>
+          {/* Today's Schedule - Takes 1 column */}
+          <div>
+            <UpcomingSchedule todayAppointments={queue} />
+          </div>
+        </div>
       </main>
     </div>
   );
