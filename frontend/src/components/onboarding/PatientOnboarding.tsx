@@ -94,18 +94,28 @@ const COMMON_CONDITIONS = [
   "Thyroid Disorder", "Depression", "Anxiety", "Cancer"
 ];
 
-export const PatientOnboarding = ({ onComplete }: { onComplete?: () => void }) => {
+interface PatientOnboardingProps {
+  onComplete?: () => void;
+  prefilledIdNumber?: string;
+  prefilledData?: {
+    date_of_birth?: string;
+    gender?: string;
+    age?: number;
+  };
+}
+
+export const PatientOnboarding = ({ onComplete, prefilledIdNumber, prefilledData }: PatientOnboardingProps) => {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [medicalAidSchemes, setMedicalAidSchemes] = useState<MedicalAidScheme[]>([]);
-  const [idValidation, setIdValidation] = useState<any>(null);
+  const [idValidation, setIdValidation] = useState<any>(prefilledData || null);
   
   const [data, setData] = useState<OnboardingData>({
     first_name: "",
     last_name: "",
-    id_number: "",
-    date_of_birth: "",
-    gender: "",
+    id_number: prefilledIdNumber || "",
+    date_of_birth: prefilledData?.date_of_birth || "",
+    gender: prefilledData?.gender || "",
     email: "",
     phone: "",
     alternative_phone: "",
@@ -133,6 +143,21 @@ export const PatientOnboarding = ({ onComplete }: { onComplete?: () => void }) =
     consent_data_processing: false,
     consent_marketing: false,
   });
+
+  // Update data if prefilled props change
+  useEffect(() => {
+    if (prefilledIdNumber) {
+      setData(prev => ({ ...prev, id_number: prefilledIdNumber }));
+    }
+    if (prefilledData) {
+      setIdValidation(prefilledData);
+      setData(prev => ({
+        ...prev,
+        date_of_birth: prefilledData.date_of_birth || prev.date_of_birth,
+        gender: prefilledData.gender || prev.gender,
+      }));
+    }
+  }, [prefilledIdNumber, prefilledData]);
 
   useEffect(() => {
     fetchMedicalAidSchemes();
