@@ -71,6 +71,80 @@ export type Database = {
           },
         ]
       }
+      clinical_notes: {
+        Row: {
+          appointment_id: string
+          chief_complaint: string | null
+          clinician_id: string
+          created_at: string
+          diagnosis: string[] | null
+          examination_findings: string | null
+          follow_up_date: string | null
+          follow_up_instructions: string | null
+          history_of_present_illness: string | null
+          icd10_codes: Json | null
+          id: string
+          patient_id: string
+          prescriptions: Json | null
+          referral_details: string | null
+          referral_required: boolean | null
+          signed_at: string | null
+          status: string
+          treatment_plan: string | null
+          updated_at: string
+        }
+        Insert: {
+          appointment_id: string
+          chief_complaint?: string | null
+          clinician_id: string
+          created_at?: string
+          diagnosis?: string[] | null
+          examination_findings?: string | null
+          follow_up_date?: string | null
+          follow_up_instructions?: string | null
+          history_of_present_illness?: string | null
+          icd10_codes?: Json | null
+          id?: string
+          patient_id: string
+          prescriptions?: Json | null
+          referral_details?: string | null
+          referral_required?: boolean | null
+          signed_at?: string | null
+          status?: string
+          treatment_plan?: string | null
+          updated_at?: string
+        }
+        Update: {
+          appointment_id?: string
+          chief_complaint?: string | null
+          clinician_id?: string
+          created_at?: string
+          diagnosis?: string[] | null
+          examination_findings?: string | null
+          follow_up_date?: string | null
+          follow_up_instructions?: string | null
+          history_of_present_illness?: string | null
+          icd10_codes?: Json | null
+          id?: string
+          patient_id?: string
+          prescriptions?: Json | null
+          referral_details?: string | null
+          referral_required?: boolean | null
+          signed_at?: string | null
+          status?: string
+          treatment_plan?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clinical_notes_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clinician_availability: {
         Row: {
           clinician_id: string
