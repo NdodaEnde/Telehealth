@@ -66,14 +66,19 @@ export const VideoStream = ({
         playsInline
         muted={muted}
         className={`w-full h-full object-cover ${isLocal ? "transform -scale-x-100" : ""}`}
+        style={{ 
+          imageRendering: 'auto',
+          WebkitBackfaceVisibility: 'hidden',
+          backfaceVisibility: 'hidden'
+        }}
       />
       {isLocal && (
-        <div className="absolute bottom-4 left-4 bg-background/80 px-2 py-1 rounded text-xs">
+        <div className="absolute bottom-4 left-4 bg-background/80 backdrop-blur-sm px-3 py-1.5 rounded-lg text-xs font-medium">
           You
         </div>
       )}
       {!isLocal && userName && (
-        <div className="absolute bottom-4 left-4 bg-background/80 px-2 py-1 rounded text-xs">
+        <div className="absolute bottom-4 left-4 bg-background/80 backdrop-blur-sm px-3 py-1.5 rounded-lg text-xs font-medium">
           {userName}
         </div>
       )}
