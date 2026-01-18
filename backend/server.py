@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 from typing import List, Optional
 import uuid
 import logging
+import os
 
 # Configuration
 from config import MONGO_URL, DB_NAME, CORS_ORIGINS
@@ -17,12 +18,18 @@ from routes.prescriptions import router as prescriptions_router
 from routes.clinical_notes import router as clinical_notes_router
 from routes.users import router as users_router
 from routes.auth import router as auth_router
+from routes.patient_onboarding import router as patient_onboarding_router
+from routes.symptom_assessment import router as symptom_assessment_router
+from routes.nurse_triage import router as nurse_triage_router
 
 # Analytics (existing)
 from analytics_service import get_full_analytics_dashboard, get_analytics_overview
 
 # Auth
 from auth import get_current_user, require_admin, AuthenticatedUser
+
+# Set Emergent LLM key in environment
+os.environ['EMERGENT_LLM_KEY'] = os.environ.get('EMERGENT_LLM_KEY', 'sk-emergent-cD64dDb326d73D2Bf1')
 
 # MongoDB connection
 client = AsyncIOMotorClient(MONGO_URL)
@@ -31,8 +38,8 @@ db = client[DB_NAME]
 # Create the main app
 app = FastAPI(
     title="HCF Telehealth API",
-    description="Backend API for HCF Telehealth Platform - Full REST API",
-    version="2.0.0",
+    description="Backend API for HCF Telehealth Platform - Full REST API with HealthBridge Integration",
+    version="2.1.0",
     docs_url="/api/docs",
     redoc_url="/api/redoc",
     openapi_url="/api/openapi.json"
