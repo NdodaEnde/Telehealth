@@ -20,25 +20,29 @@ interface Appointment {
 
 const PatientDashboard = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, profile, signOut, onboardingComplete, isLoading } = useAuth();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [showPrescriptions, setShowPrescriptions] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  // Check if user just completed onboarding (passed via navigation state)
+  const justOnboarded = location.state?.justOnboarded;
+
   // Auto-redirect to onboarding if not complete
-  // But don't redirect if we just came from onboarding (give time for state to update)
+  // But skip if user just completed onboarding (state might not have updated yet)
   useEffect(() => {
-    // Skip redirect check for 2 seconds after component mounts to allow state to settle
-    const timer = setTimeout(() => {
-      if (!isLoading && !onboardingComplete) {
-        console.log("[PatientDashboard] Onboarding not complete, redirecting...");
-        navigate("/onboarding");
-      }
-    }, 1000);
+    if (justOnboarded) {
+      console.log("[PatientDashboard] User just completed onboarding, skipping redirect check");
+      return;
+    }
     
-    return () => clearTimeout(timer);
-  }, [isLoading, onboardingComplete, navigate]);
+    if (!isLoading && !onboardingComplete) {
+      console.log("[PatientDashboard] Onboarding not complete, redirecting...");
+      navigate("/onboarding");
+    }
+  }, [isLoading, onboardingComplete, navigate, justOnboarded]);
 
   useEffect(() => {
     const fetchAppointments = async () => {
