@@ -445,6 +445,10 @@ def main():
     
     # Run all tests
     test_results['health_check'] = test_health_check()
+    test_results['password_reset_request'] = test_password_reset_request()
+    test_results['verify_token'] = test_verify_token()
+    test_results['protected_endpoints'] = test_protected_endpoints_without_auth()
+    test_results['api_documentation'] = test_api_documentation()
     test_results['prescription_pdf'] = test_prescription_pdf_generation()
     test_results['analytics_dashboard'] = test_analytics_dashboard()
     test_results['analytics_overview'] = test_analytics_overview()
