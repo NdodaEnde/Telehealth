@@ -14,6 +14,104 @@ export type Database = {
   }
   public: {
     Tables: {
+      appointments: {
+        Row: {
+          clinician_id: string
+          consultation_type: Database["public"]["Enums"]["consultation_type"]
+          created_at: string
+          duration_minutes: number
+          id: string
+          notes: string | null
+          patient_id: string
+          scheduled_at: string
+          status: Database["public"]["Enums"]["appointment_status"]
+          symptom_assessment_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          clinician_id: string
+          consultation_type?: Database["public"]["Enums"]["consultation_type"]
+          created_at?: string
+          duration_minutes?: number
+          id?: string
+          notes?: string | null
+          patient_id: string
+          scheduled_at: string
+          status?: Database["public"]["Enums"]["appointment_status"]
+          symptom_assessment_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          clinician_id?: string
+          consultation_type?: Database["public"]["Enums"]["consultation_type"]
+          created_at?: string
+          duration_minutes?: number
+          id?: string
+          notes?: string | null
+          patient_id?: string
+          scheduled_at?: string
+          status?: Database["public"]["Enums"]["appointment_status"]
+          symptom_assessment_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointments_clinician_id_fkey"
+            columns: ["clinician_id"]
+            isOneToOne: false
+            referencedRelation: "clinician_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_symptom_assessment_id_fkey"
+            columns: ["symptom_assessment_id"]
+            isOneToOne: false
+            referencedRelation: "symptom_assessments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clinician_availability: {
+        Row: {
+          clinician_id: string
+          created_at: string
+          day_of_week: number
+          end_time: string
+          id: string
+          is_active: boolean
+          start_time: string
+          updated_at: string
+        }
+        Insert: {
+          clinician_id: string
+          created_at?: string
+          day_of_week: number
+          end_time: string
+          id?: string
+          is_active?: boolean
+          start_time: string
+          updated_at?: string
+        }
+        Update: {
+          clinician_id?: string
+          created_at?: string
+          day_of_week?: number
+          end_time?: string
+          id?: string
+          is_active?: boolean
+          start_time?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clinician_availability_clinician_id_fkey"
+            columns: ["clinician_id"]
+            isOneToOne: false
+            referencedRelation: "clinician_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clinician_profiles: {
         Row: {
           bio: string | null
@@ -86,6 +184,36 @@ export type Database = {
         }
         Relationships: []
       }
+      symptom_assessments: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          patient_id: string
+          recommended_specialization: string | null
+          severity: Database["public"]["Enums"]["symptom_severity"]
+          symptoms: string[]
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          patient_id: string
+          recommended_specialization?: string | null
+          severity?: Database["public"]["Enums"]["symptom_severity"]
+          symptoms: string[]
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          patient_id?: string
+          recommended_specialization?: string | null
+          severity?: Database["public"]["Enums"]["symptom_severity"]
+          symptoms?: string[]
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           assigned_at: string
@@ -126,6 +254,9 @@ export type Database = {
     }
     Enums: {
       app_role: "patient" | "nurse" | "doctor" | "admin"
+      appointment_status: "pending" | "confirmed" | "cancelled" | "completed"
+      consultation_type: "video" | "phone" | "in_person"
+      symptom_severity: "mild" | "moderate" | "severe"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -254,6 +385,9 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["patient", "nurse", "doctor", "admin"],
+      appointment_status: ["pending", "confirmed", "cancelled", "completed"],
+      consultation_type: ["video", "phone", "in_person"],
+      symptom_severity: ["mild", "moderate", "severe"],
     },
   },
 } as const
