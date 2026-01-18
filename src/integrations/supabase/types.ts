@@ -222,6 +222,53 @@ export type Database = {
         }
         Relationships: []
       }
+      consultation_messages: {
+        Row: {
+          content: string
+          created_at: string
+          file_name: string | null
+          file_size: number | null
+          file_url: string | null
+          id: string
+          message_type: string
+          sender_id: string
+          sender_role: string
+          session_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          file_name?: string | null
+          file_size?: number | null
+          file_url?: string | null
+          id?: string
+          message_type?: string
+          sender_id: string
+          sender_role: string
+          session_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          file_name?: string | null
+          file_size?: number | null
+          file_url?: string | null
+          id?: string
+          message_type?: string
+          sender_id?: string
+          sender_role?: string
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consultation_messages_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "consultation_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       consultation_sessions: {
         Row: {
           appointment_id: string
