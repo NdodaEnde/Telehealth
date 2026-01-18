@@ -64,7 +64,182 @@ def test_health_check():
         print(f"❌ FAILED: Unexpected error - {str(e)}")
         return False
 
-def test_prescription_pdf_generation():
+def test_password_reset_request():
+    """Test the password reset request endpoint (no auth required)"""
+    print("\n=== Testing Password Reset Request API ===")
+    
+    test_data = {
+        "email": "test@example.com"
+    }
+    
+    try:
+        response = requests.post(
+            f"{BASE_URL}/auth/password/reset-request",
+            json=test_data,
+            headers={'Content-Type': 'application/json'},
+            timeout=10
+        )
+        
+        print(f"Status Code: {response.status_code}")
+        
+        if response.status_code == 200:
+            data = response.json()
+            print(f"Response: {json.dumps(data, indent=2)}")
+            
+            # Validate response structure
+            if 'success' not in data:
+                print("❌ FAILED: Missing 'success' field in response")
+                return False
+            
+            if not data.get('success'):
+                print(f"❌ FAILED: Password reset request failed")
+                return False
+            
+            if 'message' not in data:
+                print("❌ FAILED: Missing 'message' field in response")
+                return False
+            
+            # Should return success message (doesn't reveal if email exists)
+            message = data.get('message', '')
+            if 'password reset link' not in message.lower():
+                print(f"❌ FAILED: Unexpected message format: {message}")
+                return False
+            
+            print("✅ PASSED: Password reset request API working correctly")
+            return True
+        else:
+            print(f"❌ FAILED: Expected status 200, got {response.status_code}")
+            print(f"Response: {response.text}")
+            return False
+            
+    except requests.exceptions.RequestException as e:
+        print(f"❌ FAILED: Request error - {str(e)}")
+        return False
+    except Exception as e:
+        print(f"❌ FAILED: Unexpected error - {str(e)}")
+        return False
+
+
+def test_verify_token():
+    """Test the token verification endpoint (no auth required)"""
+    print("\n=== Testing Token Verification API ===")
+    
+    try:
+        # Test with invalid token
+        response = requests.get(
+            f"{BASE_URL}/auth/verify-token?token=invalid-token",
+            timeout=10
+        )
+        
+        print(f"Status Code: {response.status_code}")
+        
+        if response.status_code == 200:
+            data = response.json()
+            print(f"Response: {json.dumps(data, indent=2)}")
+            
+            # Should return valid: false for invalid token
+            if 'data' in data and isinstance(data['data'], dict):
+                valid = data['data'].get('valid')
+                if valid is False:
+                    print("✅ PASSED: Token verification API correctly identifies invalid token")
+                    return True
+                else:
+                    print(f"❌ FAILED: Expected valid=false, got valid={valid}")
+                    return False
+            else:
+                print("❌ FAILED: Missing or invalid 'data' field in response")
+                return False
+        else:
+            print(f"❌ FAILED: Expected status 200, got {response.status_code}")
+            print(f"Response: {response.text}")
+            return False
+            
+    except requests.exceptions.RequestException as e:
+        print(f"❌ FAILED: Request error - {str(e)}")
+        return False
+    except Exception as e:
+        print(f"❌ FAILED: Unexpected error - {str(e)}")
+        return False
+
+
+def test_protected_endpoints_without_auth():
+    """Test that protected endpoints return 401 without authentication"""
+    print("\n=== Testing Protected Endpoints (No Auth) ===")
+    
+    protected_endpoints = [
+        ("GET", "/users/me", "User Profile"),
+        ("GET", "/appointments", "Appointments List"),
+        ("GET", "/prescriptions", "Prescriptions List"),
+        ("GET", "/clinical-notes", "Clinical Notes List"),
+        ("GET", "/users/clinicians", "Clinicians List")
+    ]
+    
+    all_passed = True
+    
+    for method, endpoint, name in protected_endpoints:
+        try:
+            print(f"\nTesting {name}: {method} {endpoint}")
+            
+            if method == "GET":
+                response = requests.get(f"{BASE_URL}{endpoint}", timeout=10)
+            else:
+                response = requests.request(method, f"{BASE_URL}{endpoint}", timeout=10)
+            
+            print(f"Status Code: {response.status_code}")
+            
+            if response.status_code == 401:
+                print(f"✅ PASSED: {name} correctly returns 401 without auth")
+            else:
+                print(f"❌ FAILED: {name} expected 401, got {response.status_code}")
+                print(f"Response: {response.text[:200]}...")
+                all_passed = False
+                
+        except requests.exceptions.RequestException as e:
+            print(f"❌ FAILED: {name} request error - {str(e)}")
+            all_passed = False
+        except Exception as e:
+            print(f"❌ FAILED: {name} unexpected error - {str(e)}")
+            all_passed = False
+    
+    if all_passed:
+        print("\n✅ PASSED: All protected endpoints correctly require authentication")
+    else:
+        print("\n❌ FAILED: Some protected endpoints do not require authentication")
+    
+    return all_passed
+
+
+def test_api_documentation():
+    """Test that API documentation is accessible"""
+    print("\n=== Testing API Documentation ===")
+    
+    try:
+        response = requests.get(f"{BASE_URL}/docs", timeout=10)
+        print(f"Status Code: {response.status_code}")
+        
+        if response.status_code == 200:
+            content_type = response.headers.get('content-type', '')
+            content = response.text
+            
+            # Check if it's HTML content (Swagger UI)
+            if 'text/html' in content_type or '<html' in content.lower():
+                print("✅ PASSED: API documentation is accessible")
+                print(f"Content-Type: {content_type}")
+                return True
+            else:
+                print(f"❌ FAILED: Unexpected content type: {content_type}")
+                return False
+        else:
+            print(f"❌ FAILED: Expected status 200, got {response.status_code}")
+            print(f"Response: {response.text[:200]}...")
+            return False
+            
+    except requests.exceptions.RequestException as e:
+        print(f"❌ FAILED: Request error - {str(e)}")
+        return False
+    except Exception as e:
+        print(f"❌ FAILED: Unexpected error - {str(e)}")
+        return False
     """Test the prescription PDF generation endpoint"""
     print("\n=== Testing Prescription PDF Generation API ===")
     
