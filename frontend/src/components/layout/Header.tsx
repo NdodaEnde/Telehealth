@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Menu, X, Phone, LogOut, User } from "lucide-react";
+import { Menu, X, Phone, LogOut, User, Home } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import type { Database } from "@/integrations/supabase/types";
@@ -37,20 +37,20 @@ const Header = () => {
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-md border-b border-border">
       <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-16 lg:h-20">
+        <div className="flex items-center justify-between h-14 sm:h-16 lg:h-20">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center shadow-md">
-              <span className="text-primary-foreground font-bold text-lg">H</span>
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl gradient-primary flex items-center justify-center shadow-md">
+              <span className="text-primary-foreground font-bold text-sm sm:text-lg">H</span>
             </div>
             <div className="flex flex-col">
-              <span className="font-bold text-lg text-foreground leading-tight">HCF</span>
-              <span className="text-xs text-muted-foreground leading-tight">Telehealth</span>
+              <span className="font-bold text-base sm:text-lg text-foreground leading-tight">HCF</span>
+              <span className="text-[10px] sm:text-xs text-muted-foreground leading-tight">Telehealth</span>
             </div>
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden lg:flex items-center gap-8">
+          <nav className="hidden lg:flex items-center gap-6 xl:gap-8">
             {navLinks.map((link) => (
               <a
                 key={link.label}
@@ -66,7 +66,7 @@ const Header = () => {
           <div className="hidden lg:flex items-center gap-3">
             <Button variant="ghost" size="sm" className="gap-2">
               <Phone className="w-4 h-4" />
-              0800 HCF CARE
+              <span className="hidden xl:inline">0800 HCF CARE</span>
             </Button>
             
             {user ? (
@@ -101,15 +101,16 @@ const Header = () => {
           <button
             onClick={() => setIsMenuOpen(!isMenuOpen)}
             className="lg:hidden p-2 hover:bg-accent rounded-lg transition-colors"
+            aria-label="Toggle menu"
           >
-            {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            {isMenuOpen ? <X className="w-5 h-5 sm:w-6 sm:h-6" /> : <Menu className="w-5 h-5 sm:w-6 sm:h-6" />}
           </button>
         </div>
 
         {/* Mobile Menu */}
         {isMenuOpen && (
-          <div className="lg:hidden py-4 border-t border-border animate-fade-in">
-            <nav className="flex flex-col gap-2">
+          <div className="lg:hidden py-4 border-t border-border animate-fade-in max-h-[calc(100vh-4rem)] overflow-y-auto">
+            <nav className="flex flex-col gap-1">
               {navLinks.map((link) => (
                 <a
                   key={link.label}
@@ -120,16 +121,27 @@ const Header = () => {
                   {link.label}
                 </a>
               ))}
-              <div className="flex flex-col gap-2 mt-4 px-4">
+              
+              {/* Mobile Phone CTA */}
+              <a
+                href="tel:0800HCFCARE"
+                className="px-4 py-3 text-sm font-medium text-muted-foreground hover:text-primary hover:bg-accent rounded-lg transition-colors flex items-center gap-2"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                <Phone className="w-4 h-4" />
+                0800 HCF CARE
+              </a>
+
+              <div className="flex flex-col gap-2 mt-4 px-4 pt-4 border-t border-border">
                 {user ? (
                   <>
                     <Link to={role ? getDashboardRoute(role) : "/patient"} onClick={() => setIsMenuOpen(false)}>
-                      <Button variant="outline" className="w-full gap-2">
-                        <User className="w-4 h-4" />
+                      <Button variant="outline" className="w-full gap-2 justify-start">
+                        <Home className="w-4 h-4" />
                         My Dashboard
                       </Button>
                     </Link>
-                    <Button variant="ghost" className="w-full" onClick={handleSignOut}>
+                    <Button variant="ghost" className="w-full justify-start" onClick={handleSignOut}>
                       <LogOut className="w-4 h-4 mr-2" />
                       Sign Out
                     </Button>
