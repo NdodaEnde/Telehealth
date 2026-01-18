@@ -13,6 +13,7 @@ import ClinicianDashboard from "./pages/ClinicianDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import Consultation from "./pages/Consultation";
 import DemoConsultation from "./pages/DemoConsultation";
+import OnboardingPage from "./pages/Onboarding";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
