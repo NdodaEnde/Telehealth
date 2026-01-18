@@ -13,7 +13,9 @@ import {
   RefreshCw,
   CalendarDays,
   Pill,
-  PlayCircle
+  PlayCircle,
+  Menu,
+  X
 } from "lucide-react";
 import { ClinicianStats } from "@/components/clinician/ClinicianStats";
 import { PatientQueueList } from "@/components/clinician/PatientQueueList";
@@ -30,6 +32,7 @@ const ClinicianDashboard = () => {
   const [availabilityOpen, setAvailabilityOpen] = useState(false);
   const [appointmentsOpen, setAppointmentsOpen] = useState(false);
   const [showPrescriptions, setShowPrescriptions] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleStartConsultation = () => {
     const inProgress = queue.find(apt => apt.status === "in_progress");
@@ -57,15 +60,17 @@ const ClinicianDashboard = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b border-border bg-card">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+      <header className="border-b border-border bg-card sticky top-0 z-40">
+        <div className="container mx-auto px-4 py-3 sm:py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-lg">H</span>
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl gradient-primary flex items-center justify-center">
+              <span className="text-primary-foreground font-bold text-sm sm:text-lg">H</span>
             </div>
-            <span className="font-bold text-lg">HCF Telehealth</span>
+            <span className="font-bold text-base sm:text-lg hidden xs:block">HCF Telehealth</span>
           </div>
-          <div className="flex items-center gap-4">
+          
+          {/* Desktop Nav */}
+          <div className="hidden md:flex items-center gap-4">
             <Button variant="ghost" size="sm" onClick={refetch} disabled={loading}>
               <RefreshCw className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`} />
               Refresh
@@ -79,36 +84,65 @@ const ClinicianDashboard = () => {
               Sign Out
             </Button>
           </div>
+
+          {/* Mobile Actions */}
+          <div className="flex md:hidden items-center gap-2">
+            <Button variant="ghost" size="icon" onClick={refetch} disabled={loading}>
+              <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+            </Button>
+            <Badge className={`${roleColor} text-white text-xs`}>{roleLabel}</Badge>
+            <button 
+              className="p-2 hover:bg-accent rounded-lg"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            >
+              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
+          </div>
         </div>
+
+        {/* Mobile Menu */}
+        {mobileMenuOpen && (
+          <div className="md:hidden border-t border-border py-3 px-4 animate-fade-in">
+            <div className="flex flex-col gap-2">
+              <span className="text-sm text-muted-foreground py-2">
+                Dr. {profile?.first_name} {profile?.last_name}
+              </span>
+              <Button variant="ghost" size="sm" onClick={signOut} className="justify-start">
+                <LogOut className="w-4 h-4 mr-2" />
+                Sign Out
+              </Button>
+            </div>
+          </div>
+        )}
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground">Clinician Dashboard</h1>
-          <p className="text-muted-foreground mt-1">
+      <main className="container mx-auto px-4 py-4 sm:py-8">
+        <div className="mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Clinician Dashboard</h1>
+          <p className="text-sm sm:text-base text-muted-foreground mt-1">
             Manage your patients and consultations
           </p>
         </div>
 
         {/* Stats Overview */}
-        <div className="mb-8">
+        <div className="mb-6 sm:mb-8">
           <ClinicianStats stats={stats} pendingNotes={0} />
         </div>
 
-        {/* Quick Actions */}
-        <div className="grid md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+        {/* Quick Actions - Mobile Optimized */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 mb-6 sm:mb-8">
           <Card 
             className="hover:shadow-lg transition-shadow cursor-pointer border-primary/20 hover:border-primary"
             onClick={() => setAppointmentsOpen(true)}
           >
-            <CardHeader className="flex flex-row items-center gap-4 pb-2">
-              <div className="p-3 rounded-xl bg-primary/10">
-                <CalendarDays className="w-6 h-6 text-primary" />
+            <CardHeader className="p-3 sm:p-4 flex flex-col items-start gap-2 pb-2">
+              <div className="p-2 sm:p-3 rounded-xl bg-primary/10">
+                <CalendarDays className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
               </div>
               <div>
-                <CardTitle className="text-lg">Appointments</CardTitle>
-                <CardDescription>View & manage bookings</CardDescription>
+                <CardTitle className="text-sm sm:text-lg">Appointments</CardTitle>
+                <CardDescription className="text-xs hidden sm:block">View & manage</CardDescription>
               </div>
             </CardHeader>
           </Card>
@@ -117,13 +151,13 @@ const ClinicianDashboard = () => {
             className="hover:shadow-lg transition-shadow cursor-pointer border-primary/20 hover:border-primary"
             onClick={handleStartConsultation}
           >
-            <CardHeader className="flex flex-row items-center gap-4 pb-2">
-              <div className="p-3 rounded-xl bg-primary/10">
-                <Video className="w-6 h-6 text-primary" />
+            <CardHeader className="p-3 sm:p-4 flex flex-col items-start gap-2 pb-2">
+              <div className="p-2 sm:p-3 rounded-xl bg-primary/10">
+                <Video className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
               </div>
               <div>
-                <CardTitle className="text-lg">Start Consultation</CardTitle>
-                <CardDescription>Begin a video call</CardDescription>
+                <CardTitle className="text-sm sm:text-lg">Start Call</CardTitle>
+                <CardDescription className="text-xs hidden sm:block">Begin video call</CardDescription>
               </div>
             </CardHeader>
           </Card>
@@ -132,13 +166,13 @@ const ClinicianDashboard = () => {
             className="hover:shadow-lg transition-shadow cursor-pointer border-primary/20 hover:border-primary"
             onClick={handleClinicalNotes}
           >
-            <CardHeader className="flex flex-row items-center gap-4 pb-2">
-              <div className="p-3 rounded-xl bg-success/10">
-                <FileText className="w-6 h-6 text-success" />
+            <CardHeader className="p-3 sm:p-4 flex flex-col items-start gap-2 pb-2">
+              <div className="p-2 sm:p-3 rounded-xl bg-success/10">
+                <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-success" />
               </div>
               <div>
-                <CardTitle className="text-lg">Clinical Notes</CardTitle>
-                <CardDescription>Complete pending documentation</CardDescription>
+                <CardTitle className="text-sm sm:text-lg">Notes</CardTitle>
+                <CardDescription className="text-xs hidden sm:block">Clinical notes</CardDescription>
               </div>
             </CardHeader>
           </Card>
@@ -147,13 +181,13 @@ const ClinicianDashboard = () => {
             className="hover:shadow-lg transition-shadow cursor-pointer border-warning/20 hover:border-warning"
             onClick={() => navigate("/demo-consultation")}
           >
-            <CardHeader className="flex flex-row items-center gap-4 pb-2">
-              <div className="p-3 rounded-xl bg-warning/10">
-                <PlayCircle className="w-6 h-6 text-warning" />
+            <CardHeader className="p-3 sm:p-4 flex flex-col items-start gap-2 pb-2">
+              <div className="p-2 sm:p-3 rounded-xl bg-warning/10">
+                <PlayCircle className="w-5 h-5 sm:w-6 sm:h-6 text-warning" />
               </div>
               <div>
-                <CardTitle className="text-lg">Demo Mode</CardTitle>
-                <CardDescription>Test video consultation</CardDescription>
+                <CardTitle className="text-sm sm:text-lg">Demo</CardTitle>
+                <CardDescription className="text-xs hidden sm:block">Test video</CardDescription>
               </div>
             </CardHeader>
           </Card>
@@ -162,13 +196,13 @@ const ClinicianDashboard = () => {
             className={`hover:shadow-lg transition-shadow cursor-pointer border-primary/20 hover:border-primary ${showPrescriptions ? 'ring-2 ring-primary' : ''}`}
             onClick={() => setShowPrescriptions(!showPrescriptions)}
           >
-            <CardHeader className="flex flex-row items-center gap-4 pb-2">
-              <div className="p-3 rounded-xl bg-warning/10">
-                <Pill className="w-6 h-6 text-warning" />
+            <CardHeader className="p-3 sm:p-4 flex flex-col items-start gap-2 pb-2">
+              <div className="p-2 sm:p-3 rounded-xl bg-warning/10">
+                <Pill className="w-5 h-5 sm:w-6 sm:h-6 text-warning" />
               </div>
               <div>
-                <CardTitle className="text-lg">E-Prescriptions</CardTitle>
-                <CardDescription>View & create prescriptions</CardDescription>
+                <CardTitle className="text-sm sm:text-lg">Rx</CardTitle>
+                <CardDescription className="text-xs hidden sm:block">Prescriptions</CardDescription>
               </div>
             </CardHeader>
           </Card>
@@ -177,13 +211,13 @@ const ClinicianDashboard = () => {
             className="hover:shadow-lg transition-shadow cursor-pointer border-primary/20 hover:border-primary"
             onClick={() => setAvailabilityOpen(true)}
           >
-            <CardHeader className="flex flex-row items-center gap-4 pb-2">
-              <div className="p-3 rounded-xl bg-secondary/20">
-                <Calendar className="w-6 h-6 text-secondary-foreground" />
+            <CardHeader className="p-3 sm:p-4 flex flex-col items-start gap-2 pb-2">
+              <div className="p-2 sm:p-3 rounded-xl bg-secondary/20">
+                <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-secondary-foreground" />
               </div>
               <div>
-                <CardTitle className="text-lg">Availability</CardTitle>
-                <CardDescription>Manage your schedule</CardDescription>
+                <CardTitle className="text-sm sm:text-lg">Availability</CardTitle>
+                <CardDescription className="text-xs hidden sm:block">Set schedule</CardDescription>
               </div>
             </CardHeader>
           </Card>
@@ -191,20 +225,20 @@ const ClinicianDashboard = () => {
 
         {/* Prescriptions Section (toggleable) */}
         {showPrescriptions && (
-          <div className="mb-8">
+          <div className="mb-6 sm:mb-8 animate-fade-in">
             <PrescriptionList showPatient={true} />
           </div>
         )}
 
-        {/* Main Content Grid */}
-        <div className="grid lg:grid-cols-3 gap-8">
-          {/* Patient Queue - Takes 2 columns */}
-          <div className="lg:col-span-2">
+        {/* Main Content Grid - Stack on mobile */}
+        <div className="grid lg:grid-cols-3 gap-4 sm:gap-8">
+          {/* Patient Queue - Full width on mobile */}
+          <div className="lg:col-span-2 order-1">
             <PatientQueueList />
           </div>
 
-          {/* Today's Schedule - Takes 1 column */}
-          <div>
+          {/* Today's Schedule - Full width on mobile */}
+          <div className="order-2">
             <UpcomingSchedule todayAppointments={queue} />
           </div>
         </div>
