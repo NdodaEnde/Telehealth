@@ -54,10 +54,10 @@ export const UpcomingSchedule = ({ todayAppointments }: UpcomingScheduleProps) =
                 <div className="flex items-center gap-3">
                   <div className="flex flex-col items-center">
                     <span className="text-sm font-medium">
-                      {format(new Date(apt.scheduled_at), "h:mm")}
+                      {formatSAST(new Date(apt.scheduled_at), "h:mm")}
                     </span>
                     <span className="text-xs text-muted-foreground">
-                      {format(new Date(apt.scheduled_at), "a")}
+                      {formatSAST(new Date(apt.scheduled_at), "a")}
                     </span>
                   </div>
                   <div className="w-px h-8 bg-border" />
