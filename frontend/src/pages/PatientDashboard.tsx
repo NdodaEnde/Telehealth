@@ -27,10 +27,17 @@ const PatientDashboard = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Auto-redirect to onboarding if not complete
+  // But don't redirect if we just came from onboarding (give time for state to update)
   useEffect(() => {
-    if (!isLoading && !onboardingComplete) {
-      navigate("/onboarding");
-    }
+    // Skip redirect check for 2 seconds after component mounts to allow state to settle
+    const timer = setTimeout(() => {
+      if (!isLoading && !onboardingComplete) {
+        console.log("[PatientDashboard] Onboarding not complete, redirecting...");
+        navigate("/onboarding");
+      }
+    }, 1000);
+    
+    return () => clearTimeout(timer);
   }, [isLoading, onboardingComplete, navigate]);
 
   useEffect(() => {
