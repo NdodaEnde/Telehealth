@@ -13,12 +13,14 @@ import {
   Play,
   CheckCircle,
   FileText,
-  Pill
+  Pill,
+  History
 } from "lucide-react";
 import { format } from "date-fns";
 import { QueuePatient } from "@/hooks/usePatientQueue";
 import { ClinicalNotesDialog } from "@/components/clinical/ClinicalNotesDialog";
 import { PrescriptionDialog } from "@/components/prescriptions/PrescriptionDialog";
+import { PatientHistoryDialog } from "@/components/clinical/PatientHistoryDialog";
 
 interface PatientQueueCardProps {
   patient: QueuePatient;
@@ -56,6 +58,7 @@ export const PatientQueueCard = ({
   const navigate = useNavigate();
   const [notesOpen, setNotesOpen] = useState(false);
   const [prescriptionOpen, setPrescriptionOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   
   const ConsultationIcon = CONSULTATION_ICONS[patient.consultation_type];
   const statusConfig = STATUS_CONFIG[patient.status];
@@ -132,14 +135,24 @@ export const PatientQueueCard = ({
             {/* Actions */}
             <div className="flex gap-2">
               {isWaiting && (
-                <Button 
-                  size="sm" 
-                  onClick={() => onStartConsultation(patient)}
-                  disabled={isUpdating}
-                >
-                  <Play className="w-4 h-4 mr-1" />
-                  Start Consultation
-                </Button>
+                <>
+                  <Button 
+                    size="sm" 
+                    onClick={() => onStartConsultation(patient)}
+                    disabled={isUpdating}
+                  >
+                    <Play className="w-4 h-4 mr-1" />
+                    Start Consultation
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => setHistoryOpen(true)}
+                  >
+                    <History className="w-4 h-4 mr-1" />
+                    History
+                  </Button>
+                </>
               )}
               {isInProgress && (
                 <>
@@ -166,6 +179,14 @@ export const PatientQueueCard = ({
                   <Button 
                     size="sm" 
                     variant="outline"
+                    onClick={() => setHistoryOpen(true)}
+                  >
+                    <History className="w-4 h-4 mr-1" />
+                    History
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="outline"
                     onClick={() => onCompleteConsultation(patient)}
                     disabled={isUpdating}
                   >
@@ -183,6 +204,10 @@ export const PatientQueueCard = ({
                   <Button size="sm" variant="outline" onClick={() => setPrescriptionOpen(true)}>
                     <Pill className="w-4 h-4 mr-1" />
                     Prescribe
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => setHistoryOpen(true)}>
+                    <History className="w-4 h-4 mr-1" />
+                    History
                   </Button>
                   <Badge variant="secondary" className="ml-2">
                     <CheckCircle className="w-3 h-3 mr-1" />
@@ -209,6 +234,13 @@ export const PatientQueueCard = ({
         patientId={patient.patient_id}
         patientName={patient.patient_name}
         appointmentId={patient.id}
+      />
+
+      <PatientHistoryDialog
+        open={historyOpen}
+        onOpenChange={setHistoryOpen}
+        patientId={patient.patient_id}
+        patientName={patient.patient_name}
       />
     </Card>
   );
