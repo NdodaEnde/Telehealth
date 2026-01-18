@@ -32,7 +32,7 @@ const PatientDashboard = () => {
           .from("appointments")
           .select("id, scheduled_at, consultation_type, status, clinician_id")
           .eq("patient_id", user.id)
-          .in("status", ["pending", "confirmed"])
+          .in("status", ["pending", "confirmed", "in_progress"])
           .gte("scheduled_at", new Date().toISOString())
           .order("scheduled_at", { ascending: true })
           .limit(5);
@@ -206,9 +206,20 @@ const PatientDashboard = () => {
                         {format(new Date(apt.scheduled_at), "h:mm a")}
                       </p>
                     </div>
-                    <Badge variant={apt.status === "confirmed" ? "default" : "secondary"}>
-                      {apt.status}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      {apt.status === "in_progress" && (
+                        <Button 
+                          size="sm" 
+                          onClick={() => navigate(`/consultation?appointment=${apt.id}`)}
+                        >
+                          <Video className="w-4 h-4 mr-1" />
+                          Join
+                        </Button>
+                      )}
+                      <Badge variant={apt.status === "confirmed" ? "default" : apt.status === "in_progress" ? "default" : "secondary"}>
+                        {apt.status === "in_progress" ? "In Progress" : apt.status}
+                      </Badge>
+                    </div>
                   </div>
                 ))}
               </div>
