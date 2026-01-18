@@ -1,68 +1,57 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Query
+from fastapi import FastAPI, APIRouter, HTTPException, Query, Depends
 from fastapi.responses import JSONResponse
-from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
-import os
-import logging
-from pathlib import Path
+from datetime import datetime
 from pydantic import BaseModel, Field
 from typing import List, Optional
 import uuid
-from datetime import datetime
+import logging
 
-from models import (
-    PrescriptionPDFRequest,
-    PrescriptionPDFResponse,
-    AnalyticsDashboard,
-    AnalyticsOverview,
-    DateRangeFilter
-)
-from pdf_generator import generate_prescription_pdf
-from analytics_service import (
-    get_analytics_overview,
-    get_appointment_trends,
-    get_consultation_type_stats,
-    get_status_distribution,
-    get_clinician_performance,
-    get_patient_growth,
-    get_full_analytics_dashboard
-)
+# Configuration
+from config import MONGO_URL, DB_NAME, CORS_ORIGINS
 
-ROOT_DIR = Path(__file__).parent
-load_dotenv(ROOT_DIR / '.env')
+# Route imports
+from routes.appointments import router as appointments_router
+from routes.prescriptions import router as prescriptions_router
+from routes.clinical_notes import router as clinical_notes_router
+from routes.users import router as users_router
+from routes.auth import router as auth_router
+
+# Analytics (existing)
+from analytics_service import get_full_analytics_dashboard, get_analytics_overview
+
+# Auth
+from auth import get_current_user, require_admin, AuthenticatedUser
 
 # MongoDB connection
-mongo_url = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
-client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ.get('DB_NAME', 'hcf_telehealth')]
+client = AsyncIOMotorClient(MONGO_URL)
+db = client[DB_NAME]
 
-# Create the main app without a prefix
+# Create the main app
 app = FastAPI(
     title="HCF Telehealth API",
-    description="Backend API for HCF Telehealth Platform",
-    version="1.0.0"
+    description="Backend API for HCF Telehealth Platform - Full REST API",
+    version="2.0.0",
+    docs_url="/api/docs",
+    redoc_url="/api/redoc",
+    openapi_url="/api/openapi.json"
 )
 
-# Create a router with the /api prefix
+# Create main API router with /api prefix
 api_router = APIRouter(prefix="/api")
-
-
-# Define Models
-class StatusCheck(BaseModel):
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    client_name: str
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
-
-class StatusCheckCreate(BaseModel):
-    client_name: str
 
 
 # ============ Health Check Routes ============
 
 @api_router.get("/")
 async def root():
-    return {"message": "HCF Telehealth API", "version": "1.0.0", "status": "healthy"}
+    return {
+        "message": "HCF Telehealth API",
+        "version": "2.0.0",
+        "status": "healthy",
+        "timestamp": datetime.utcnow().isoformat()
+    }
 
 @api_router.get("/health")
 async def health_check():
@@ -75,124 +64,13 @@ async def health_check():
         }
     }
 
-@api_router.post("/status", response_model=StatusCheck)
-async def create_status_check(input: StatusCheckCreate):
-    status_dict = input.dict()
-    status_obj = StatusCheck(**status_dict)
-    _ = await db.status_checks.insert_one(status_obj.dict())
-    return status_obj
-
-@api_router.get("/status", response_model=List[StatusCheck])
-async def get_status_checks():
-    status_checks = await db.status_checks.find().to_list(1000)
-    return [StatusCheck(**status_check) for status_check in status_checks]
-
-
-# ============ Prescription PDF Routes ============
-
-@api_router.post("/prescriptions/generate-pdf", response_model=PrescriptionPDFResponse)
-async def generate_prescription_pdf_endpoint(data: PrescriptionPDFRequest):
-    """Generate a PDF for a prescription"""
-    try:
-        pdf_base64 = generate_prescription_pdf(data)
-        
-        # Log PDF generation
-        await db.pdf_generation_logs.insert_one({
-            "id": str(uuid.uuid4()),
-            "prescription_id": data.prescription_id,
-            "patient_name": data.patient_name,
-            "clinician_name": data.clinician_name,
-            "generated_at": datetime.utcnow().isoformat(),
-            "success": True
-        })
-        
-        return PrescriptionPDFResponse(success=True, pdf_base64=pdf_base64)
-    except Exception as e:
-        logging.error(f"PDF generation failed: {str(e)}")
-        
-        # Log failure
-        await db.pdf_generation_logs.insert_one({
-            "id": str(uuid.uuid4()),
-            "prescription_id": data.prescription_id,
-            "generated_at": datetime.utcnow().isoformat(),
-            "success": False,
-            "error": str(e)
-        })
-        
-        return PrescriptionPDFResponse(success=False, error=str(e))
-
 
 # ============ Analytics Routes ============
 
-@api_router.get("/analytics/overview", response_model=AnalyticsOverview)
-async def get_overview_analytics(
-    start_date: Optional[str] = Query(None, description="Start date for filtering"),
-    end_date: Optional[str] = Query(None, description="End date for filtering")
-):
-    """Get overview analytics metrics"""
-    try:
-        return await get_analytics_overview(start_date, end_date)
-    except Exception as e:
-        logging.error(f"Analytics overview failed: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@api_router.get("/analytics/appointment-trends")
-async def get_appointment_trends_endpoint(
-    days: int = Query(30, ge=7, le=365, description="Number of days to analyze")
-):
-    """Get appointment trends over time"""
-    try:
-        trends = await get_appointment_trends(days)
-        return {"trends": trends}
-    except Exception as e:
-        logging.error(f"Appointment trends failed: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@api_router.get("/analytics/consultation-types")
-async def get_consultation_types_endpoint():
-    """Get breakdown by consultation type"""
-    try:
-        stats = await get_consultation_type_stats()
-        return stats
-    except Exception as e:
-        logging.error(f"Consultation types failed: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@api_router.get("/analytics/status-distribution")
-async def get_status_distribution_endpoint():
-    """Get appointment status distribution"""
-    try:
-        distribution = await get_status_distribution()
-        return {"distribution": distribution}
-    except Exception as e:
-        logging.error(f"Status distribution failed: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@api_router.get("/analytics/clinician-performance")
-async def get_clinician_performance_endpoint():
-    """Get clinician performance metrics"""
-    try:
-        performance = await get_clinician_performance()
-        return {"clinicians": performance}
-    except Exception as e:
-        logging.error(f"Clinician performance failed: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@api_router.get("/analytics/patient-growth")
-async def get_patient_growth_endpoint(
-    days: int = Query(30, ge=7, le=365, description="Number of days to analyze")
-):
-    """Get patient growth over time"""
-    try:
-        growth = await get_patient_growth(days)
-        return {"growth": growth}
-    except Exception as e:
-        logging.error(f"Patient growth failed: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@api_router.get("/analytics/dashboard", response_model=AnalyticsDashboard)
+@api_router.get("/analytics/dashboard")
 async def get_analytics_dashboard(
-    days: int = Query(30, ge=7, le=365, description="Number of days to analyze")
+    days: int = Query(30, ge=7, le=365),
+    user: AuthenticatedUser = Depends(get_current_user)
 ):
     """Get complete analytics dashboard data"""
     try:
@@ -201,8 +79,21 @@ async def get_analytics_dashboard(
         logging.error(f"Analytics dashboard failed: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@api_router.get("/analytics/overview")
+async def get_overview_analytics(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    user: AuthenticatedUser = Depends(get_current_user)
+):
+    """Get overview analytics metrics"""
+    try:
+        return await get_analytics_overview(start_date, end_date)
+    except Exception as e:
+        logging.error(f"Analytics overview failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
-# ============ Audit Log Routes ============
+
+# ============ Audit Log Routes (MongoDB) ============
 
 class AuditLogEntry(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -223,7 +114,10 @@ class AuditLogCreate(BaseModel):
     ip_address: Optional[str] = None
 
 @api_router.post("/audit-logs", response_model=AuditLogEntry)
-async def create_audit_log(data: AuditLogCreate):
+async def create_audit_log(
+    data: AuditLogCreate,
+    user: AuthenticatedUser = Depends(get_current_user)
+):
     """Create an audit log entry"""
     log_entry = AuditLogEntry(**data.dict())
     await db.audit_logs.insert_one(log_entry.dict())
@@ -233,9 +127,10 @@ async def create_audit_log(data: AuditLogCreate):
 async def get_audit_logs(
     user_id: Optional[str] = None,
     resource_type: Optional[str] = None,
-    limit: int = Query(100, ge=1, le=1000)
+    limit: int = Query(100, ge=1, le=1000),
+    admin: AuthenticatedUser = Depends(require_admin)
 ):
-    """Get audit logs with optional filtering"""
+    """Get audit logs with optional filtering (admin only)"""
     query = {}
     if user_id:
         query["user_id"] = user_id
@@ -246,24 +141,70 @@ async def get_audit_logs(
     return [AuditLogEntry(**log) for log in logs]
 
 
-# Include the router in the main app
+# ============ Status Check Routes (for testing) ============
+
+class StatusCheck(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    client_name: str
+    timestamp: datetime = Field(default_factory=datetime.utcnow)
+
+class StatusCheckCreate(BaseModel):
+    client_name: str
+
+@api_router.post("/status", response_model=StatusCheck)
+async def create_status_check(input: StatusCheckCreate):
+    status_dict = input.dict()
+    status_obj = StatusCheck(**status_dict)
+    _ = await db.status_checks.insert_one(status_obj.dict())
+    return status_obj
+
+@api_router.get("/status", response_model=List[StatusCheck])
+async def get_status_checks():
+    status_checks = await db.status_checks.find().to_list(1000)
+    return [StatusCheck(**status_check) for status_check in status_checks]
+
+
+# ============ Include All Routers ============
+
+# Main API router
 app.include_router(api_router)
+
+# Feature routers (already have /api prefix handled)
+app.include_router(appointments_router, prefix="/api")
+app.include_router(prescriptions_router, prefix="/api")
+app.include_router(clinical_notes_router, prefix="/api")
+app.include_router(users_router, prefix="/api")
+app.include_router(auth_router, prefix="/api")
+
+
+# ============ Middleware ============
 
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
+    allow_origins=CORS_ORIGINS,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Configure logging
+
+# ============ Logging ============
+
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
 
+
+# ============ Startup/Shutdown ============
+
+@app.on_event("startup")
+async def startup():
+    logger.info("HCF Telehealth API starting up...")
+    logger.info(f"API docs available at /api/docs")
+
 @app.on_event("shutdown")
 async def shutdown_db_client():
+    logger.info("HCF Telehealth API shutting down...")
     client.close()
