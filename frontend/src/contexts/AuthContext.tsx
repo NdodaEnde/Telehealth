@@ -1,9 +1,11 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import React, { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
+
+const BACKEND_URL = import.meta.env.REACT_APP_BACKEND_URL || '';
 
 interface Profile {
   id: string;
@@ -11,17 +13,30 @@ interface Profile {
   last_name: string;
   phone: string | null;
   avatar_url: string | null;
+  id_number?: string | null;
+}
+
+interface PatientProfile {
+  id: string;
+  user_id: string;
+  onboarding_completed_at: string | null;
+  has_medical_aid: boolean;
+  medical_aid_scheme: string | null;
+  // Add other fields as needed
 }
 
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   profile: Profile | null;
+  patientProfile: PatientProfile | null;
   role: AppRole | null;
   isLoading: boolean;
+  onboardingComplete: boolean;
   signUp: (email: string, password: string, metadata: SignUpMetadata) => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
 }
 
 interface SignUpMetadata {
@@ -29,6 +44,7 @@ interface SignUpMetadata {
   last_name: string;
   role?: AppRole;
   hpcsa_number?: string;
+  id_number?: string;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -49,15 +65,17 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [patientProfile, setPatientProfile] = useState<PatientProfile | null>(null);
   const [role, setRole] = useState<AppRole | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [onboardingComplete, setOnboardingComplete] = useState(false);
 
   const fetchUserData = async (userId: string) => {
     try {
       // Fetch profile
       const { data: profileData } = await supabase
         .from("profiles")
-        .select("id, first_name, last_name, phone, avatar_url")
+        .select("id, first_name, last_name, phone, avatar_url, id_number")
         .eq("id", userId)
         .single();
 
@@ -74,9 +92,47 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
       if (roleData) {
         setRole(roleData.role);
+        
+        // Only fetch patient profile if user is a patient
+        if (roleData.role === "patient") {
+          await fetchPatientProfile(userId);
+        } else {
+          // Non-patients don't need onboarding
+          setOnboardingComplete(true);
+        }
       }
     } catch (error) {
       console.error("Error fetching user data:", error);
+    }
+  };
+
+  const fetchPatientProfile = async (userId: string) => {
+    try {
+      // Check if patient has completed onboarding
+      const { data: patientData } = await supabase
+        .from("patient_profiles")
+        .select("id, user_id, onboarding_completed_at, has_medical_aid, medical_aid_scheme")
+        .eq("user_id", userId)
+        .single();
+
+      if (patientData) {
+        setPatientProfile(patientData);
+        setOnboardingComplete(!!patientData.onboarding_completed_at);
+      } else {
+        // No patient profile yet - not onboarded
+        setPatientProfile(null);
+        setOnboardingComplete(false);
+      }
+    } catch (error) {
+      // No patient profile found - this is expected for new patients
+      setPatientProfile(null);
+      setOnboardingComplete(false);
+    }
+  };
+
+  const refreshProfile = async () => {
+    if (user) {
+      await fetchUserData(user.id);
     }
   };
 
@@ -94,12 +150,16 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           }, 0);
         } else {
           setProfile(null);
+          setPatientProfile(null);
           setRole(null);
+          setOnboardingComplete(false);
         }
 
         if (event === "SIGNED_OUT") {
           setProfile(null);
+          setPatientProfile(null);
           setRole(null);
+          setOnboardingComplete(false);
         }
       }
     );
@@ -132,6 +192,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           last_name: metadata.last_name,
           role: metadata.role || "patient",
           hpcsa_number: metadata.hpcsa_number,
+          id_number: metadata.id_number,
         },
       },
     });
@@ -153,7 +214,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     setUser(null);
     setSession(null);
     setProfile(null);
+    setPatientProfile(null);
     setRole(null);
+    setOnboardingComplete(false);
   };
 
   return (
@@ -162,11 +225,14 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         user,
         session,
         profile,
+        patientProfile,
         role,
         isLoading,
+        onboardingComplete,
         signUp,
         signIn,
         signOut,
+        refreshProfile,
       }}
     >
       {children}
