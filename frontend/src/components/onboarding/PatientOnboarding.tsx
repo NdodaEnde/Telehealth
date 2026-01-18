@@ -39,7 +39,10 @@ interface OnboardingData {
   // Basic Info
   first_name: string;
   last_name: string;
+  id_type: "sa_id" | "passport";
   id_number: string;
+  passport_number: string;
+  passport_country: string;
   date_of_birth: string;
   gender: string;
   email: string;
