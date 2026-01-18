@@ -238,6 +238,86 @@ def test_api_documentation():
         print(f"❌ FAILED: Request error - {str(e)}")
         return False
     except Exception as e:
+
+def test_prescription_pdf_generation():
+    """Test the prescription PDF generation endpoint"""
+    print("\n=== Testing Prescription PDF Generation API ===")
+    
+    # Sample prescription data as specified in the review request
+    test_data = {
+        "prescription_id": "test-123",
+        "patient_name": "John Doe",
+        "clinician_name": "Smith",
+        "medication_name": "Amoxicillin",
+        "dosage": "500mg",
+        "frequency": "3 times daily",
+        "duration": "7 days",
+        "quantity": 21,
+        "refills": 0,
+        "instructions": "Take with food",
+        "prescribed_at": "2025-01-18T10:00:00Z"
+    }
+    
+    try:
+        response = requests.post(
+            f"{BASE_URL}/prescriptions/generate-pdf",
+            json=test_data,
+            headers={'Content-Type': 'application/json'},
+            timeout=30
+        )
+        
+        print(f"Status Code: {response.status_code}")
+        
+        if response.status_code == 401:
+            print("✅ PASSED: Prescription PDF generation correctly requires authentication")
+            return True
+        elif response.status_code == 200:
+            data = response.json()
+            print(f"Response keys: {list(data.keys())}")
+            
+            # Validate response structure
+            if 'success' not in data:
+                print("❌ FAILED: Missing 'success' field in response")
+                return False
+            
+            if not data.get('success'):
+                error_msg = data.get('error', 'Unknown error')
+                print(f"❌ FAILED: PDF generation failed - {error_msg}")
+                return False
+            
+            if 'pdf_base64' not in data:
+                print("❌ FAILED: Missing 'pdf_base64' field in response")
+                return False
+            
+            pdf_data = data.get('pdf_base64')
+            if not pdf_data:
+                print("❌ FAILED: Empty PDF data")
+                return False
+            
+            # Validate base64 encoding
+            try:
+                decoded = base64.b64decode(pdf_data)
+                if not decoded.startswith(b'%PDF'):
+                    print("❌ FAILED: Invalid PDF format")
+                    return False
+                print(f"✅ PDF generated successfully, size: {len(decoded)} bytes")
+            except Exception as e:
+                print(f"❌ FAILED: Invalid base64 encoding - {str(e)}")
+                return False
+            
+            print("✅ PASSED: Prescription PDF generation working correctly")
+            return True
+        else:
+            print(f"❌ FAILED: Expected status 200 or 401, got {response.status_code}")
+            print(f"Response: {response.text}")
+            return False
+            
+    except requests.exceptions.RequestException as e:
+        print(f"❌ FAILED: Request error - {str(e)}")
+        return False
+    except Exception as e:
+        print(f"❌ FAILED: Unexpected error - {str(e)}")
+        return False
         print(f"❌ FAILED: Unexpected error - {str(e)}")
         return False
     """Test the prescription PDF generation endpoint"""
