@@ -9,6 +9,11 @@ import uuid
 
 # ============ Patient Onboarding Models ============
 
+class IdentificationType(str, Enum):
+    sa_id = "sa_id"
+    passport = "passport"
+
+
 class Gender(str, Enum):
     male = "male"
     female = "female"
