@@ -166,10 +166,8 @@ const OnboardingPage = () => {
 
       await refreshProfile();
       toast.success("Profile confirmed successfully!");
-      // Give React time to update state before navigating
-      setTimeout(() => {
-        navigate("/patient", { replace: true });
-      }, 500);
+      // Navigate with state to indicate onboarding was just completed
+      navigate("/patient", { replace: true, state: { justOnboarded: true } });
     } catch (error) {
       console.error("Confirmation failed:", error);
       toast.error("Failed to confirm profile. Please try again.");
