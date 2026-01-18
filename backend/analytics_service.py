@@ -78,7 +78,7 @@ async def get_analytics_overview(start_date: Optional[str] = None, end_date: Opt
                 appointments_this_month += 1
             if apt.get('status') == 'completed':
                 completed_count += 1
-        except:
+        except Exception:
             pass
     
     completion_rate = (completed_count / total_appointments * 100) if total_appointments > 0 else 0
