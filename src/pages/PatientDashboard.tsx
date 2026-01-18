@@ -3,10 +3,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Clock, FileText, Video, User, LogOut, Plus } from "lucide-react";
+import { Calendar, Clock, FileText, Video, User, LogOut, Plus, Pill } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
+import { PatientPrescriptionHistory } from "@/components/prescriptions/PatientPrescriptionHistory";
 
 interface Appointment {
   id: string;
@@ -22,6 +23,7 @@ const PatientDashboard = () => {
   const { user, profile, signOut } = useAuth();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showPrescriptions, setShowPrescriptions] = useState(false);
 
   useEffect(() => {
     const fetchAppointments = async () => {
@@ -103,7 +105,7 @@ const PatientDashboard = () => {
         </div>
 
         {/* Quick Actions */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
           <Card 
             className="hover:shadow-lg transition-shadow cursor-pointer border-primary/20 hover:border-primary"
             onClick={() => navigate("/book-appointment")}
@@ -143,6 +145,21 @@ const PatientDashboard = () => {
             </CardHeader>
           </Card>
 
+          <Card 
+            className={`hover:shadow-lg transition-shadow cursor-pointer border-primary/20 hover:border-primary ${showPrescriptions ? 'ring-2 ring-primary' : ''}`}
+            onClick={() => setShowPrescriptions(!showPrescriptions)}
+          >
+            <CardHeader className="flex flex-row items-center gap-4 pb-2">
+              <div className="p-3 rounded-xl bg-warning/10">
+                <Pill className="w-6 h-6 text-warning" />
+              </div>
+              <div>
+                <CardTitle className="text-lg">My Prescriptions</CardTitle>
+                <CardDescription>View prescription history</CardDescription>
+              </div>
+            </CardHeader>
+          </Card>
+
           <Card className="hover:shadow-lg transition-shadow cursor-pointer border-primary/20 hover:border-primary">
             <CardHeader className="flex flex-row items-center gap-4 pb-2">
               <div className="p-3 rounded-xl bg-accent/50">
@@ -155,6 +172,13 @@ const PatientDashboard = () => {
             </CardHeader>
           </Card>
         </div>
+
+        {/* Prescriptions Section (toggleable) */}
+        {showPrescriptions && (
+          <div className="mb-8">
+            <PatientPrescriptionHistory />
+          </div>
+        )}
 
         {/* Upcoming Appointments */}
         <Card className="mb-8">

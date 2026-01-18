@@ -1,0 +1,262 @@
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Pill, Calendar, Clock, RefreshCw, User, CheckCircle, XCircle, AlertCircle } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { format } from "date-fns";
+
+interface PatientPrescription {
+  id: string;
+  medication_name: string;
+  dosage: string;
+  frequency: string;
+  duration: string;
+  quantity: number | null;
+  refills: number;
+  instructions: string | null;
+  status: string;
+  prescribed_at: string;
+  clinician_name: string;
+}
+
+const STATUS_CONFIG = {
+  active: { 
+    label: "Active", 
+    variant: "default" as const, 
+    icon: CheckCircle,
+  },
+  cancelled: { 
+    label: "Cancelled", 
+    variant: "destructive" as const, 
+    icon: XCircle,
+  },
+  expired: { 
+    label: "Expired", 
+    variant: "secondary" as const, 
+    icon: AlertCircle,
+  },
+  completed: { 
+    label: "Completed", 
+    variant: "secondary" as const, 
+    icon: CheckCircle,
+  },
+};
+
+export const PatientPrescriptionHistory = () => {
+  const { user } = useAuth();
+  const [prescriptions, setPrescriptions] = useState<PatientPrescription[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchPrescriptions = async () => {
+      if (!user) return;
+
+      try {
+        const { data, error } = await supabase
+          .from("prescriptions")
+          .select("*")
+          .eq("patient_id", user.id)
+          .order("prescribed_at", { ascending: false });
+
+        if (error) throw error;
+
+        if (data && data.length > 0) {
+          const clinicianIds = [...new Set(data.map(p => p.clinician_id))];
+          
+          const { data: profiles } = await supabase
+            .from("profiles")
+            .select("id, first_name, last_name")
+            .in("id", clinicianIds);
+
+          const profileMap = new Map(
+            profiles?.map(p => [p.id, `Dr. ${p.first_name} ${p.last_name}`]) || []
+          );
+
+          const enriched = data.map(p => ({
+            id: p.id,
+            medication_name: p.medication_name,
+            dosage: p.dosage,
+            frequency: p.frequency,
+            duration: p.duration,
+            quantity: p.quantity,
+            refills: p.refills,
+            instructions: p.instructions,
+            status: p.status,
+            prescribed_at: p.prescribed_at,
+            clinician_name: profileMap.get(p.clinician_id) || "Unknown",
+          }));
+
+          setPrescriptions(enriched);
+        }
+      } catch (error) {
+        console.error("Error fetching prescriptions:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPrescriptions();
+  }, [user]);
+
+  const activePrescriptions = prescriptions.filter(p => p.status === "active");
+  const pastPrescriptions = prescriptions.filter(p => p.status !== "active");
+
+  if (loading) {
+    return (
+      <Card>
+        <CardHeader>
+          <Skeleton className="h-6 w-40" />
+          <Skeleton className="h-4 w-60" />
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {[1, 2].map(i => (
+            <Skeleton key={i} className="h-24 w-full" />
+          ))}
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Pill className="w-5 h-5 text-primary" />
+          My Prescriptions
+        </CardTitle>
+        <CardDescription>
+          {prescriptions.length} prescription(s) • {activePrescriptions.length} active
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {prescriptions.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            <Pill className="w-12 h-12 mx-auto mb-4 opacity-50" />
+            <p>No prescriptions yet</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {/* Active Prescriptions */}
+            {activePrescriptions.length > 0 && (
+              <div>
+                <h3 className="text-sm font-medium text-muted-foreground mb-3">Active Prescriptions</h3>
+                <div className="space-y-3">
+                  {activePrescriptions.map(prescription => {
+                    const statusConfig = STATUS_CONFIG[prescription.status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.active;
+                    const StatusIcon = statusConfig.icon;
+
+                    return (
+                      <div
+                        key={prescription.id}
+                        className="p-4 rounded-lg border border-primary/30 bg-primary/5"
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 rounded-lg bg-primary/10">
+                              <Pill className="w-5 h-5 text-primary" />
+                            </div>
+                            <div>
+                              <h4 className="font-semibold">{prescription.medication_name}</h4>
+                              <p className="text-sm text-muted-foreground">
+                                {prescription.dosage} • {prescription.frequency}
+                              </p>
+                            </div>
+                          </div>
+                          <Badge variant={statusConfig.variant} className="flex items-center gap-1">
+                            <StatusIcon className="w-3 h-3" />
+                            {statusConfig.label}
+                          </Badge>
+                        </div>
+
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm mt-3">
+                          <div>
+                            <span className="text-muted-foreground">Duration:</span>
+                            <p className="font-medium">{prescription.duration}</p>
+                          </div>
+                          {prescription.quantity && (
+                            <div>
+                              <span className="text-muted-foreground">Quantity:</span>
+                              <p className="font-medium">{prescription.quantity}</p>
+                            </div>
+                          )}
+                          {prescription.refills > 0 && (
+                            <div>
+                              <span className="text-muted-foreground">Refills:</span>
+                              <p className="font-medium">{prescription.refills}</p>
+                            </div>
+                          )}
+                          <div>
+                            <span className="text-muted-foreground">Prescribed:</span>
+                            <p className="font-medium">
+                              {format(new Date(prescription.prescribed_at), "MMM d, yyyy")}
+                            </p>
+                          </div>
+                        </div>
+
+                        {prescription.instructions && (
+                          <div className="mt-3 p-2 bg-muted/50 rounded text-sm">
+                            <span className="font-medium">Instructions:</span> {prescription.instructions}
+                          </div>
+                        )}
+
+                        <div className="flex items-center gap-2 mt-3 text-sm text-muted-foreground">
+                          <User className="w-4 h-4" />
+                          {prescription.clinician_name}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Past Prescriptions */}
+            {pastPrescriptions.length > 0 && (
+              <div className="mt-6">
+                <h3 className="text-sm font-medium text-muted-foreground mb-3">Past Prescriptions</h3>
+                <div className="space-y-3">
+                  {pastPrescriptions.map(prescription => {
+                    const statusConfig = STATUS_CONFIG[prescription.status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.completed;
+                    const StatusIcon = statusConfig.icon;
+
+                    return (
+                      <div
+                        key={prescription.id}
+                        className="p-4 rounded-lg border border-border"
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 rounded-lg bg-muted">
+                              <Pill className="w-5 h-5 text-muted-foreground" />
+                            </div>
+                            <div>
+                              <h4 className="font-medium">{prescription.medication_name}</h4>
+                              <p className="text-sm text-muted-foreground">
+                                {prescription.dosage} • {prescription.frequency} • {prescription.duration}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <Badge variant={statusConfig.variant} className="flex items-center gap-1">
+                              <StatusIcon className="w-3 h-3" />
+                              {statusConfig.label}
+                            </Badge>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {format(new Date(prescription.prescribed_at), "MMM d, yyyy")}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
