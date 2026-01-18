@@ -132,7 +132,7 @@ const ClinicianDashboard = () => {
         </div>
 
         {/* Quick Actions - Mobile Optimized */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 mb-6 sm:mb-8">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3 sm:gap-4 mb-6 sm:mb-8">
           <Card 
             className="hover:shadow-lg transition-shadow cursor-pointer border-primary/20 hover:border-primary"
             onClick={() => setAppointmentsOpen(true)}
@@ -147,6 +147,24 @@ const ClinicianDashboard = () => {
               </div>
             </CardHeader>
           </Card>
+
+          {/* Nurse Triage - Show for nurses */}
+          {role === "nurse" && (
+            <Card 
+              className="hover:shadow-lg transition-shadow cursor-pointer border-success/20 hover:border-success"
+              onClick={() => navigate("/nurse-triage")}
+            >
+              <CardHeader className="p-3 sm:p-4 flex flex-col items-start gap-2 pb-2">
+                <div className="p-2 sm:p-3 rounded-xl bg-success/10">
+                  <Stethoscope className="w-5 h-5 sm:w-6 sm:h-6 text-success" />
+                </div>
+                <div>
+                  <CardTitle className="text-sm sm:text-lg">Triage</CardTitle>
+                  <CardDescription className="text-xs hidden sm:block">Assess patients</CardDescription>
+                </div>
+              </CardHeader>
+            </Card>
+          )}
 
           <Card 
             className="hover:shadow-lg transition-shadow cursor-pointer border-primary/20 hover:border-primary"
