@@ -148,6 +148,53 @@ export type Database = {
         }
         Relationships: []
       }
+      consultation_sessions: {
+        Row: {
+          appointment_id: string
+          clinician_id: string
+          clinician_joined_at: string | null
+          created_at: string
+          duration_seconds: number | null
+          ended_at: string | null
+          id: string
+          patient_id: string
+          patient_joined_at: string | null
+          status: string
+        }
+        Insert: {
+          appointment_id: string
+          clinician_id: string
+          clinician_joined_at?: string | null
+          created_at?: string
+          duration_seconds?: number | null
+          ended_at?: string | null
+          id?: string
+          patient_id: string
+          patient_joined_at?: string | null
+          status?: string
+        }
+        Update: {
+          appointment_id?: string
+          clinician_id?: string
+          clinician_joined_at?: string | null
+          created_at?: string
+          duration_seconds?: number | null
+          ended_at?: string | null
+          id?: string
+          patient_id?: string
+          patient_joined_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consultation_sessions_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: true
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null

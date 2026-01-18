@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -48,6 +49,7 @@ export const PatientQueueCard = ({
   onCompleteConsultation,
   isUpdating,
 }: PatientQueueCardProps) => {
+  const navigate = useNavigate();
   const ConsultationIcon = CONSULTATION_ICONS[patient.consultation_type];
   const statusConfig = STATUS_CONFIG[patient.status];
   const severityConfig = SEVERITY_CONFIG[patient.severity];
@@ -55,6 +57,10 @@ export const PatientQueueCard = ({
   const isWaiting = patient.status === "pending" || patient.status === "confirmed";
   const isInProgress = patient.status === "in_progress";
   const isCompleted = patient.status === "completed" || patient.status === "cancelled";
+
+  const handleJoinCall = () => {
+    navigate(`/consultation?appointment=${patient.id}`);
+  };
 
   return (
     <Card className={`transition-all ${
@@ -130,13 +136,13 @@ export const PatientQueueCard = ({
               )}
               {isInProgress && (
                 <>
-                  <Button size="sm" variant="outline">
+                  <Button size="sm" variant="default" onClick={handleJoinCall}>
                     <Video className="w-4 h-4 mr-1" />
                     Join Call
                   </Button>
                   <Button 
                     size="sm" 
-                    variant="default"
+                    variant="outline"
                     onClick={() => onCompleteConsultation(patient)}
                     disabled={isUpdating}
                   >
