@@ -1,0 +1,323 @@
+/**
+ * HCF Telehealth API Service
+ * Centralized API calls to the FastAPI backend
+ */
+
+const BACKEND_URL = import.meta.env.REACT_APP_BACKEND_URL || '';
+
+interface APIResponse<T = any> {
+  success: boolean;
+  message?: string;
+  data?: T;
+}
+
+class APIError extends Error {
+  status: number;
+  
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = 'APIError';
+    this.status = status;
+  }
+}
+
+/**
+ * Get auth token from Supabase session
+ */
+const getAuthToken = async (): Promise<string | null> => {
+  // Import dynamically to avoid circular dependencies
+  const { supabase } = await import('@/integrations/supabase/client');
+  const { data: { session } } = await supabase.auth.getSession();
+  return session?.access_token || null;
+};
+
+/**
+ * Make authenticated API request
+ */
+async function apiRequest<T = any>(
+  endpoint: string,
+  options: RequestInit = {}
+): Promise<T> {
+  const token = await getAuthToken();
+  
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+    ...(options.headers || {}),
+  };
+  
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  
+  const response = await fetch(`${BACKEND_URL}${endpoint}`, {
+    ...options,
+    headers,
+  });
+  
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new APIError(
+      errorData.detail || errorData.message || 'API request failed',
+      response.status
+    );
+  }
+  
+  return response.json();
+}
+
+// ============ User API ============
+
+export const userAPI = {
+  getProfile: () => apiRequest('/api/users/me'),
+  
+  updateProfile: (data: {
+    first_name?: string;
+    last_name?: string;
+    phone?: string;
+    date_of_birth?: string;
+  }) => apiRequest('/api/users/me', {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  }),
+  
+  getClinicians: (params?: { specialization?: string }) => {
+    const query = params?.specialization ? `?specialization=${params.specialization}` : '';
+    return apiRequest(`/api/users/clinicians${query}`);
+  },
+  
+  getClinician: (id: string) => apiRequest(`/api/users/clinicians/${id}`),
+  
+  getClinicianAvailability: (id: string) => 
+    apiRequest(`/api/users/clinicians/${id}/availability`),
+  
+  setAvailability: (data: {
+    day_of_week: number;
+    start_time: string;
+    end_time: string;
+    is_available?: boolean;
+  }) => apiRequest('/api/users/me/availability', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
+  
+  deleteAvailability: (slotId: string) =>
+    apiRequest(`/api/users/me/availability/${slotId}`, { method: 'DELETE' }),
+};
+
+// ============ Appointments API ============
+
+export const appointmentsAPI = {
+  list: (params?: { status?: string; limit?: number }) => {
+    const searchParams = new URLSearchParams();
+    if (params?.status) searchParams.set('status', params.status);
+    if (params?.limit) searchParams.set('limit', params.limit.toString());
+    const query = searchParams.toString() ? `?${searchParams}` : '';
+    return apiRequest(`/api/appointments${query}`);
+  },
+  
+  get: (id: string) => apiRequest(`/api/appointments/${id}`),
+  
+  create: (data: {
+    clinician_id: string;
+    scheduled_at: string;
+    consultation_type?: 'video' | 'phone' | 'in_person';
+    duration_minutes?: number;
+    notes?: string;
+    symptom_assessment_id?: string;
+  }) => apiRequest('/api/appointments', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
+  
+  update: (id: string, data: {
+    status?: string;
+    scheduled_at?: string;
+    notes?: string;
+  }) => apiRequest(`/api/appointments/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  }),
+  
+  cancel: (id: string) => apiRequest(`/api/appointments/${id}`, { method: 'DELETE' }),
+  
+  createSymptomAssessment: (data: {
+    symptoms: string[];
+    severity: 'mild' | 'moderate' | 'severe';
+    description?: string;
+    recommended_specialization?: string;
+  }) => apiRequest('/api/appointments/symptom-assessment', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
+  
+  getTodayQueue: () => apiRequest('/api/appointments/queue/today'),
+};
+
+// ============ Prescriptions API ============
+
+export const prescriptionsAPI = {
+  list: (params?: { status?: string; patient_id?: string; limit?: number }) => {
+    const searchParams = new URLSearchParams();
+    if (params?.status) searchParams.set('status', params.status);
+    if (params?.patient_id) searchParams.set('patient_id', params.patient_id);
+    if (params?.limit) searchParams.set('limit', params.limit.toString());
+    const query = searchParams.toString() ? `?${searchParams}` : '';
+    return apiRequest(`/api/prescriptions${query}`);
+  },
+  
+  get: (id: string) => apiRequest(`/api/prescriptions/${id}`),
+  
+  create: (data: {
+    appointment_id: string;
+    patient_id: string;
+    medication_name: string;
+    dosage: string;
+    frequency: string;
+    duration: string;
+    quantity?: number;
+    refills?: number;
+    instructions?: string;
+    pharmacy_notes?: string;
+  }) => apiRequest('/api/prescriptions', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
+  
+  update: (id: string, data: {
+    status?: string;
+    pharmacy_notes?: string;
+  }) => apiRequest(`/api/prescriptions/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  }),
+  
+  cancel: (id: string) => apiRequest(`/api/prescriptions/${id}/cancel`, { method: 'POST' }),
+  
+  getPDF: (id: string) => apiRequest(`/api/prescriptions/${id}/pdf`),
+  
+  generatePDF: (data: {
+    prescription_id: string;
+    patient_name: string;
+    clinician_name: string;
+    medication_name: string;
+    dosage: string;
+    frequency: string;
+    duration: string;
+    prescribed_at: string;
+    [key: string]: any;
+  }) => apiRequest('/api/prescriptions/generate-pdf', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
+};
+
+// ============ Clinical Notes API ============
+
+export const clinicalNotesAPI = {
+  list: (params?: { appointment_id?: string; patient_id?: string; status?: string }) => {
+    const searchParams = new URLSearchParams();
+    if (params?.appointment_id) searchParams.set('appointment_id', params.appointment_id);
+    if (params?.patient_id) searchParams.set('patient_id', params.patient_id);
+    if (params?.status) searchParams.set('status', params.status);
+    const query = searchParams.toString() ? `?${searchParams}` : '';
+    return apiRequest(`/api/clinical-notes${query}`);
+  },
+  
+  get: (id: string) => apiRequest(`/api/clinical-notes/${id}`),
+  
+  getForAppointment: (appointmentId: string) => 
+    apiRequest(`/api/clinical-notes/appointment/${appointmentId}`),
+  
+  create: (data: {
+    appointment_id: string;
+    patient_id: string;
+    chief_complaint?: string;
+    history_of_present_illness?: string;
+    examination_findings?: string;
+    diagnosis?: string[];
+    diagnosis_codes?: string[];
+    treatment_plan?: string;
+    follow_up_instructions?: string;
+    follow_up_date?: string;
+    referral_required?: boolean;
+    referral_details?: string;
+    status?: 'draft' | 'final';
+  }) => apiRequest('/api/clinical-notes', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
+  
+  update: (id: string, data: Record<string, any>) => 
+    apiRequest(`/api/clinical-notes/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+  
+  finalize: (id: string) => 
+    apiRequest(`/api/clinical-notes/${id}/finalize`, { method: 'POST' }),
+};
+
+// ============ Auth API ============
+
+export const authAPI = {
+  requestPasswordReset: (email: string) =>
+    apiRequest('/api/auth/password/reset-request', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    }),
+  
+  confirmPasswordReset: (token: string, newPassword: string) =>
+    apiRequest('/api/auth/password/reset-confirm', {
+      method: 'POST',
+      body: JSON.stringify({ token, new_password: newPassword }),
+    }),
+  
+  verifyToken: (token: string) =>
+    apiRequest(`/api/auth/verify-token?token=${token}`),
+};
+
+// ============ Analytics API ============
+
+export const analyticsAPI = {
+  getDashboard: (days: number = 30) =>
+    apiRequest(`/api/analytics/dashboard?days=${days}`),
+  
+  getOverview: () => apiRequest('/api/analytics/overview'),
+};
+
+// ============ Audit Logs API ============
+
+export const auditAPI = {
+  log: (data: {
+    user_id: string;
+    action: string;
+    resource_type: string;
+    resource_id: string;
+    details?: Record<string, any>;
+  }) => apiRequest('/api/audit-logs', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
+  
+  list: (params?: { user_id?: string; resource_type?: string; limit?: number }) => {
+    const searchParams = new URLSearchParams();
+    if (params?.user_id) searchParams.set('user_id', params.user_id);
+    if (params?.resource_type) searchParams.set('resource_type', params.resource_type);
+    if (params?.limit) searchParams.set('limit', params.limit.toString());
+    const query = searchParams.toString() ? `?${searchParams}` : '';
+    return apiRequest(`/api/audit-logs${query}`);
+  },
+};
+
+// Export all APIs
+export const api = {
+  user: userAPI,
+  appointments: appointmentsAPI,
+  prescriptions: prescriptionsAPI,
+  clinicalNotes: clinicalNotesAPI,
+  auth: authAPI,
+  analytics: analyticsAPI,
+  audit: auditAPI,
+};
+
+export default api;
