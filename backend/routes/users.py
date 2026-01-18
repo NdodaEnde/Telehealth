@@ -14,6 +14,27 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/users", tags=["Users"])
 
 
+# ============ Debug Route ============
+
+@router.get("/debug/profile")
+async def debug_profile(
+    user: AuthenticatedUser = Depends(get_current_user)
+):
+    """Debug: Get raw profile data to check id_number"""
+    profiles = await supabase.select('profiles', '*', {'id': user.id})
+    
+    if not profiles:
+        return {"error": "Profile not found", "user_id": user.id}
+    
+    profile = profiles[0]
+    return {
+        "user_id": user.id,
+        "profile": profile,
+        "has_id_number": bool(profile.get('id_number')),
+        "id_number_value": profile.get('id_number')
+    }
+
+
 # ============ User Profile Routes ============
 
 @router.get("/me", response_model=UserWithRole)
