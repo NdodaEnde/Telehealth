@@ -680,8 +680,7 @@ def test_patient_onboarding_id_validation():
     
     try:
         response = requests.post(
-            f"{BASE_URL}/patient/validate-id",
-            json={"id_number": test_id},
+            f"{BASE_URL}/patient/validate-id?id_number={test_id}",
             headers={'Content-Type': 'application/json'},
             timeout=10
         )
