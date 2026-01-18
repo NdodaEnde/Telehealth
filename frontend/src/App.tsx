@@ -62,6 +62,14 @@ const App = () => (
               }
             />
             <Route
+              path="/nurse-triage"
+              element={
+                <ProtectedRoute allowedRoles={["nurse", "doctor"]}>
+                  <NurseTriagePage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/admin/*"
               element={
                 <ProtectedRoute allowedRoles={["admin"]}>
