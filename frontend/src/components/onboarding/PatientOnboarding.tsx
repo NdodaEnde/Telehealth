@@ -230,7 +230,10 @@ export const PatientOnboarding = ({
       const payload = {
         first_name: data.first_name,
         last_name: data.last_name,
-        id_number: data.id_number,
+        id_type: data.id_type,
+        id_number: data.id_type === "sa_id" ? data.id_number : null,
+        passport_number: data.id_type === "passport" ? data.passport_number : null,
+        passport_country: data.id_type === "passport" ? data.passport_country : null,
         date_of_birth: data.date_of_birth,
         gender: data.gender,
         email: data.email,
