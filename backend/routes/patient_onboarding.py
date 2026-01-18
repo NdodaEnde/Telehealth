@@ -179,7 +179,7 @@ async def complete_patient_onboarding(
 async def get_patient_profile(
     user: AuthenticatedUser = Depends(get_current_user)
 ):
-    """Get complete patient profile including medical history"""
+    """Get complete patient profile"""
     # Get base profile
     profiles = await supabase.select("profiles", "*", {"id": user.id})
     if not profiles:
@@ -187,14 +187,13 @@ async def get_patient_profile(
     
     profile = profiles[0]
     
-    # Get extended profile
-    extended = await supabase.select("patient_profiles", "*", {"user_id": user.id})
-    extended_data = extended[0] if extended else None
+    # Check if onboarding is complete by presence of id_number
+    onboarding_complete = bool(profile.get("id_number"))
     
     return {
         "profile": profile,
-        "extended": extended_data,
-        "onboarding_complete": bool(extended_data and extended_data.get("onboarding_completed_at"))
+        "extended": None,  # Extended profile not available (table doesn't exist)
+        "onboarding_complete": onboarding_complete
     }
 
 
@@ -205,19 +204,7 @@ async def update_medical_history(
     current_medications: Optional[List[dict]] = None,
     user: AuthenticatedUser = Depends(get_current_user)
 ):
-    """Update patient medical history"""
-    update_data = {"updated_at": datetime.utcnow().isoformat()}
-    
-    if allergies is not None:
-        update_data["allergies"] = allergies
-    if chronic_conditions is not None:
-        update_data["chronic_conditions"] = chronic_conditions
-    if current_medications is not None:
-        update_data["current_medications"] = current_medications
-    
-    result = await supabase.update("patient_profiles", update_data, {"user_id": user.id})
-    
-    if not result:
-        raise HTTPException(status_code=404, detail="Patient profile not found")
-    
-    return APIResponse(success=True, message="Medical history updated")
+    """Update patient medical history - Currently not implemented as patient_profiles table doesn't exist"""
+    # Note: This endpoint would need the patient_profiles table to work
+    # For now, return a message indicating the limitation
+    return APIResponse(success=False, message="Medical history storage not available - database table needs to be created")
