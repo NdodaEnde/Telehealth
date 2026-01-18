@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,17 +7,19 @@ import {
   Video, 
   FileText, 
   LogOut,
-  Settings,
+  Calendar,
   RefreshCw
 } from "lucide-react";
 import { ClinicianStats } from "@/components/clinician/ClinicianStats";
 import { PatientQueueList } from "@/components/clinician/PatientQueueList";
 import { UpcomingSchedule } from "@/components/clinician/UpcomingSchedule";
 import { usePatientQueue } from "@/hooks/usePatientQueue";
+import { AvailabilityDialog } from "@/components/availability/AvailabilityDialog";
 
 const ClinicianDashboard = () => {
   const { profile, role, signOut } = useAuth();
   const { queue, stats, loading, refetch } = usePatientQueue();
+  const [availabilityOpen, setAvailabilityOpen] = useState(false);
 
   const roleLabel = role === "doctor" ? "Doctor" : "Nurse";
   const roleColor = role === "doctor" ? "bg-primary" : "bg-success";
@@ -89,10 +92,13 @@ const ClinicianDashboard = () => {
             </CardHeader>
           </Card>
 
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer border-primary/20 hover:border-primary">
+          <Card 
+            className="hover:shadow-lg transition-shadow cursor-pointer border-primary/20 hover:border-primary"
+            onClick={() => setAvailabilityOpen(true)}
+          >
             <CardHeader className="flex flex-row items-center gap-4 pb-2">
               <div className="p-3 rounded-xl bg-secondary/20">
-                <Settings className="w-6 h-6 text-secondary-foreground" />
+                <Calendar className="w-6 h-6 text-secondary-foreground" />
               </div>
               <div>
                 <CardTitle className="text-lg">Availability</CardTitle>
@@ -114,6 +120,11 @@ const ClinicianDashboard = () => {
             <UpcomingSchedule todayAppointments={queue} />
           </div>
         </div>
+
+        <AvailabilityDialog 
+          open={availabilityOpen} 
+          onOpenChange={setAvailabilityOpen} 
+        />
       </main>
     </div>
   );
