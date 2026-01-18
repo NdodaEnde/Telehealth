@@ -308,6 +308,36 @@ def get_medical_aid_schemes() -> List[Dict[str, Any]]:
     return MEDICAL_AID_SCHEMES
 
 
+# Common countries for foreign nationals in South Africa
+COMMON_COUNTRIES = [
+    {"code": "ZA", "name": "South Africa"},
+    {"code": "ZW", "name": "Zimbabwe"},
+    {"code": "MZ", "name": "Mozambique"},
+    {"code": "MW", "name": "Malawi"},
+    {"code": "LS", "name": "Lesotho"},
+    {"code": "SZ", "name": "Eswatini (Swaziland)"},
+    {"code": "BW", "name": "Botswana"},
+    {"code": "NA", "name": "Namibia"},
+    {"code": "ZM", "name": "Zambia"},
+    {"code": "NG", "name": "Nigeria"},
+    {"code": "CD", "name": "DRC (Congo)"},
+    {"code": "ET", "name": "Ethiopia"},
+    {"code": "SO", "name": "Somalia"},
+    {"code": "PK", "name": "Pakistan"},
+    {"code": "BD", "name": "Bangladesh"},
+    {"code": "IN", "name": "India"},
+    {"code": "CN", "name": "China"},
+    {"code": "GB", "name": "United Kingdom"},
+    {"code": "US", "name": "United States"},
+    {"code": "OTHER", "name": "Other"},
+]
+
+
+def get_countries() -> List[Dict[str, str]]:
+    """Get list of countries for passport selection"""
+    return COMMON_COUNTRIES
+
+
 def validate_sa_id_number(id_number: str) -> Dict[str, Any]:
     """
     Validate South African ID number and extract info.
@@ -365,8 +395,76 @@ def validate_sa_id_number(id_number: str) -> Dict[str, Any]:
     
     return {
         "valid": True,
+        "id_type": "sa_id",
         "date_of_birth": dob_str,
         "gender": gender,
         "citizenship": citizenship,
         "age": (datetime.now() - dob).days // 365
     }
+
+
+def validate_passport(passport_number: str, country_code: str, date_of_birth: str = None) -> Dict[str, Any]:
+    """
+    Validate passport number (basic validation).
+    
+    Since passport formats vary by country, we do basic validation:
+    - Not empty
+    - Alphanumeric characters only
+    - Reasonable length (5-20 characters)
+    """
+    if not passport_number:
+        return {"valid": False, "error": "Passport number is required"}
+    
+    # Remove spaces and convert to uppercase
+    passport_number = passport_number.replace(" ", "").upper()
+    
+    if len(passport_number) < 5 or len(passport_number) > 20:
+        return {"valid": False, "error": "Passport number must be 5-20 characters"}
+    
+    if not passport_number.isalnum():
+        return {"valid": False, "error": "Passport number must contain only letters and numbers"}
+    
+    if not country_code:
+        return {"valid": False, "error": "Country of issue is required"}
+    
+    # Calculate age if DOB provided
+    age = None
+    if date_of_birth:
+        try:
+            dob = datetime.strptime(date_of_birth, "%Y-%m-%d")
+            age = (datetime.now() - dob).days // 365
+        except ValueError:
+            pass
+    
+    return {
+        "valid": True,
+        "id_type": "passport",
+        "passport_number": passport_number,
+        "country_code": country_code,
+        "date_of_birth": date_of_birth,
+        "age": age
+    }
+
+
+def validate_identification(
+    id_type: str,
+    id_number: str = None,
+    passport_number: str = None,
+    country_code: str = None,
+    date_of_birth: str = None
+) -> Dict[str, Any]:
+    """
+    Validate identification based on type (SA ID or Passport).
+    """
+    if id_type == "sa_id":
+        if not id_number:
+            return {"valid": False, "error": "SA ID number is required"}
+        return validate_sa_id_number(id_number)
+    elif id_type == "passport":
+        if not passport_number:
+            return {"valid": False, "error": "Passport number is required"}
+        if not date_of_birth:
+            return {"valid": False, "error": "Date of birth is required for passport holders"}
+        return validate_passport(passport_number, country_code, date_of_birth)
+    else:
+        return {"valid": False, "error": "Invalid identification type. Use 'sa_id' or 'passport'"}
