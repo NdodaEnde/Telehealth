@@ -2,10 +2,13 @@
 """
 Backend API Testing for HCF Telehealth Application
 Tests the following APIs:
-1. Health Check API - GET /api/health
-2. Prescription PDF Generation API - POST /api/prescriptions/generate-pdf
-3. Analytics Dashboard API - GET /api/analytics/dashboard
-4. Analytics Overview API - GET /api/analytics/overview
+1. Health Check API - GET /api/health (no auth)
+2. Password Reset APIs - POST /api/auth/password/reset-request, GET /api/auth/verify-token (no auth)
+3. Protected APIs - Should return 401 without auth token
+4. API Documentation - GET /api/docs
+5. Prescription PDF Generation API - POST /api/prescriptions/generate-pdf
+6. Analytics Dashboard API - GET /api/analytics/dashboard
+7. Analytics Overview API - GET /api/analytics/overview
 """
 
 import requests
