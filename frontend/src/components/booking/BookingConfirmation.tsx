@@ -119,8 +119,8 @@ export const BookingConfirmation = ({
             Your appointment with Dr. {data.clinician.first_name} {data.clinician.last_name} has been scheduled.
           </p>
           <div className="bg-muted/50 rounded-lg p-4 mb-6 inline-block">
-            <p className="font-medium">{format(data.date, "EEEE, MMMM d, yyyy")}</p>
-            <p className="text-lg font-bold text-primary">{data.time}</p>
+            <p className="font-medium">{formatFullDateSAST(data.date)}</p>
+            <p className="text-lg font-bold text-primary">{data.time} {TIMEZONE_ABBR}</p>
           </div>
           <p className="text-sm text-muted-foreground mb-6">
             You will receive a confirmation email with further instructions.
