@@ -340,6 +340,42 @@ frontend:
         agent: "main"
         comment: "GMT+2 timezone formatting throughout app"
 
+  - task: "AI Symptom Checker for Booking"
+    implemented: true
+    working: "NA"
+    file: "frontend/src/components/booking/AISymptomCheckerForBooking.tsx, frontend/src/pages/BookAppointment.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "NEW: AI-powered symptom checker integrated into appointment booking flow. Multi-step wizard with symptom selection, severity, OpenAI assessment results with urgency and care pathway."
+
+  - task: "Patient Onboarding UI"
+    implemented: true
+    working: "NA"
+    file: "frontend/src/pages/Onboarding.tsx, frontend/src/components/onboarding/PatientOnboarding.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "NEW: 5-step patient onboarding flow - Personal info with SA ID validation, Address/emergency contact, Medical aid details, Medical history (allergies, conditions), Consent forms."
+
+  - task: "Nurse Triage UI"
+    implemented: true
+    working: "NA"
+    file: "frontend/src/pages/NurseTriage.tsx, frontend/src/components/triage/NurseTriageForm.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "NEW: Nurse triage workflow page with queue view, triage form with vitals, chief complaint, priority levels, pre-consultation checklist. Accessible from Clinician Dashboard for nurses."
+
 metadata:
   created_by: "main_agent"
   version: "2.1"
