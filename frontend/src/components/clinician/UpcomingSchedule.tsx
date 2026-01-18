@@ -1,8 +1,8 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Clock, Video, Phone, Building } from "lucide-react";
-import { format, isSameDay, addDays } from "date-fns";
 import { QueuePatient } from "@/hooks/usePatientQueue";
+import { formatSAST, formatFullDateSAST, TIMEZONE_ABBR } from "@/lib/timezone";
 
 interface UpcomingScheduleProps {
   todayAppointments: QueuePatient[];
