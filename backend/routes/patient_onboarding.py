@@ -122,30 +122,55 @@ async def complete_patient_onboarding(
 ):
     """
     Complete patient onboarding with full profile data.
+    Supports both SA ID and Passport identification.
     Validates ID, optionally verifies medical aid, and syncs to HealthBridge.
     
     Note: Uses the user's own JWT token to update their profile (RLS compliant)
     """
-    # Validate ID number
-    id_validation = validate_sa_id_number(data.id_number)
-    if not id_validation.get("valid"):
-        raise HTTPException(status_code=400, detail=id_validation.get("error", "Invalid ID number"))
+    # Validate identification based on type
+    id_validation = None
+    identification_value = None
+    
+    if data.id_type.value == "sa_id":
+        if not data.id_number:
+            raise HTTPException(status_code=400, detail="SA ID number is required")
+        id_validation = validate_sa_id_number(data.id_number)
+        if not id_validation.get("valid"):
+            raise HTTPException(status_code=400, detail=id_validation.get("error", "Invalid ID number"))
+        identification_value = data.id_number
+    else:  # passport
+        if not data.passport_number:
+            raise HTTPException(status_code=400, detail="Passport number is required")
+        if not data.passport_country:
+            raise HTTPException(status_code=400, detail="Passport country is required")
+        if not data.date_of_birth:
+            raise HTTPException(status_code=400, detail="Date of birth is required for passport holders")
+        id_validation = validate_passport(data.passport_number, data.passport_country, data.date_of_birth)
+        if not id_validation.get("valid"):
+            raise HTTPException(status_code=400, detail=id_validation.get("error", "Invalid passport"))
+        # For passport users, we store passport info in id_number field (prefixed)
+        identification_value = f"PP:{data.passport_country}:{data.passport_number}"
     
     # Check consent
     if not data.consent_telehealth or not data.consent_data_processing:
         raise HTTPException(status_code=400, detail="Telehealth and data processing consent required")
     
     # Update main profile in Supabase using user's own token (RLS will allow)
+    # For SA ID, date_of_birth is extracted from ID; for passport, use provided DOB
+    dob = data.date_of_birth
+    if data.id_type.value == "sa_id" and id_validation.get("date_of_birth"):
+        dob = id_validation.get("date_of_birth")
+    
     profile_data = {
         "first_name": data.first_name,
         "last_name": data.last_name,
         "phone": data.phone,
-        "date_of_birth": data.date_of_birth or id_validation.get("date_of_birth"),
-        "id_number": data.id_number,
+        "date_of_birth": dob,
+        "id_number": identification_value,  # Stores SA ID or passport (prefixed)
         "updated_at": datetime.utcnow().isoformat()
     }
     
-    logger.info(f"Updating profile for user {user.id} with data: {profile_data}")
+    logger.info(f"Updating profile for user {user.id} with id_type: {data.id_type.value}")
     
     # Use the user's access token to update - this respects RLS
     result = await supabase.update(
@@ -159,7 +184,7 @@ async def complete_patient_onboarding(
         logger.error(f"Failed to update profile for user {user.id}")
         raise HTTPException(status_code=500, detail="Failed to update profile")
     
-    logger.info(f"Profile updated successfully for user {user.id}, result: {result}")
+    logger.info(f"Profile updated successfully for user {user.id}")
     
     # Create extended profile record ID
     extended_profile_id = str(uuid.uuid4())
@@ -179,10 +204,13 @@ async def complete_patient_onboarding(
     healthbridge_patient_id = None
     
     sync_result = await healthbridge.sync_patient_to_ehr({
-        "id_number": data.id_number,
+        "id_type": data.id_type.value,
+        "id_number": data.id_number if data.id_type.value == "sa_id" else None,
+        "passport_number": data.passport_number if data.id_type.value == "passport" else None,
+        "passport_country": data.passport_country if data.id_type.value == "passport" else None,
         "first_name": data.first_name,
         "last_name": data.last_name,
-        "date_of_birth": data.date_of_birth,
+        "date_of_birth": dob,
         "gender": data.gender.value,
         "email": data.email,
         "phone": data.phone,
