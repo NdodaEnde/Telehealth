@@ -3,7 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Clock, FileText, Video, User, LogOut, Plus, Pill, Home, Menu, X } from "lucide-react";
+import { Calendar, Clock, FileText, Video, User, LogOut, Plus, Pill, Home, Menu, X, AlertCircle } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
@@ -20,11 +20,18 @@ interface Appointment {
 
 const PatientDashboard = () => {
   const navigate = useNavigate();
-  const { user, profile, signOut } = useAuth();
+  const { user, profile, signOut, onboardingComplete, isLoading } = useAuth();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [showPrescriptions, setShowPrescriptions] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Auto-redirect to onboarding if not complete
+  useEffect(() => {
+    if (!isLoading && !onboardingComplete) {
+      navigate("/onboarding");
+    }
+  }, [isLoading, onboardingComplete, navigate]);
 
   useEffect(() => {
     const fetchAppointments = async () => {
@@ -74,6 +81,18 @@ const PatientDashboard = () => {
 
     fetchAppointments();
   }, [user]);
+
+  // Show loading while checking onboarding status
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
