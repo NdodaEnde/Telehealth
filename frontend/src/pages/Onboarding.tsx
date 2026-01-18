@@ -107,9 +107,13 @@ const OnboardingPage = () => {
   };
 
   const handleOnboardingComplete = async () => {
+    console.log("[Onboarding] Onboarding complete, refreshing profile...");
     await refreshProfile();
-    toast.success("Profile completed successfully!");
-    navigate("/patient");
+    // Give React time to update state before navigating
+    setTimeout(() => {
+      console.log("[Onboarding] Navigating to dashboard");
+      navigate("/patient", { replace: true });
+    }, 500);
   };
 
   const handleConfirmEHRData = async () => {
