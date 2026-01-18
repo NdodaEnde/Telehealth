@@ -102,7 +102,7 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-user_problem_statement: "Phase 1 MVP Completion: Full REST API backend, Prescription PDF Export, Admin Analytics, Mobile Responsiveness, Password Reset"
+user_problem_statement: "Phase 1 MVP Completion: Full REST API backend, Prescription PDF Export, Admin Analytics, Mobile Responsiveness, Password Reset, AI Symptom Assessment, Patient Onboarding, Nurse Triage"
 
 backend:
   - task: "Health Check API"
@@ -230,6 +230,42 @@ backend:
       - working: true
         agent: "testing"
         comment: "POST /api/prescriptions/generate-pdf generates valid PDF"
+
+  - task: "AI Symptom Assessment API"
+    implemented: true
+    working: "NA"
+    file: "backend/symptom_assessment.py, backend/routes/symptom_assessment.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "NEW: Implemented OpenAI-powered symptom assessment. GET /api/symptoms/common returns categorized symptoms. POST /api/symptoms/assess uses GPT-4o-mini for AI analysis with urgency levels, care pathways. Fallback to rule-based if OpenAI fails."
+
+  - task: "Patient Onboarding API"
+    implemented: true
+    working: "NA"
+    file: "backend/routes/patient_onboarding.py, backend/healthbridge_service.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "NEW: Full patient onboarding flow. GET /api/patient/medical-aid-schemes, POST /api/patient/validate-id (SA ID validation), POST /api/patient/onboarding (full profile). HealthBridge integration is PLACEHOLDER."
+
+  - task: "Nurse Triage API"
+    implemented: true
+    working: "NA"
+    file: "backend/routes/nurse_triage.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "NEW: Nurse triage workflow. GET /api/triage/queue, POST /api/triage, GET /api/triage/{appointment_id}, GET /api/triage/ready-for-doctor/list. Vitals, priority levels, pre-consultation checklist."
 
 frontend:
   - task: "API Service Layer"
