@@ -12,11 +12,12 @@ security = HTTPBearer(auto_error=False)
 
 class AuthenticatedUser:
     """Represents an authenticated user"""
-    def __init__(self, user_id: str, email: str, role: Optional[str] = None, profile: Optional[Dict] = None):
+    def __init__(self, user_id: str, email: str, role: Optional[str] = None, profile: Optional[Dict] = None, access_token: Optional[str] = None):
         self.id = user_id
         self.email = email
         self.role = role
         self.profile = profile or {}
+        self.access_token = access_token  # Store the user's JWT for making authenticated requests
 
 
 async def get_current_user(
