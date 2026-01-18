@@ -1,10 +1,16 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Menu, X, Phone, Calendar, User, FileText } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Menu, X, Phone, LogOut, User } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import type { Database } from "@/integrations/supabase/types";
+
+type AppRole = Database["public"]["Enums"]["app_role"];
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { user, profile, role, signOut } = useAuth();
+  const navigate = useNavigate();
 
   const navLinks = [
     { label: "How It Works", href: "#how-it-works" },
@@ -12,6 +18,21 @@ const Header = () => {
     { label: "For Clinicians", href: "#clinicians" },
     { label: "Contact", href: "#contact" },
   ];
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/");
+  };
+
+  const getDashboardRoute = (userRole: AppRole): string => {
+    const routes: Record<AppRole, string> = {
+      patient: "/patient",
+      nurse: "/clinician",
+      doctor: "/clinician",
+      admin: "/admin",
+    };
+    return routes[userRole];
+  };
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-md border-b border-border">
@@ -47,12 +68,33 @@ const Header = () => {
               <Phone className="w-4 h-4" />
               0800 HCF CARE
             </Button>
-            <Button variant="outline" size="sm">
-              Sign In
-            </Button>
-            <Button variant="default" size="sm">
-              Book Consultation
-            </Button>
+            
+            {user ? (
+              <>
+                <Link to={role ? getDashboardRoute(role) : "/patient"}>
+                  <Button variant="outline" size="sm" className="gap-2">
+                    <User className="w-4 h-4" />
+                    {profile?.first_name || "Dashboard"}
+                  </Button>
+                </Link>
+                <Button variant="ghost" size="sm" onClick={handleSignOut}>
+                  <LogOut className="w-4 h-4" />
+                </Button>
+              </>
+            ) : (
+              <>
+                <Link to="/auth">
+                  <Button variant="outline" size="sm">
+                    Sign In
+                  </Button>
+                </Link>
+                <Link to="/auth">
+                  <Button variant="default" size="sm">
+                    Book Consultation
+                  </Button>
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -79,12 +121,33 @@ const Header = () => {
                 </a>
               ))}
               <div className="flex flex-col gap-2 mt-4 px-4">
-                <Button variant="outline" className="w-full">
-                  Sign In
-                </Button>
-                <Button variant="default" className="w-full">
-                  Book Consultation
-                </Button>
+                {user ? (
+                  <>
+                    <Link to={role ? getDashboardRoute(role) : "/patient"} onClick={() => setIsMenuOpen(false)}>
+                      <Button variant="outline" className="w-full gap-2">
+                        <User className="w-4 h-4" />
+                        My Dashboard
+                      </Button>
+                    </Link>
+                    <Button variant="ghost" className="w-full" onClick={handleSignOut}>
+                      <LogOut className="w-4 h-4 mr-2" />
+                      Sign Out
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Link to="/auth" onClick={() => setIsMenuOpen(false)}>
+                      <Button variant="outline" className="w-full">
+                        Sign In
+                      </Button>
+                    </Link>
+                    <Link to="/auth" onClick={() => setIsMenuOpen(false)}>
+                      <Button variant="default" className="w-full">
+                        Book Consultation
+                      </Button>
+                    </Link>
+                  </>
+                )}
               </div>
             </nav>
           </div>
