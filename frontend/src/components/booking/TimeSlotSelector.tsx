@@ -69,7 +69,7 @@ export const TimeSlotSelector = ({
 
         const booked = (data || []).map(apt => {
           const date = new Date(apt.scheduled_at);
-          return format(date, "HH:mm");
+          return formatSAST(date, "HH:mm");
         });
 
         setBookedSlots(booked);
