@@ -45,6 +45,14 @@ const App = () => (
               }
             />
             <Route
+              path="/onboarding"
+              element={
+                <ProtectedRoute allowedRoles={["patient"]}>
+                  <OnboardingPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/clinician/*"
               element={
                 <ProtectedRoute allowedRoles={["nurse", "doctor"]}>
