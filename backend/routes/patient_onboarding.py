@@ -100,9 +100,7 @@ async def complete_patient_onboarding(
     Complete patient onboarding with full profile data.
     Validates ID, optionally verifies medical aid, and syncs to HealthBridge.
     
-    Note: Since patient_profiles table doesn't exist in Supabase, we:
-    1. Update the profiles table with basic info (id_number marks onboarding complete)
-    2. Store extended data in MongoDB for now
+    Note: Uses the user's own JWT token to update their profile (RLS compliant)
     """
     # Validate ID number
     id_validation = validate_sa_id_number(data.id_number)
@@ -113,7 +111,7 @@ async def complete_patient_onboarding(
     if not data.consent_telehealth or not data.consent_data_processing:
         raise HTTPException(status_code=400, detail="Telehealth and data processing consent required")
     
-    # Update main profile in Supabase - id_number being set indicates onboarding complete
+    # Update main profile in Supabase using user's own token (RLS will allow)
     profile_data = {
         "first_name": data.first_name,
         "last_name": data.last_name,
@@ -123,12 +121,21 @@ async def complete_patient_onboarding(
         "updated_at": datetime.utcnow().isoformat()
     }
     
-    result = await supabase.update("profiles", profile_data, {"id": user.id})
+    logger.info(f"Updating profile for user {user.id} with data: {profile_data}")
+    
+    # Use the user's access token to update - this respects RLS
+    result = await supabase.update(
+        "profiles", 
+        profile_data, 
+        {"id": user.id},
+        access_token=user.access_token  # Use user's own token
+    )
+    
     if result is None:
         logger.error(f"Failed to update profile for user {user.id}")
         raise HTTPException(status_code=500, detail="Failed to update profile")
     
-    logger.info(f"Profile updated for user {user.id} with id_number {data.id_number}")
+    logger.info(f"Profile updated successfully for user {user.id}, result: {result}")
     
     # Create extended profile record ID
     extended_profile_id = str(uuid.uuid4())
