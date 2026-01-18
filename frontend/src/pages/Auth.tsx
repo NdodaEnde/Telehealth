@@ -62,6 +62,7 @@ const Auth = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedRole, setSelectedRole] = useState<AppRole>("patient");
+  const [showPasswordReset, setShowPasswordReset] = useState(false);
   
   const { signIn, signUp, user, role } = useAuth();
   const navigate = useNavigate();
