@@ -179,43 +179,142 @@ const BookAppointment = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid sm:grid-cols-3 gap-3 sm:gap-4 mb-6 sm:mb-8">
-                <div className="p-3 sm:p-4 bg-muted/50 rounded-lg">
-                  <div className="flex items-center justify-center gap-2 mb-2">
-                    <Brain className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
-                    <Sparkles className="w-4 h-4 text-yellow-500" />
-                  </div>
-                  <h3 className="font-medium text-sm sm:text-base">AI Symptom Check</h3>
-                  <p className="text-xs sm:text-sm text-muted-foreground">AI-powered assessment</p>
-                </div>
-                <div className="p-3 sm:p-4 bg-muted/50 rounded-lg">
-                  <User className="w-6 h-6 sm:w-8 sm:h-8 text-primary mx-auto mb-2" />
-                  <h3 className="font-medium text-sm sm:text-base">Choose Clinician</h3>
-                  <p className="text-xs sm:text-sm text-muted-foreground">Select your preferred doctor</p>
-                </div>
-                <div className="p-3 sm:p-4 bg-muted/50 rounded-lg">
-                  <Clock className="w-6 h-6 sm:w-8 sm:h-8 text-primary mx-auto mb-2" />
-                  <h3 className="font-medium text-sm sm:text-base">Schedule</h3>
-                  <p className="text-xs sm:text-sm text-muted-foreground">Pick a convenient time</p>
-                </div>
-              </div>
-              
-              <div className="p-4 bg-primary/5 rounded-lg mb-6 text-left">
-                <h4 className="font-medium flex items-center gap-2 text-sm sm:text-base">
-                  <Sparkles className="w-4 h-4 text-primary" />
-                  Powered by AI
-                </h4>
-                <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-                  Our AI assistant will analyze your symptoms to determine urgency and recommend the best care pathway for you.
-                </p>
+              {/* Booking Type Selection */}
+              <div className="grid sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
+                <Card 
+                  className={`cursor-pointer transition-all hover:border-primary ${bookingType === 'scheduled' ? 'ring-2 ring-primary border-primary' : ''}`}
+                  onClick={() => setBookingType('scheduled')}
+                >
+                  <CardContent className="p-4 text-center">
+                    <Calendar className="w-8 h-8 text-primary mx-auto mb-2" />
+                    <h3 className="font-medium">Schedule</h3>
+                    <p className="text-xs text-muted-foreground">Book a future appointment</p>
+                  </CardContent>
+                </Card>
+                
+                <Card 
+                  className={`cursor-pointer transition-all hover:border-orange-500 ${bookingType === 'walk-in' ? 'ring-2 ring-orange-500 border-orange-500' : ''}`}
+                  onClick={() => setBookingType('walk-in')}
+                >
+                  <CardContent className="p-4 text-center">
+                    <Users className="w-8 h-8 text-orange-500 mx-auto mb-2" />
+                    <h3 className="font-medium">Walk-In</h3>
+                    <p className="text-xs text-muted-foreground">Join queue now</p>
+                  </CardContent>
+                </Card>
+                
+                <Card 
+                  className={`cursor-pointer transition-all hover:border-red-500 ${bookingType === 'emergency' ? 'ring-2 ring-red-500 border-red-500' : ''}`}
+                  onClick={() => setBookingType('emergency')}
+                >
+                  <CardContent className="p-4 text-center">
+                    <AlertTriangle className="w-8 h-8 text-red-500 mx-auto mb-2" />
+                    <h3 className="font-medium">Emergency</h3>
+                    <p className="text-xs text-muted-foreground">Urgent care needed</p>
+                  </CardContent>
+                </Card>
               </div>
 
-              <Button size="lg" onClick={() => setCurrentStep("symptoms")} className="w-full sm:w-auto">
-                Start Booking
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </Button>
+              {/* Scheduled booking info */}
+              {bookingType === 'scheduled' && (
+                <>
+                  <div className="grid sm:grid-cols-3 gap-3 sm:gap-4 mb-6 sm:mb-8">
+                    <div className="p-3 sm:p-4 bg-muted/50 rounded-lg">
+                      <div className="flex items-center justify-center gap-2 mb-2">
+                        <Brain className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
+                        <Sparkles className="w-4 h-4 text-yellow-500" />
+                      </div>
+                      <h3 className="font-medium text-sm sm:text-base">AI Symptom Check</h3>
+                      <p className="text-xs sm:text-sm text-muted-foreground">AI-powered assessment</p>
+                    </div>
+                    <div className="p-3 sm:p-4 bg-muted/50 rounded-lg">
+                      <User className="w-6 h-6 sm:w-8 sm:h-8 text-primary mx-auto mb-2" />
+                      <h3 className="font-medium text-sm sm:text-base">Choose Clinician</h3>
+                      <p className="text-xs sm:text-sm text-muted-foreground">Select your preferred doctor</p>
+                    </div>
+                    <div className="p-3 sm:p-4 bg-muted/50 rounded-lg">
+                      <Clock className="w-6 h-6 sm:w-8 sm:h-8 text-primary mx-auto mb-2" />
+                      <h3 className="font-medium text-sm sm:text-base">Schedule</h3>
+                      <p className="text-xs sm:text-sm text-muted-foreground">Pick a convenient time</p>
+                    </div>
+                  </div>
+                  
+                  <div className="p-4 bg-primary/5 rounded-lg mb-6 text-left">
+                    <h4 className="font-medium flex items-center gap-2 text-sm sm:text-base">
+                      <Sparkles className="w-4 h-4 text-primary" />
+                      Powered by AI
+                    </h4>
+                    <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+                      Our AI assistant will analyze your symptoms to determine urgency and recommend the best care pathway.
+                    </p>
+                  </div>
+
+                  <Button size="lg" onClick={() => setCurrentStep("symptoms")} className="w-full sm:w-auto">
+                    Start Booking
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </Button>
+                </>
+              )}
+
+              {/* Walk-in info */}
+              {bookingType === 'walk-in' && (
+                <div className="text-left">
+                  <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg mb-6">
+                    <h4 className="font-medium flex items-center gap-2 text-orange-700">
+                      <Users className="w-4 h-4" />
+                      Walk-In Queue
+                    </h4>
+                    <p className="text-sm text-orange-600 mt-1">
+                      No appointment needed. Join the queue and be seen in order of arrival. 
+                      Average wait time: ~30 minutes.
+                    </p>
+                  </div>
+                  <Button size="lg" onClick={() => setCurrentStep("walk-in")} className="w-full sm:w-auto bg-orange-500 hover:bg-orange-600">
+                    Join Walk-In Queue
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </Button>
+                </div>
+              )}
+
+              {/* Emergency info */}
+              {bookingType === 'emergency' && (
+                <div className="text-left">
+                  <div className="p-4 bg-red-50 border border-red-200 rounded-lg mb-6">
+                    <h4 className="font-medium flex items-center gap-2 text-red-700">
+                      <AlertTriangle className="w-4 h-4" />
+                      Emergency Care
+                    </h4>
+                    <p className="text-sm text-red-600 mt-1">
+                      For urgent medical situations. You'll be prioritized and a clinician will contact you immediately.
+                    </p>
+                    <p className="text-sm text-red-700 font-medium mt-2">
+                      Life-threatening? Call 10177 (ambulance) or 112 now.
+                    </p>
+                  </div>
+                  <Button size="lg" variant="destructive" onClick={() => setCurrentStep("emergency")} className="w-full sm:w-auto">
+                    Request Emergency Help
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
+        )}
+
+        {/* Walk-In Booking */}
+        {currentStep === "walk-in" && (
+          <WalkInBooking
+            onBack={() => setCurrentStep("intro")}
+            onComplete={() => navigate("/patient")}
+          />
+        )}
+
+        {/* Emergency Booking */}
+        {currentStep === "emergency" && (
+          <EmergencyBooking
+            onBack={() => setCurrentStep("intro")}
+            onComplete={() => navigate("/patient")}
+          />
         )}
 
         {/* AI Symptom Checker Step */}
