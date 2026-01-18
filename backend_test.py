@@ -517,6 +517,315 @@ def test_analytics_overview():
         print(f"❌ FAILED: Unexpected error - {str(e)}")
         return False
 
+
+# ============ NEW PHASE 1 API TESTS ============
+
+def test_ai_symptom_assessment_common():
+    """Test the common symptoms endpoint (no auth required)"""
+    print("\n=== Testing AI Symptom Assessment - Common Symptoms API ===")
+    
+    try:
+        response = requests.get(f"{BASE_URL}/symptoms/common", timeout=10)
+        print(f"Status Code: {response.status_code}")
+        
+        if response.status_code == 200:
+            data = response.json()
+            print(f"Response keys: {list(data.keys())}")
+            
+            # Validate response structure
+            if 'symptom_categories' not in data:
+                print("❌ FAILED: Missing 'symptom_categories' field in response")
+                return False
+            
+            categories = data.get('symptom_categories', [])
+            if not isinstance(categories, list):
+                print("❌ FAILED: symptom_categories should be a list")
+                return False
+            
+            if len(categories) == 0:
+                print("❌ FAILED: symptom_categories should not be empty")
+                return False
+            
+            # Validate category structure
+            for category in categories:
+                if not isinstance(category, dict):
+                    print("❌ FAILED: Each category should be a dictionary")
+                    return False
+                
+                if 'category' not in category or 'symptoms' not in category:
+                    print("❌ FAILED: Each category should have 'category' and 'symptoms' fields")
+                    return False
+                
+                if not isinstance(category['symptoms'], list):
+                    print("❌ FAILED: symptoms should be a list")
+                    return False
+            
+            print("✅ PASSED: Common symptoms API working correctly")
+            print(f"   - Categories found: {len(categories)}")
+            print(f"   - Sample categories: {[c['category'] for c in categories[:3]]}")
+            return True
+        else:
+            print(f"❌ FAILED: Expected status 200, got {response.status_code}")
+            print(f"Response: {response.text}")
+            return False
+            
+    except requests.exceptions.RequestException as e:
+        print(f"❌ FAILED: Request error - {str(e)}")
+        return False
+    except Exception as e:
+        print(f"❌ FAILED: Unexpected error - {str(e)}")
+        return False
+
+
+def test_ai_symptom_assessment_auth():
+    """Test the symptom assessment endpoint (requires auth)"""
+    print("\n=== Testing AI Symptom Assessment - Assessment API (No Auth) ===")
+    
+    test_data = {
+        "symptoms": ["Headache", "Fever"],
+        "severity": "moderate",
+        "description": "Persistent headache with mild fever for 2 days",
+        "duration": "2 days",
+        "patient_age": 35,
+        "patient_gender": "female"
+    }
+    
+    try:
+        response = requests.post(
+            f"{BASE_URL}/symptoms/assess",
+            json=test_data,
+            headers={'Content-Type': 'application/json'},
+            timeout=15
+        )
+        
+        print(f"Status Code: {response.status_code}")
+        
+        if response.status_code == 401:
+            print("✅ PASSED: Symptom assessment correctly requires authentication")
+            return True
+        else:
+            print(f"❌ FAILED: Expected status 401, got {response.status_code}")
+            print(f"Response: {response.text}")
+            return False
+            
+    except requests.exceptions.RequestException as e:
+        print(f"❌ FAILED: Request error - {str(e)}")
+        return False
+    except Exception as e:
+        print(f"❌ FAILED: Unexpected error - {str(e)}")
+        return False
+
+
+def test_patient_onboarding_medical_aid_schemes():
+    """Test the medical aid schemes endpoint (no auth required)"""
+    print("\n=== Testing Patient Onboarding - Medical Aid Schemes API ===")
+    
+    try:
+        response = requests.get(f"{BASE_URL}/patient/medical-aid-schemes", timeout=10)
+        print(f"Status Code: {response.status_code}")
+        
+        if response.status_code == 200:
+            data = response.json()
+            print(f"Response keys: {list(data.keys())}")
+            
+            # Validate response structure
+            if 'schemes' not in data:
+                print("❌ FAILED: Missing 'schemes' field in response")
+                return False
+            
+            schemes = data.get('schemes', [])
+            if not isinstance(schemes, list):
+                print("❌ FAILED: schemes should be a list")
+                return False
+            
+            if len(schemes) == 0:
+                print("❌ FAILED: schemes should not be empty")
+                return False
+            
+            # Validate scheme structure
+            for scheme in schemes:
+                if not isinstance(scheme, dict):
+                    print("❌ FAILED: Each scheme should be a dictionary")
+                    return False
+                
+                required_fields = ['name', 'code']
+                for field in required_fields:
+                    if field not in scheme:
+                        print(f"❌ FAILED: Scheme missing required field: {field}")
+                        return False
+            
+            print("✅ PASSED: Medical aid schemes API working correctly")
+            print(f"   - Schemes found: {len(schemes)}")
+            print(f"   - Sample schemes: {[s['name'] for s in schemes[:3]]}")
+            return True
+        else:
+            print(f"❌ FAILED: Expected status 200, got {response.status_code}")
+            print(f"Response: {response.text}")
+            return False
+            
+    except requests.exceptions.RequestException as e:
+        print(f"❌ FAILED: Request error - {str(e)}")
+        return False
+    except Exception as e:
+        print(f"❌ FAILED: Unexpected error - {str(e)}")
+        return False
+
+
+def test_patient_onboarding_id_validation():
+    """Test the SA ID validation endpoint"""
+    print("\n=== Testing Patient Onboarding - SA ID Validation API ===")
+    
+    # Test with a valid SA ID format (not a real person)
+    test_id = "9001015009087"  # Valid format but fictional
+    
+    try:
+        response = requests.post(
+            f"{BASE_URL}/patient/validate-id",
+            json={"id_number": test_id},
+            headers={'Content-Type': 'application/json'},
+            timeout=10
+        )
+        
+        print(f"Status Code: {response.status_code}")
+        
+        if response.status_code == 200:
+            data = response.json()
+            print(f"Response keys: {list(data.keys())}")
+            
+            # Validate response structure
+            required_fields = ['valid', 'date_of_birth', 'gender', 'citizenship']
+            for field in required_fields:
+                if field not in data:
+                    print(f"❌ FAILED: Missing required field: {field}")
+                    return False
+            
+            # Check if validation worked
+            if not isinstance(data.get('valid'), bool):
+                print("❌ FAILED: 'valid' field should be boolean")
+                return False
+            
+            print("✅ PASSED: SA ID validation API working correctly")
+            print(f"   - Valid: {data.get('valid')}")
+            print(f"   - Date of birth: {data.get('date_of_birth')}")
+            print(f"   - Gender: {data.get('gender')}")
+            return True
+        else:
+            print(f"❌ FAILED: Expected status 200, got {response.status_code}")
+            print(f"Response: {response.text}")
+            return False
+            
+    except requests.exceptions.RequestException as e:
+        print(f"❌ FAILED: Request error - {str(e)}")
+        return False
+    except Exception as e:
+        print(f"❌ FAILED: Unexpected error - {str(e)}")
+        return False
+
+
+def test_nurse_triage_queue_auth():
+    """Test the nurse triage queue endpoint (requires clinician auth)"""
+    print("\n=== Testing Nurse Triage - Queue API (No Auth) ===")
+    
+    try:
+        response = requests.get(f"{BASE_URL}/triage/queue", timeout=10)
+        print(f"Status Code: {response.status_code}")
+        
+        if response.status_code == 401:
+            print("✅ PASSED: Triage queue correctly requires authentication")
+            return True
+        else:
+            print(f"❌ FAILED: Expected status 401, got {response.status_code}")
+            print(f"Response: {response.text}")
+            return False
+            
+    except requests.exceptions.RequestException as e:
+        print(f"❌ FAILED: Request error - {str(e)}")
+        return False
+    except Exception as e:
+        print(f"❌ FAILED: Unexpected error - {str(e)}")
+        return False
+
+
+def test_nurse_triage_reference_ranges():
+    """Test the vital sign reference ranges endpoint"""
+    print("\n=== Testing Nurse Triage - Reference Ranges API ===")
+    
+    try:
+        response = requests.get(f"{BASE_URL}/triage/reference-ranges", timeout=10)
+        print(f"Status Code: {response.status_code}")
+        
+        if response.status_code == 200:
+            data = response.json()
+            print(f"Response keys: {list(data.keys())}")
+            
+            # Validate response structure
+            if 'reference_ranges' not in data:
+                print("❌ FAILED: Missing 'reference_ranges' field in response")
+                return False
+            
+            ranges = data.get('reference_ranges', {})
+            if not isinstance(ranges, dict):
+                print("❌ FAILED: reference_ranges should be a dictionary")
+                return False
+            
+            # Check for expected vital signs
+            expected_vitals = [
+                'blood_pressure_systolic', 'blood_pressure_diastolic', 
+                'heart_rate', 'respiratory_rate', 'temperature', 'oxygen_saturation'
+            ]
+            
+            for vital in expected_vitals:
+                if vital not in ranges:
+                    print(f"❌ FAILED: Missing vital sign: {vital}")
+                    return False
+                
+                vital_range = ranges[vital]
+                required_fields = ['low', 'normal_low', 'normal_high', 'high', 'unit']
+                for field in required_fields:
+                    if field not in vital_range:
+                        print(f"❌ FAILED: Missing field {field} in {vital}")
+                        return False
+            
+            print("✅ PASSED: Reference ranges API working correctly")
+            print(f"   - Vital signs covered: {len(ranges)}")
+            print(f"   - Sample ranges: {list(ranges.keys())[:3]}")
+            return True
+        else:
+            print(f"❌ FAILED: Expected status 200, got {response.status_code}")
+            print(f"Response: {response.text}")
+            return False
+            
+    except requests.exceptions.RequestException as e:
+        print(f"❌ FAILED: Request error - {str(e)}")
+        return False
+    except Exception as e:
+        print(f"❌ FAILED: Unexpected error - {str(e)}")
+        return False
+
+
+def test_nurse_triage_ready_for_doctor_auth():
+    """Test the ready for doctor list endpoint (requires clinician auth)"""
+    print("\n=== Testing Nurse Triage - Ready for Doctor API (No Auth) ===")
+    
+    try:
+        response = requests.get(f"{BASE_URL}/triage/ready-for-doctor/list", timeout=10)
+        print(f"Status Code: {response.status_code}")
+        
+        if response.status_code == 401:
+            print("✅ PASSED: Ready for doctor list correctly requires authentication")
+            return True
+        else:
+            print(f"❌ FAILED: Expected status 401, got {response.status_code}")
+            print(f"Response: {response.text}")
+            return False
+            
+    except requests.exceptions.RequestException as e:
+        print(f"❌ FAILED: Request error - {str(e)}")
+        return False
+    except Exception as e:
+        print(f"❌ FAILED: Unexpected error - {str(e)}")
+        return False
+
 def main():
     """Run all backend API tests"""
     print("🚀 Starting HCF Telehealth Backend API Tests")
