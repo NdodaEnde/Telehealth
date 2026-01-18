@@ -10,8 +10,11 @@ from auth import get_current_user, AuthenticatedUser
 from supabase_client import supabase
 from healthbridge_service import (
     healthbridge, 
-    validate_sa_id_number, 
+    validate_sa_id_number,
+    validate_passport,
+    validate_identification,
     get_medical_aid_schemes,
+    get_countries,
     MedicalAidVerificationResult,
     PatientLookupResult
 )
@@ -33,13 +36,34 @@ async def list_medical_aid_schemes():
     return {"schemes": schemes}
 
 
+@router.get("/countries")
+async def list_countries():
+    """Get list of countries for passport selection"""
+    countries = get_countries()
+    return {"countries": countries}
+
+
 @router.post("/validate-id")
-async def validate_id_number(id_number: str):
+async def validate_id_number(
+    id_type: str = Query("sa_id", description="Type of ID: 'sa_id' or 'passport'"),
+    id_number: Optional[str] = Query(None, description="SA ID number (13 digits)"),
+    passport_number: Optional[str] = Query(None, description="Passport number"),
+    country_code: Optional[str] = Query(None, description="Country code for passport"),
+    date_of_birth: Optional[str] = Query(None, description="Date of birth (YYYY-MM-DD) for passport")
+):
     """
-    Validate South African ID number and extract information.
-    Returns date of birth, gender, and citizenship status.
+    Validate identification document.
+    
+    For SA ID: Validates format, checksum, extracts DOB/gender.
+    For Passport: Validates format, requires DOB separately.
     """
-    result = validate_sa_id_number(id_number)
+    result = validate_identification(
+        id_type=id_type,
+        id_number=id_number,
+        passport_number=passport_number,
+        country_code=country_code,
+        date_of_birth=date_of_birth
+    )
     return result
 
 
