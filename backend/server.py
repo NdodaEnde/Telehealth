@@ -28,8 +28,7 @@ from analytics_service import get_full_analytics_dashboard, get_analytics_overvi
 # Auth
 from auth import get_current_user, require_admin, AuthenticatedUser
 
-# Set Emergent LLM key in environment
-os.environ['EMERGENT_LLM_KEY'] = os.environ.get('EMERGENT_LLM_KEY', 'sk-emergent-cD64dDb326d73D2Bf1')
+# OpenAI API key is loaded from .env automatically
 
 # MongoDB connection
 client = AsyncIOMotorClient(MONGO_URL)
