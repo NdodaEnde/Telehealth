@@ -166,9 +166,10 @@ export const TimeSlotSelector = ({
             <CardTitle className="flex items-center gap-2">
               <Clock className="w-5 h-5 text-primary" />
               Select Time
+              <Badge variant="outline" className="ml-2 text-xs">{TIMEZONE_ABBR}</Badge>
             </CardTitle>
             <CardDescription>
-              {selectedDate ? format(selectedDate, "EEEE, MMMM d, yyyy") : "Select a date first"}
+              {selectedDate ? formatFullDateSAST(selectedDate) : "Select a date first"}
             </CardDescription>
           </CardHeader>
           <CardContent>
