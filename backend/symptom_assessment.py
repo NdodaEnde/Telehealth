@@ -1,6 +1,6 @@
 """AI Symptom Assessment Service
 
-Uses LLM to analyze patient symptoms and determine:
+Uses OpenAI to analyze patient symptoms and determine:
 - Urgency level (emergency/urgent/routine)
 - Recommended care pathway
 - Suggested specialization
@@ -13,11 +13,15 @@ import logging
 from typing import Optional, List, Dict, Any
 from pydantic import BaseModel
 from enum import Enum
+from openai import AsyncOpenAI
 
 logger = logging.getLogger(__name__)
 
-# Emergent LLM Key
-EMERGENT_LLM_KEY = os.environ.get('EMERGENT_LLM_KEY', 'sk-emergent-cD64dDb326d73D2Bf1')
+# OpenAI API Key
+OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY', '')
+
+# Initialize OpenAI client
+client = AsyncOpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
 
 
 class UrgencyLevel(str, Enum):
@@ -131,9 +135,11 @@ async def _llm_assess_symptoms(
     chronic_conditions: Optional[List[str]],
     current_medications: Optional[List[str]]
 ) -> SymptomAssessmentResult:
-    """Use LLM to assess symptoms"""
+    """Use OpenAI to assess symptoms"""
     
-    from emergentintegrations.llm.chat import chat, LlmConfig
+    if not client:
+        logger.warning("OpenAI client not initialized, falling back to rule-based assessment")
+        return _rule_based_assessment(symptoms, severity)
     
     # Build context
     patient_info = []
@@ -178,23 +184,21 @@ IMPORTANT:
 
 Respond ONLY with the JSON object, no additional text."""
 
-    config = LlmConfig(
-        api_key=EMERGENT_LLM_KEY,
+    response = await client.chat.completions.create(
         model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": "You are a medical triage AI. Respond only with valid JSON."},
+            {"role": "user", "content": prompt}
+        ],
         temperature=0.3,
         max_tokens=1000
     )
     
-    response = await chat(
-        config=config,
-        prompt=prompt,
-        system_prompt="You are a medical triage AI. Respond only with valid JSON."
-    )
+    response_text = response.choices[0].message.content.strip()
     
     # Parse LLM response
     try:
         # Clean response if needed
-        response_text = response.strip()
         if response_text.startswith("```json"):
             response_text = response_text[7:]
         if response_text.startswith("```"):
