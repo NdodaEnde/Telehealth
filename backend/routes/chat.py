@@ -1,27 +1,20 @@
 """
-Chat Routes for Patient-Receptionist Communication
+Chat Routes for Patient-Receptionist Communication (Supabase Version)
 Handles chat conversations, messages, and real-time updates
 """
-from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Query, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Query
 from pydantic import BaseModel, Field
-from typing import List, Optional, Dict, Any
+from typing import List, Optional
 from datetime import datetime
-from motor.motor_asyncio import AsyncIOMotorClient
-from config import MONGO_URL, DB_NAME
 from auth import get_current_user, AuthenticatedUser
+from supabase_client import supabase
 import uuid
 import logging
-import json
-import asyncio
 from enum import Enum
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/chat", tags=["Chat"])
-
-# MongoDB connection
-client = AsyncIOMotorClient(MONGO_URL)
-db = client[DB_NAME]
 
 # ============ Enums ============
 
@@ -36,6 +29,7 @@ class ChatStatus(str, Enum):
 class MessageType(str, Enum):
     TEXT = "text"
     IMAGE = "image"
+    FILE = "file"
     SYSTEM = "system"
     BOOKING_CONFIRMATION = "booking_confirmation"
 
@@ -53,11 +47,11 @@ class ConversationCreate(BaseModel):
 class ConversationResponse(BaseModel):
     id: str
     patient_id: str
-    patient_name: str
+    patient_name: Optional[str] = None
     receptionist_id: Optional[str] = None
     receptionist_name: Optional[str] = None
-    status: ChatStatus
-    patient_type: Optional[PatientType] = None
+    status: str
+    patient_type: Optional[str] = None
     booking_id: Optional[str] = None
     last_message: Optional[str] = None
     last_message_at: Optional[datetime] = None
@@ -75,10 +69,10 @@ class MessageResponse(BaseModel):
     id: str
     conversation_id: str
     sender_id: str
-    sender_name: str
+    sender_name: Optional[str] = None
     sender_role: str
     content: str
-    message_type: MessageType
+    message_type: str
     file_url: Optional[str] = None
     file_name: Optional[str] = None
     read_at: Optional[datetime] = None
@@ -93,88 +87,35 @@ class ConversationStatusUpdate(BaseModel):
 class PatientTypeUpdate(BaseModel):
     patient_type: PatientType
 
-# ============ WebSocket Manager ============
-
-class ConnectionManager:
-    """Manages WebSocket connections for real-time chat"""
-    
-    def __init__(self):
-        # Map of conversation_id -> list of WebSocket connections
-        self.active_connections: Dict[str, List[WebSocket]] = {}
-        # Map of user_id -> WebSocket for notifications
-        self.user_connections: Dict[str, WebSocket] = {}
-    
-    async def connect(self, websocket: WebSocket, conversation_id: str, user_id: str):
-        await websocket.accept()
-        if conversation_id not in self.active_connections:
-            self.active_connections[conversation_id] = []
-        self.active_connections[conversation_id].append(websocket)
-        self.user_connections[user_id] = websocket
-        logger.info(f"User {user_id} connected to conversation {conversation_id}")
-    
-    def disconnect(self, websocket: WebSocket, conversation_id: str, user_id: str):
-        if conversation_id in self.active_connections:
-            if websocket in self.active_connections[conversation_id]:
-                self.active_connections[conversation_id].remove(websocket)
-        if user_id in self.user_connections:
-            del self.user_connections[user_id]
-        logger.info(f"User {user_id} disconnected from conversation {conversation_id}")
-    
-    async def broadcast_to_conversation(self, conversation_id: str, message: dict):
-        """Send message to all participants in a conversation"""
-        if conversation_id in self.active_connections:
-            disconnected = []
-            for connection in self.active_connections[conversation_id]:
-                try:
-                    await connection.send_json(message)
-                except Exception as e:
-                    logger.error(f"Error sending message: {e}")
-                    disconnected.append(connection)
-            # Clean up disconnected sockets
-            for conn in disconnected:
-                self.active_connections[conversation_id].remove(conn)
-    
-    async def notify_user(self, user_id: str, notification: dict):
-        """Send notification to a specific user"""
-        if user_id in self.user_connections:
-            try:
-                await self.user_connections[user_id].send_json(notification)
-            except Exception as e:
-                logger.error(f"Error notifying user {user_id}: {e}")
-    
-    async def broadcast_to_receptionists(self, message: dict):
-        """Broadcast to all connected receptionists (for new chat notifications)"""
-        # This would need a separate tracking of receptionist connections
-        # For now, we'll handle this via polling
-        pass
-
-manager = ConnectionManager()
-
 # ============ Helper Functions ============
 
-async def get_user_profile(user_id: str) -> Dict[str, Any]:
-    """Get user profile from Supabase via our client"""
-    from supabase_client import supabase
+async def get_user_profile(user_id: str, access_token: str = None):
+    """Get user profile from Supabase"""
     profiles = await supabase.select(
         "profiles",
         columns="id, first_name, last_name",
-        filters={"id": user_id}
+        filters={"id": user_id},
+        access_token=access_token
     )
     if profiles:
         return profiles[0]
     return {"id": user_id, "first_name": "Unknown", "last_name": "User"}
 
-async def get_user_role(user_id: str) -> str:
+async def get_user_role(user_id: str, access_token: str = None) -> str:
     """Get user role from Supabase"""
-    from supabase_client import supabase
     roles = await supabase.select(
         "user_roles",
         columns="role",
-        filters={"user_id": user_id}
+        filters={"user_id": user_id},
+        access_token=access_token
     )
     if roles:
         return roles[0].get("role", "patient")
     return "patient"
+
+def format_name(profile: dict) -> str:
+    """Format user's full name"""
+    return f"{profile.get('first_name', '')} {profile.get('last_name', '')}".strip() or "Unknown"
 
 # ============ Conversation Routes ============
 
@@ -184,47 +125,50 @@ async def create_conversation(
     user: AuthenticatedUser = Depends(get_current_user)
 ):
     """Create a new chat conversation (patient initiates)"""
-    profile = await get_user_profile(user.id)
-    patient_name = f"{profile.get('first_name', '')} {profile.get('last_name', '')}".strip()
+    profile = await get_user_profile(user.id, user.token)
+    patient_name = format_name(profile)
     
-    conversation = {
-        "id": str(uuid.uuid4()),
+    conversation_id = str(uuid.uuid4())
+    
+    conversation_data = {
+        "id": conversation_id,
         "patient_id": user.id,
-        "patient_name": patient_name,
-        "receptionist_id": None,
-        "receptionist_name": None,
         "status": ChatStatus.NEW.value,
-        "patient_type": None,
-        "booking_id": None,
-        "last_message": data.initial_message[:100],
-        "last_message_at": datetime.utcnow(),
-        "unread_count": 1,
-        "created_at": datetime.utcnow(),
-        "updated_at": datetime.utcnow()
+        "last_message": data.initial_message[:100] if data.initial_message else None,
+        "last_message_at": datetime.utcnow().isoformat(),
+        "unread_count": 1
     }
     
-    await db.chat_conversations.insert_one(conversation)
+    result = await supabase.insert("chat_conversations", conversation_data, user.token)
+    
+    if not result:
+        raise HTTPException(status_code=500, detail="Failed to create conversation")
     
     # Create the initial message
-    message = {
+    message_data = {
         "id": str(uuid.uuid4()),
-        "conversation_id": conversation["id"],
+        "conversation_id": conversation_id,
         "sender_id": user.id,
-        "sender_name": patient_name,
         "sender_role": "patient",
         "content": data.initial_message,
-        "message_type": MessageType.TEXT.value,
-        "file_url": None,
-        "file_name": None,
-        "read_at": None,
-        "created_at": datetime.utcnow()
+        "message_type": MessageType.TEXT.value
     }
     
-    await db.chat_messages.insert_one(message)
+    await supabase.insert("chat_messages", message_data, user.token)
     
-    logger.info(f"New conversation created: {conversation['id']} by patient {user.id}")
+    logger.info(f"New conversation created: {conversation_id} by patient {user.id}")
     
-    return ConversationResponse(**conversation)
+    return ConversationResponse(
+        id=conversation_id,
+        patient_id=user.id,
+        patient_name=patient_name,
+        status=ChatStatus.NEW.value,
+        last_message=data.initial_message[:100],
+        last_message_at=datetime.utcnow(),
+        unread_count=1,
+        created_at=datetime.utcnow(),
+        updated_at=datetime.utcnow()
+    )
 
 @router.get("/conversations", response_model=List[ConversationResponse])
 async def get_conversations(
@@ -235,27 +179,56 @@ async def get_conversations(
     user: AuthenticatedUser = Depends(get_current_user)
 ):
     """Get conversations based on user role and filters"""
-    role = await get_user_role(user.id)
+    role = await get_user_role(user.id, user.token)
     
-    query = {}
+    filters = {}
     
     if role == "patient":
-        # Patients only see their own conversations
-        query["patient_id"] = user.id
-    elif role in ["admin", "nurse", "doctor"]:
-        # Receptionists/admins can filter
+        filters["patient_id"] = user.id
+    elif role in ["admin", "nurse", "doctor", "receptionist"]:
         if assigned_to_me:
-            query["receptionist_id"] = user.id
+            filters["receptionist_id"] = user.id
         elif unassigned_only:
-            query["receptionist_id"] = None
-        # If neither, show all conversations
+            filters["receptionist_id"] = {"is": "null"}
     
     if status:
-        query["status"] = status.value
+        filters["status"] = status.value
     
-    conversations = await db.chat_conversations.find(query).sort("updated_at", -1).limit(limit).to_list(limit)
+    conversations = await supabase.select(
+        "chat_conversations",
+        columns="*",
+        filters=filters,
+        order="updated_at.desc",
+        limit=limit,
+        access_token=user.token
+    )
     
-    return [ConversationResponse(**conv) for conv in conversations]
+    # Enrich with user names
+    result = []
+    for conv in conversations:
+        patient_profile = await get_user_profile(conv["patient_id"], user.token)
+        receptionist_name = None
+        if conv.get("receptionist_id"):
+            receptionist_profile = await get_user_profile(conv["receptionist_id"], user.token)
+            receptionist_name = format_name(receptionist_profile)
+        
+        result.append(ConversationResponse(
+            id=conv["id"],
+            patient_id=conv["patient_id"],
+            patient_name=format_name(patient_profile),
+            receptionist_id=conv.get("receptionist_id"),
+            receptionist_name=receptionist_name,
+            status=conv["status"],
+            patient_type=conv.get("patient_type"),
+            booking_id=conv.get("booking_id"),
+            last_message=conv.get("last_message"),
+            last_message_at=conv.get("last_message_at"),
+            unread_count=conv.get("unread_count", 0),
+            created_at=conv["created_at"],
+            updated_at=conv["updated_at"]
+        ))
+    
+    return result
 
 @router.get("/conversations/unassigned", response_model=List[ConversationResponse])
 async def get_unassigned_conversations(
@@ -263,16 +236,40 @@ async def get_unassigned_conversations(
     user: AuthenticatedUser = Depends(get_current_user)
 ):
     """Get unassigned conversations (for receptionist queue)"""
-    role = await get_user_role(user.id)
-    if role not in ["admin", "nurse", "doctor"]:
+    role = await get_user_role(user.id, user.token)
+    if role not in ["admin", "nurse", "doctor", "receptionist"]:
         raise HTTPException(status_code=403, detail="Not authorized to view unassigned chats")
     
-    conversations = await db.chat_conversations.find({
-        "receptionist_id": None,
-        "status": {"$ne": ChatStatus.CLOSED.value}
-    }).sort("created_at", 1).limit(limit).to_list(limit)
+    # Build URL with proper null filter
+    conversations = await supabase.select(
+        "chat_conversations",
+        columns="*",
+        filters={"receptionist_id": {"is": "null"}, "status": {"neq": ChatStatus.CLOSED.value}},
+        order="created_at.asc",
+        limit=limit,
+        access_token=user.token
+    )
     
-    return [ConversationResponse(**conv) for conv in conversations]
+    result = []
+    for conv in conversations:
+        patient_profile = await get_user_profile(conv["patient_id"], user.token)
+        result.append(ConversationResponse(
+            id=conv["id"],
+            patient_id=conv["patient_id"],
+            patient_name=format_name(patient_profile),
+            receptionist_id=None,
+            receptionist_name=None,
+            status=conv["status"],
+            patient_type=conv.get("patient_type"),
+            booking_id=conv.get("booking_id"),
+            last_message=conv.get("last_message"),
+            last_message_at=conv.get("last_message_at"),
+            unread_count=conv.get("unread_count", 0),
+            created_at=conv["created_at"],
+            updated_at=conv["updated_at"]
+        ))
+    
+    return result
 
 @router.get("/conversations/my-chats", response_model=List[ConversationResponse])
 async def get_my_assigned_conversations(
@@ -280,16 +277,40 @@ async def get_my_assigned_conversations(
     user: AuthenticatedUser = Depends(get_current_user)
 ):
     """Get conversations assigned to current user (receptionist)"""
-    role = await get_user_role(user.id)
-    if role not in ["admin", "nurse", "doctor"]:
+    role = await get_user_role(user.id, user.token)
+    if role not in ["admin", "nurse", "doctor", "receptionist"]:
         raise HTTPException(status_code=403, detail="Not authorized")
     
-    conversations = await db.chat_conversations.find({
-        "receptionist_id": user.id,
-        "status": {"$ne": ChatStatus.CLOSED.value}
-    }).sort("updated_at", -1).limit(limit).to_list(limit)
+    conversations = await supabase.select(
+        "chat_conversations",
+        columns="*",
+        filters={"receptionist_id": user.id, "status": {"neq": ChatStatus.CLOSED.value}},
+        order="updated_at.desc",
+        limit=limit,
+        access_token=user.token
+    )
     
-    return [ConversationResponse(**conv) for conv in conversations]
+    result = []
+    for conv in conversations:
+        patient_profile = await get_user_profile(conv["patient_id"], user.token)
+        receptionist_profile = await get_user_profile(user.id, user.token)
+        result.append(ConversationResponse(
+            id=conv["id"],
+            patient_id=conv["patient_id"],
+            patient_name=format_name(patient_profile),
+            receptionist_id=user.id,
+            receptionist_name=format_name(receptionist_profile),
+            status=conv["status"],
+            patient_type=conv.get("patient_type"),
+            booking_id=conv.get("booking_id"),
+            last_message=conv.get("last_message"),
+            last_message_at=conv.get("last_message_at"),
+            unread_count=conv.get("unread_count", 0),
+            created_at=conv["created_at"],
+            updated_at=conv["updated_at"]
+        ))
+    
+    return result
 
 @router.get("/conversations/{conversation_id}", response_model=ConversationResponse)
 async def get_conversation(
@@ -297,18 +318,43 @@ async def get_conversation(
     user: AuthenticatedUser = Depends(get_current_user)
 ):
     """Get a specific conversation"""
-    conversation = await db.chat_conversations.find_one({"id": conversation_id})
+    conversations = await supabase.select(
+        "chat_conversations",
+        columns="*",
+        filters={"id": conversation_id},
+        access_token=user.token
+    )
     
-    if not conversation:
+    if not conversations:
         raise HTTPException(status_code=404, detail="Conversation not found")
     
-    role = await get_user_role(user.id)
+    conv = conversations[0]
+    role = await get_user_role(user.id, user.token)
     
-    # Check access
-    if role == "patient" and conversation["patient_id"] != user.id:
+    if role == "patient" and conv["patient_id"] != user.id:
         raise HTTPException(status_code=403, detail="Not authorized to view this conversation")
     
-    return ConversationResponse(**conversation)
+    patient_profile = await get_user_profile(conv["patient_id"], user.token)
+    receptionist_name = None
+    if conv.get("receptionist_id"):
+        receptionist_profile = await get_user_profile(conv["receptionist_id"], user.token)
+        receptionist_name = format_name(receptionist_profile)
+    
+    return ConversationResponse(
+        id=conv["id"],
+        patient_id=conv["patient_id"],
+        patient_name=format_name(patient_profile),
+        receptionist_id=conv.get("receptionist_id"),
+        receptionist_name=receptionist_name,
+        status=conv["status"],
+        patient_type=conv.get("patient_type"),
+        booking_id=conv.get("booking_id"),
+        last_message=conv.get("last_message"),
+        last_message_at=conv.get("last_message_at"),
+        unread_count=conv.get("unread_count", 0),
+        created_at=conv["created_at"],
+        updated_at=conv["updated_at"]
+    )
 
 @router.post("/conversations/{conversation_id}/claim")
 async def claim_conversation(
@@ -316,55 +362,51 @@ async def claim_conversation(
     user: AuthenticatedUser = Depends(get_current_user)
 ):
     """Receptionist claims an unassigned conversation"""
-    role = await get_user_role(user.id)
-    if role not in ["admin", "nurse", "doctor"]:
+    role = await get_user_role(user.id, user.token)
+    if role not in ["admin", "nurse", "doctor", "receptionist"]:
         raise HTTPException(status_code=403, detail="Not authorized to claim chats")
     
-    conversation = await db.chat_conversations.find_one({"id": conversation_id})
+    conversations = await supabase.select(
+        "chat_conversations",
+        columns="*",
+        filters={"id": conversation_id},
+        access_token=user.token
+    )
     
-    if not conversation:
+    if not conversations:
         raise HTTPException(status_code=404, detail="Conversation not found")
     
-    if conversation.get("receptionist_id"):
+    conv = conversations[0]
+    if conv.get("receptionist_id"):
         raise HTTPException(status_code=400, detail="Conversation already assigned")
     
-    profile = await get_user_profile(user.id)
-    receptionist_name = f"{profile.get('first_name', '')} {profile.get('last_name', '')}".strip()
+    profile = await get_user_profile(user.id, user.token)
+    receptionist_name = format_name(profile)
     
-    await db.chat_conversations.update_one(
-        {"id": conversation_id},
+    await supabase.update(
+        "chat_conversations",
         {
-            "$set": {
-                "receptionist_id": user.id,
-                "receptionist_name": receptionist_name,
-                "status": ChatStatus.ACTIVE.value,
-                "updated_at": datetime.utcnow()
-            }
-        }
+            "receptionist_id": user.id,
+            "status": ChatStatus.ACTIVE.value
+        },
+        {"id": conversation_id},
+        user.token
     )
     
     # Add system message
     system_message = {
         "id": str(uuid.uuid4()),
         "conversation_id": conversation_id,
-        "sender_id": "system",
-        "sender_name": "System",
+        "sender_id": user.id,
         "sender_role": "system",
         "content": f"{receptionist_name} has joined the conversation",
-        "message_type": MessageType.SYSTEM.value,
-        "created_at": datetime.utcnow()
+        "message_type": MessageType.SYSTEM.value
     }
-    await db.chat_messages.insert_one(system_message)
-    
-    # Broadcast to conversation participants
-    await manager.broadcast_to_conversation(conversation_id, {
-        "type": "system",
-        "message": system_message
-    })
+    await supabase.insert("chat_messages", system_message, user.token)
     
     logger.info(f"Conversation {conversation_id} claimed by {user.id}")
     
-    return {"message": "Conversation claimed successfully"}
+    return {"message": "Conversation claimed successfully", "receptionist_name": receptionist_name}
 
 @router.post("/conversations/{conversation_id}/reassign")
 async def reassign_conversation(
@@ -373,36 +415,30 @@ async def reassign_conversation(
     user: AuthenticatedUser = Depends(get_current_user)
 ):
     """Reassign a conversation to another receptionist"""
-    role = await get_user_role(user.id)
+    role = await get_user_role(user.id, user.token)
     if role not in ["admin"]:
         raise HTTPException(status_code=403, detail="Only admins can reassign chats")
     
-    new_profile = await get_user_profile(data.receptionist_id)
-    new_name = f"{new_profile.get('first_name', '')} {new_profile.get('last_name', '')}".strip()
+    new_profile = await get_user_profile(data.receptionist_id, user.token)
+    new_name = format_name(new_profile)
     
-    await db.chat_conversations.update_one(
+    await supabase.update(
+        "chat_conversations",
+        {"receptionist_id": data.receptionist_id},
         {"id": conversation_id},
-        {
-            "$set": {
-                "receptionist_id": data.receptionist_id,
-                "receptionist_name": new_name,
-                "updated_at": datetime.utcnow()
-            }
-        }
+        user.token
     )
     
     # Add system message
     system_message = {
         "id": str(uuid.uuid4()),
         "conversation_id": conversation_id,
-        "sender_id": "system",
-        "sender_name": "System",
+        "sender_id": user.id,
         "sender_role": "system",
         "content": f"Conversation reassigned to {new_name}",
-        "message_type": MessageType.SYSTEM.value,
-        "created_at": datetime.utcnow()
+        "message_type": MessageType.SYSTEM.value
     }
-    await db.chat_messages.insert_one(system_message)
+    await supabase.insert("chat_messages", system_message, user.token)
     
     return {"message": "Conversation reassigned successfully"}
 
@@ -413,18 +449,15 @@ async def update_conversation_status(
     user: AuthenticatedUser = Depends(get_current_user)
 ):
     """Update conversation status"""
-    role = await get_user_role(user.id)
-    if role not in ["admin", "nurse", "doctor"]:
+    role = await get_user_role(user.id, user.token)
+    if role not in ["admin", "nurse", "doctor", "receptionist"]:
         raise HTTPException(status_code=403, detail="Not authorized to update status")
     
-    await db.chat_conversations.update_one(
+    await supabase.update(
+        "chat_conversations",
+        {"status": data.status.value},
         {"id": conversation_id},
-        {
-            "$set": {
-                "status": data.status.value,
-                "updated_at": datetime.utcnow()
-            }
-        }
+        user.token
     )
     
     return {"message": "Status updated successfully"}
@@ -436,18 +469,15 @@ async def update_patient_type(
     user: AuthenticatedUser = Depends(get_current_user)
 ):
     """Update patient type for billing purposes"""
-    role = await get_user_role(user.id)
-    if role not in ["admin", "nurse", "doctor"]:
+    role = await get_user_role(user.id, user.token)
+    if role not in ["admin", "nurse", "doctor", "receptionist"]:
         raise HTTPException(status_code=403, detail="Not authorized")
     
-    await db.chat_conversations.update_one(
+    await supabase.update(
+        "chat_conversations",
+        {"patient_type": data.patient_type.value},
         {"id": conversation_id},
-        {
-            "$set": {
-                "patient_type": data.patient_type.value,
-                "updated_at": datetime.utcnow()
-            }
-        }
+        user.token
     )
     
     return {"message": "Patient type updated successfully"}
@@ -458,29 +488,63 @@ async def update_patient_type(
 async def get_messages(
     conversation_id: str,
     limit: int = Query(100, ge=1, le=500),
-    before: Optional[str] = None,
     user: AuthenticatedUser = Depends(get_current_user)
 ):
     """Get messages for a conversation"""
     # Verify access
-    conversation = await db.chat_conversations.find_one({"id": conversation_id})
-    if not conversation:
+    conversations = await supabase.select(
+        "chat_conversations",
+        columns="*",
+        filters={"id": conversation_id},
+        access_token=user.token
+    )
+    
+    if not conversations:
         raise HTTPException(status_code=404, detail="Conversation not found")
     
-    role = await get_user_role(user.id)
-    if role == "patient" and conversation["patient_id"] != user.id:
+    conv = conversations[0]
+    role = await get_user_role(user.id, user.token)
+    
+    if role == "patient" and conv["patient_id"] != user.id:
         raise HTTPException(status_code=403, detail="Not authorized")
     
-    query = {"conversation_id": conversation_id}
-    if before:
-        query["created_at"] = {"$lt": before}
+    messages = await supabase.select(
+        "chat_messages",
+        columns="*",
+        filters={"conversation_id": conversation_id},
+        order="created_at.asc",
+        limit=limit,
+        access_token=user.token
+    )
     
-    messages = await db.chat_messages.find(query).sort("created_at", -1).limit(limit).to_list(limit)
+    # Enrich with sender names
+    result = []
+    sender_cache = {}
     
-    # Return in chronological order
-    messages.reverse()
+    for msg in messages:
+        sender_id = msg["sender_id"]
+        if sender_id not in sender_cache:
+            if msg["sender_role"] == "system":
+                sender_cache[sender_id] = "System"
+            else:
+                profile = await get_user_profile(sender_id, user.token)
+                sender_cache[sender_id] = format_name(profile)
+        
+        result.append(MessageResponse(
+            id=msg["id"],
+            conversation_id=msg["conversation_id"],
+            sender_id=sender_id,
+            sender_name=sender_cache[sender_id],
+            sender_role=msg["sender_role"],
+            content=msg["content"],
+            message_type=msg["message_type"],
+            file_url=msg.get("file_url"),
+            file_name=msg.get("file_name"),
+            read_at=msg.get("read_at"),
+            created_at=msg["created_at"]
+        ))
     
-    return [MessageResponse(**msg) for msg in messages]
+    return result
 
 @router.post("/conversations/{conversation_id}/messages", response_model=MessageResponse)
 async def send_message(
@@ -490,59 +554,57 @@ async def send_message(
 ):
     """Send a message in a conversation"""
     # Verify access
-    conversation = await db.chat_conversations.find_one({"id": conversation_id})
-    if not conversation:
+    conversations = await supabase.select(
+        "chat_conversations",
+        columns="*",
+        filters={"id": conversation_id},
+        access_token=user.token
+    )
+    
+    if not conversations:
         raise HTTPException(status_code=404, detail="Conversation not found")
     
-    role = await get_user_role(user.id)
-    if role == "patient" and conversation["patient_id"] != user.id:
+    conv = conversations[0]
+    role = await get_user_role(user.id, user.token)
+    
+    if role == "patient" and conv["patient_id"] != user.id:
         raise HTTPException(status_code=403, detail="Not authorized")
     
-    if role != "patient" and conversation.get("receptionist_id") != user.id and role != "admin":
-        # Allow if user is the assigned receptionist or an admin
-        raise HTTPException(status_code=403, detail="Not authorized to send messages in this conversation")
+    profile = await get_user_profile(user.id, user.token)
+    sender_name = format_name(profile)
     
-    profile = await get_user_profile(user.id)
-    sender_name = f"{profile.get('first_name', '')} {profile.get('last_name', '')}".strip()
-    
-    message = {
-        "id": str(uuid.uuid4()),
+    message_id = str(uuid.uuid4())
+    message_data = {
+        "id": message_id,
         "conversation_id": conversation_id,
         "sender_id": user.id,
-        "sender_name": sender_name,
         "sender_role": role,
         "content": data.content,
         "message_type": data.message_type.value,
         "file_url": data.file_url,
-        "file_name": data.file_name,
-        "read_at": None,
-        "created_at": datetime.utcnow()
+        "file_name": data.file_name
     }
     
-    await db.chat_messages.insert_one(message)
+    result = await supabase.insert("chat_messages", message_data, user.token)
     
-    # Update conversation
-    await db.chat_conversations.update_one(
-        {"id": conversation_id},
-        {
-            "$set": {
-                "last_message": data.content[:100],
-                "last_message_at": datetime.utcnow(),
-                "updated_at": datetime.utcnow()
-            },
-            "$inc": {"unread_count": 1}
-        }
-    )
-    
-    # Broadcast message via WebSocket
-    await manager.broadcast_to_conversation(conversation_id, {
-        "type": "new_message",
-        "message": {**message, "created_at": message["created_at"].isoformat()}
-    })
+    if not result:
+        raise HTTPException(status_code=500, detail="Failed to send message")
     
     logger.info(f"Message sent in conversation {conversation_id} by {user.id}")
     
-    return MessageResponse(**message)
+    return MessageResponse(
+        id=message_id,
+        conversation_id=conversation_id,
+        sender_id=user.id,
+        sender_name=sender_name,
+        sender_role=role,
+        content=data.content,
+        message_type=data.message_type.value,
+        file_url=data.file_url,
+        file_name=data.file_name,
+        read_at=None,
+        created_at=datetime.utcnow()
+    )
 
 @router.post("/conversations/{conversation_id}/read")
 async def mark_messages_read(
@@ -550,207 +612,25 @@ async def mark_messages_read(
     user: AuthenticatedUser = Depends(get_current_user)
 ):
     """Mark all messages in conversation as read"""
-    conversation = await db.chat_conversations.find_one({"id": conversation_id})
-    if not conversation:
-        raise HTTPException(status_code=404, detail="Conversation not found")
-    
-    # Mark messages not sent by this user as read
-    await db.chat_messages.update_many(
-        {
-            "conversation_id": conversation_id,
-            "sender_id": {"$ne": user.id},
-            "read_at": None
-        },
-        {"$set": {"read_at": datetime.utcnow()}}
+    conversations = await supabase.select(
+        "chat_conversations",
+        columns="*",
+        filters={"id": conversation_id},
+        access_token=user.token
     )
     
+    if not conversations:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    
     # Reset unread count
-    await db.chat_conversations.update_one(
+    await supabase.update(
+        "chat_conversations",
+        {"unread_count": 0},
         {"id": conversation_id},
-        {"$set": {"unread_count": 0}}
+        user.token
     )
     
     return {"message": "Messages marked as read"}
-
-# ============ File Upload Route ============
-
-@router.post("/conversations/{conversation_id}/upload")
-async def upload_file(
-    conversation_id: str,
-    file: UploadFile = File(...),
-    user: AuthenticatedUser = Depends(get_current_user)
-):
-    """Upload a file/image to a conversation"""
-    # Verify access
-    conversation = await db.chat_conversations.find_one({"id": conversation_id})
-    if not conversation:
-        raise HTTPException(status_code=404, detail="Conversation not found")
-    
-    role = await get_user_role(user.id)
-    if role == "patient" and conversation["patient_id"] != user.id:
-        raise HTTPException(status_code=403, detail="Not authorized")
-    
-    # Validate file type
-    allowed_types = ["image/jpeg", "image/png", "image/gif", "application/pdf"]
-    if file.content_type not in allowed_types:
-        raise HTTPException(status_code=400, detail="File type not allowed")
-    
-    # Read file content
-    content = await file.read()
-    
-    # Store in MongoDB GridFS or as base64 (for MVP, we'll store metadata and use external storage)
-    # For now, we'll return a placeholder - in production, integrate with S3 or Supabase Storage
-    file_id = str(uuid.uuid4())
-    
-    # Store file metadata
-    file_record = {
-        "id": file_id,
-        "conversation_id": conversation_id,
-        "uploaded_by": user.id,
-        "file_name": file.filename,
-        "content_type": file.content_type,
-        "size": len(content),
-        "created_at": datetime.utcnow()
-    }
-    
-    await db.chat_files.insert_one(file_record)
-    
-    # In production, upload to cloud storage and return URL
-    # For MVP, we'll store in MongoDB (not ideal for large files)
-    await db.chat_file_content.insert_one({
-        "file_id": file_id,
-        "content": content
-    })
-    
-    return {
-        "file_id": file_id,
-        "file_name": file.filename,
-        "file_url": f"/api/chat/files/{file_id}",
-        "content_type": file.content_type
-    }
-
-@router.get("/files/{file_id}")
-async def get_file(
-    file_id: str,
-    user: AuthenticatedUser = Depends(get_current_user)
-):
-    """Get an uploaded file"""
-    from fastapi.responses import Response
-    
-    file_record = await db.chat_files.find_one({"id": file_id})
-    if not file_record:
-        raise HTTPException(status_code=404, detail="File not found")
-    
-    # Verify access through conversation
-    conversation = await db.chat_conversations.find_one({"id": file_record["conversation_id"]})
-    if not conversation:
-        raise HTTPException(status_code=404, detail="Conversation not found")
-    
-    role = await get_user_role(user.id)
-    if role == "patient" and conversation["patient_id"] != user.id:
-        raise HTTPException(status_code=403, detail="Not authorized")
-    
-    file_content = await db.chat_file_content.find_one({"file_id": file_id})
-    if not file_content:
-        raise HTTPException(status_code=404, detail="File content not found")
-    
-    return Response(
-        content=file_content["content"],
-        media_type=file_record["content_type"],
-        headers={
-            "Content-Disposition": f'inline; filename="{file_record["file_name"]}"'
-        }
-    )
-
-# ============ WebSocket Endpoint ============
-
-@router.websocket("/ws/{conversation_id}")
-async def websocket_endpoint(
-    websocket: WebSocket,
-    conversation_id: str
-):
-    """WebSocket endpoint for real-time chat"""
-    # Get token from query params
-    token = websocket.query_params.get("token")
-    if not token:
-        await websocket.close(code=4001, reason="Missing authentication token")
-        return
-    
-    # Validate token
-    from supabase_client import supabase
-    user_data = await supabase.get_user_from_token(token)
-    if not user_data:
-        await websocket.close(code=4001, reason="Invalid token")
-        return
-    
-    user_id = user_data.get("id")
-    
-    # Verify conversation access
-    conversation = await db.chat_conversations.find_one({"id": conversation_id})
-    if not conversation:
-        await websocket.close(code=4004, reason="Conversation not found")
-        return
-    
-    role = await get_user_role(user_id)
-    if role == "patient" and conversation["patient_id"] != user_id:
-        await websocket.close(code=4003, reason="Not authorized")
-        return
-    
-    await manager.connect(websocket, conversation_id, user_id)
-    
-    try:
-        while True:
-            data = await websocket.receive_text()
-            message_data = json.loads(data)
-            
-            if message_data.get("type") == "ping":
-                await websocket.send_json({"type": "pong"})
-                continue
-            
-            if message_data.get("type") == "message":
-                # Handle incoming message through WebSocket
-                profile = await get_user_profile(user_id)
-                sender_name = f"{profile.get('first_name', '')} {profile.get('last_name', '')}".strip()
-                
-                message = {
-                    "id": str(uuid.uuid4()),
-                    "conversation_id": conversation_id,
-                    "sender_id": user_id,
-                    "sender_name": sender_name,
-                    "sender_role": role,
-                    "content": message_data.get("content", ""),
-                    "message_type": message_data.get("message_type", "text"),
-                    "file_url": message_data.get("file_url"),
-                    "file_name": message_data.get("file_name"),
-                    "read_at": None,
-                    "created_at": datetime.utcnow()
-                }
-                
-                await db.chat_messages.insert_one(message)
-                
-                # Update conversation
-                await db.chat_conversations.update_one(
-                    {"id": conversation_id},
-                    {
-                        "$set": {
-                            "last_message": message["content"][:100],
-                            "last_message_at": datetime.utcnow(),
-                            "updated_at": datetime.utcnow()
-                        }
-                    }
-                )
-                
-                # Broadcast to all participants
-                await manager.broadcast_to_conversation(conversation_id, {
-                    "type": "new_message",
-                    "message": {**message, "created_at": message["created_at"].isoformat()}
-                })
-                
-    except WebSocketDisconnect:
-        manager.disconnect(websocket, conversation_id, user_id)
-    except Exception as e:
-        logger.error(f"WebSocket error: {e}")
-        manager.disconnect(websocket, conversation_id, user_id)
 
 # ============ Stats for Dashboard ============
 
@@ -759,26 +639,36 @@ async def get_chat_stats(
     user: AuthenticatedUser = Depends(get_current_user)
 ):
     """Get chat statistics for receptionist dashboard"""
-    role = await get_user_role(user.id)
-    if role not in ["admin", "nurse", "doctor"]:
+    role = await get_user_role(user.id, user.token)
+    if role not in ["admin", "nurse", "doctor", "receptionist"]:
         raise HTTPException(status_code=403, detail="Not authorized")
     
-    unassigned_count = await db.chat_conversations.count_documents({
-        "receptionist_id": None,
-        "status": {"$ne": ChatStatus.CLOSED.value}
-    })
+    # Get unassigned count
+    unassigned = await supabase.select(
+        "chat_conversations",
+        columns="id",
+        filters={"receptionist_id": {"is": "null"}, "status": {"neq": ChatStatus.CLOSED.value}},
+        access_token=user.token
+    )
     
-    my_chats_count = await db.chat_conversations.count_documents({
-        "receptionist_id": user.id,
-        "status": {"$ne": ChatStatus.CLOSED.value}
-    })
+    # Get my chats count
+    my_chats = await supabase.select(
+        "chat_conversations",
+        columns="id",
+        filters={"receptionist_id": user.id, "status": {"neq": ChatStatus.CLOSED.value}},
+        access_token=user.token
+    )
     
-    total_active = await db.chat_conversations.count_documents({
-        "status": {"$nin": [ChatStatus.CLOSED.value, ChatStatus.CONSULTATION_COMPLETE.value]}
-    })
+    # Get total active
+    total_active = await supabase.select(
+        "chat_conversations",
+        columns="id",
+        filters={"status": {"neq": ChatStatus.CLOSED.value}},
+        access_token=user.token
+    )
     
     return {
-        "unassigned_count": unassigned_count,
-        "my_chats_count": my_chats_count,
-        "total_active": total_active
+        "unassigned_count": len(unassigned) if unassigned else 0,
+        "my_chats_count": len(my_chats) if my_chats else 0,
+        "total_active": len(total_active) if total_active else 0
     }
