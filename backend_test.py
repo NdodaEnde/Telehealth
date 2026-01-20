@@ -1127,6 +1127,10 @@ def main():
         'nurse_triage_reference_ranges', 'nurse_triage_ready_for_doctor_auth'
     ]
     
+    phase2_tests = [
+        'chat_stats_auth', 'chat_conversations_auth', 'bookings_fee_schedule', 'bookings_auth'
+    ]
+    
     print("EXISTING APIs:")
     for test_name in existing_tests:
         if test_name in test_results:
@@ -1135,6 +1139,12 @@ def main():
     
     print("\nPHASE 1 NEW APIs:")
     for test_name in phase1_tests:
+        if test_name in test_results:
+            status = "✅ PASSED" if test_results[test_name] else "❌ FAILED"
+            print(f"  {test_name.replace('_', ' ').title()}: {status}")
+    
+    print("\nPHASE 2 CHAT & BOOKINGS APIs:")
+    for test_name in phase2_tests:
         if test_name in test_results:
             status = "✅ PASSED" if test_results[test_name] else "❌ FAILED"
             print(f"  {test_name.replace('_', ' ').title()}: {status}")
