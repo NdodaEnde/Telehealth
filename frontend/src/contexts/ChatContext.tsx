@@ -78,6 +78,41 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
   // Calculate total unread count
   const unreadCount = conversations.reduce((acc, conv) => acc + (conv.unread_count || 0), 0);
 
+  // Helper: Deduplicate conversations by id
+  const deduplicateConversations = (convs: Conversation[]): Conversation[] => {
+    const seen = new Map<string, Conversation>();
+    convs.forEach(conv => {
+      if (!seen.has(conv.id)) {
+        seen.set(conv.id, conv);
+      }
+    });
+    return Array.from(seen.values());
+  };
+
+  // Helper: Enrich message with sender name from conversation context
+  const enrichMessageName = (message: any, conversation: Conversation | null): Message => {
+    let senderName = message.sender_name;
+    
+    if (!senderName && conversation) {
+      if (message.sender_role === 'system') {
+        senderName = 'System';
+      } else if (message.sender_id === conversation.patient_id) {
+        senderName = conversation.patient_name || 'Patient';
+      } else if (message.sender_id === conversation.receptionist_id) {
+        senderName = conversation.receptionist_name || 'Receptionist';
+      } else if (['receptionist', 'admin', 'nurse', 'doctor'].includes(message.sender_role)) {
+        senderName = conversation.receptionist_name || 'Staff';
+      } else {
+        senderName = 'Unknown';
+      }
+    }
+    
+    return {
+      ...message,
+      sender_name: senderName || message.sender_role || 'Unknown'
+    };
+  };
+
   // Load conversations for the current user
   const loadConversations = useCallback(async () => {
     if (!user) return;
@@ -87,7 +122,9 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
     
     try {
       const data = await chatAPI.getConversations();
-      setConversations(data || []);
+      // Deduplicate conversations
+      const uniqueConvs = deduplicateConversations(data || []);
+      setConversations(uniqueConvs);
     } catch (err: any) {
       console.error('Error loading conversations:', err);
       setError(err.message || 'Failed to load conversations');
@@ -118,26 +155,36 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
     }
   }, []);
 
-  // Select and load a conversation
+  // Select and load a conversation - FIX #2: Properly set conversation with names
   const selectConversation = useCallback(async (conversationId: string) => {
     setIsLoading(true);
     setError(null);
     
     try {
-      const [conversation, messagesData] = await Promise.all([
-        chatAPI.getConversation(conversationId),
-        chatAPI.getMessages(conversationId)
-      ]);
+      // Fetch full conversation details from API (includes names)
+      const conversation = await chatAPI.getConversation(conversationId);
       
+      console.log('[ChatContext] Selected conversation:', conversation);
+      
+      // Set current conversation with all enriched fields
       setCurrentConversation(conversation);
-      setMessages(messagesData || []);
+      
+      // Load messages
+      const messagesData = await chatAPI.getMessages(conversationId);
+      
+      // Enrich messages with names
+      const enrichedMessages = (messagesData || []).map((msg: any) => 
+        enrichMessageName(msg, conversation)
+      );
+      
+      setMessages(enrichedMessages);
       
       // Mark as read
       await chatAPI.markAsRead(conversationId);
       
-      // Update local state
+      // FIX: Update the conversation in the list with enriched data
       setConversations(prev => 
-        prev.map(c => c.id === conversationId ? { ...c, unread_count: 0 } : c)
+        prev.map(c => c.id === conversationId ? { ...c, ...conversation, unread_count: 0 } : c)
       );
     } catch (err: any) {
       console.error('Error loading conversation:', err);
@@ -154,12 +201,21 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
     
     try {
       const conversation = await chatAPI.createConversation(initialMessage);
-      setConversations(prev => [conversation, ...prev]);
+      
+      // Add to list (avoiding duplicates)
+      setConversations(prev => {
+        if (prev.some(c => c.id === conversation.id)) return prev;
+        return [conversation, ...prev];
+      });
+      
       setCurrentConversation(conversation);
       
       // Load messages
       const messagesData = await chatAPI.getMessages(conversation.id);
-      setMessages(messagesData || []);
+      const enrichedMessages = (messagesData || []).map((msg: any) => 
+        enrichMessageName(msg, conversation)
+      );
+      setMessages(enrichedMessages);
       
       return conversation;
     } catch (err: any) {
@@ -191,7 +247,11 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
         fileName
       );
       
-      setMessages(prev => [...prev, message]);
+      // Add message to list (it should have sender_name from API)
+      setMessages(prev => {
+        if (prev.some(m => m.id === message.id)) return prev;
+        return [...prev, message];
+      });
       
       // Update conversation in list
       setConversations(prev => 
@@ -211,7 +271,7 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
     try {
       await chatAPI.claimConversation(conversationId);
       
-      // Refresh the conversation
+      // Refresh the conversation to get updated data with receptionist name
       await selectConversation(conversationId);
       await loadConversations();
     } catch (err: any) {
@@ -225,7 +285,7 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
     try {
       await chatAPI.updateConversationStatus(conversationId, status);
       
-      // Update local state
+      // Update local state while preserving names
       setConversations(prev => 
         prev.map(c => c.id === conversationId ? { ...c, status: status as Conversation['status'] } : c)
       );
@@ -257,7 +317,7 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
   useEffect(() => {
     if (!user || !session) return;
 
-    // Subscribe to new messages in conversations the user is part of
+    // Subscribe to new messages
     const messagesChannel = supabase
       .channel('chat_messages_changes')
       .on(
@@ -270,6 +330,8 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
         (payload) => {
           const newMessage = payload.new as any;
           
+          console.log('[ChatContext] Realtime message received:', newMessage);
+          
           // If this is for the current conversation, add it to messages
           if (currentConversation && newMessage.conversation_id === currentConversation.id) {
             // Only add if not sent by current user (to avoid duplicates)
@@ -277,7 +339,11 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
               setMessages(prev => {
                 // Check if message already exists
                 if (prev.some(m => m.id === newMessage.id)) return prev;
-                return [...prev, newMessage as Message];
+                
+                // FIX #5: Enrich message with name if missing
+                const enrichedMessage = enrichMessageName(newMessage, currentConversation);
+                
+                return [...prev, enrichedMessage];
               });
             }
           }
@@ -290,7 +356,7 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
                   ...c,
                   last_message: newMessage.content?.substring(0, 100),
                   last_message_at: newMessage.created_at,
-                  unread_count: c.id === currentConversation?.id ? 0 : c.unread_count + 1
+                  unread_count: c.id === currentConversation?.id ? 0 : (c.unread_count || 0) + 1
                 };
               }
               return c;
@@ -311,19 +377,42 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
           table: 'chat_conversations'
         },
         (payload) => {
+          const updatedConv = payload.new as any;
+          
+          console.log('[ChatContext] Realtime conversation update:', payload.eventType, updatedConv);
+          
           if (payload.eventType === 'INSERT') {
-            const newConv = payload.new as Conversation;
             setConversations(prev => {
-              if (prev.some(c => c.id === newConv.id)) return prev;
-              return [newConv, ...prev];
+              // FIX #6: Prevent duplicates
+              if (prev.some(c => c.id === updatedConv.id)) return prev;
+              return [updatedConv as Conversation, ...prev];
             });
           } else if (payload.eventType === 'UPDATE') {
-            const updatedConv = payload.new as Conversation;
+            // FIX #3: Preserve existing names when updating
             setConversations(prev => 
-              prev.map(c => c.id === updatedConv.id ? { ...c, ...updatedConv } : c)
+              prev.map(c => {
+                if (c.id === updatedConv.id) {
+                  return {
+                    ...c,
+                    ...updatedConv,
+                    // Preserve names if not in update
+                    patient_name: updatedConv.patient_name || c.patient_name,
+                    receptionist_name: updatedConv.receptionist_name || c.receptionist_name,
+                  };
+                }
+                return c;
+              })
             );
+            
+            // Also update currentConversation if it's the one being updated
             if (currentConversation?.id === updatedConv.id) {
-              setCurrentConversation(prev => prev ? { ...prev, ...updatedConv } : null);
+              setCurrentConversation(prev => prev ? {
+                ...prev,
+                ...updatedConv,
+                // Preserve names
+                patient_name: updatedConv.patient_name || prev.patient_name,
+                receptionist_name: updatedConv.receptionist_name || prev.receptionist_name,
+              } : null);
             }
           }
         }
