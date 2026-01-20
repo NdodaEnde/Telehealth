@@ -203,24 +203,24 @@ async def create_booking(
     user: AuthenticatedUser = Depends(get_current_user)
 ):
     """Create a new booking (receptionist action)"""
-    role = await get_user_role(user.id, user.token)
+    role = await get_user_role(user.id, user.access_token)
     if role not in ["admin", "nurse", "doctor", "receptionist"]:
         raise HTTPException(status_code=403, detail="Not authorized to create bookings")
     
     # Get patient info
-    patient_profile = await get_user_profile(data.patient_id, user.token)
+    patient_profile = await get_user_profile(data.patient_id, user.access_token)
     if not patient_profile:
         raise HTTPException(status_code=404, detail="Patient not found")
     patient_name = format_name(patient_profile)
     
     # Get clinician info
-    clinician_profile = await get_user_profile(data.clinician_id, user.token)
+    clinician_profile = await get_user_profile(data.clinician_id, user.access_token)
     if not clinician_profile:
         raise HTTPException(status_code=404, detail="Clinician not found")
     clinician_name = format_name(clinician_profile)
     
     # Get creator info
-    creator_profile = await get_user_profile(user.id, user.token)
+    creator_profile = await get_user_profile(user.id, user.access_token)
     creator_name = format_name(creator_profile)
     
     # Get service details
@@ -239,7 +239,7 @@ async def create_booking(
         "notes": data.notes
     }
     
-    appointment_result = await supabase.insert("appointments", appointment_data, user.token)
+    appointment_result = await supabase.insert("appointments", appointment_data, user.access_token)
     appointment_id = appointment_result.get("id") if appointment_result else None
     
     # Create booking
@@ -258,7 +258,7 @@ async def create_booking(
         "created_by": user.id
     }
     
-    result = await supabase.insert("bookings", booking_data, user.token)
+    result = await supabase.insert("bookings", booking_data, user.access_token)
     
     if not result:
         raise HTTPException(status_code=500, detail="Failed to create booking")
@@ -272,7 +272,7 @@ async def create_booking(
                 "booking_id": booking_id
             },
             {"id": data.conversation_id},
-            user.token
+            user.access_token
         )
         
         # Add system message to conversation
@@ -284,7 +284,7 @@ async def create_booking(
             "content": f"✅ Booking confirmed with {clinician_name} on {data.scheduled_at.strftime('%B %d, %Y at %H:%M')}",
             "message_type": "booking_confirmation"
         }
-        await supabase.insert("chat_messages", system_message, user.token)
+        await supabase.insert("chat_messages", system_message, user.access_token)
     
     # Generate invoice for cash patients
     invoice_id = None
@@ -296,7 +296,7 @@ async def create_booking(
             service_type=data.service_type,
             service_details=service_details,
             consultation_date=data.scheduled_at,
-            access_token=user.token
+            access_token=user.access_token
         )
         
         # Update booking with invoice_id
@@ -304,7 +304,7 @@ async def create_booking(
             "bookings",
             {"invoice_id": invoice_id},
             {"id": booking_id},
-            user.token
+            user.access_token
         )
     
     logger.info(f"Booking created: {booking_id} for patient {data.patient_id}")
@@ -371,7 +371,7 @@ async def get_bookings(
     user: AuthenticatedUser = Depends(get_current_user)
 ):
     """Get bookings with optional filters"""
-    role = await get_user_role(user.id, user.token)
+    role = await get_user_role(user.id, user.access_token)
     
     filters = {}
     
@@ -392,14 +392,14 @@ async def get_bookings(
         filters=filters,
         order="scheduled_at.desc",
         limit=limit,
-        access_token=user.token
+        access_token=user.access_token
     )
     
     result = []
     for booking in bookings:
-        patient_profile = await get_user_profile(booking["patient_id"], user.token)
-        clinician_profile = await get_user_profile(booking["clinician_id"], user.token)
-        creator_profile = await get_user_profile(booking["created_by"], user.token)
+        patient_profile = await get_user_profile(booking["patient_id"], user.access_token)
+        clinician_profile = await get_user_profile(booking["clinician_id"], user.access_token)
+        creator_profile = await get_user_profile(booking["created_by"], user.access_token)
         
         service_details = FEE_SCHEDULE.get(ServiceType(booking["service_type"]), {})
         
@@ -438,21 +438,21 @@ async def get_booking(
         "bookings",
         columns="*",
         filters={"id": booking_id},
-        access_token=user.token
+        access_token=user.access_token
     )
     
     if not bookings:
         raise HTTPException(status_code=404, detail="Booking not found")
     
     booking = bookings[0]
-    role = await get_user_role(user.id, user.token)
+    role = await get_user_role(user.id, user.access_token)
     
     if role == "patient" and booking["patient_id"] != user.id:
         raise HTTPException(status_code=403, detail="Not authorized")
     
-    patient_profile = await get_user_profile(booking["patient_id"], user.token)
-    clinician_profile = await get_user_profile(booking["clinician_id"], user.token)
-    creator_profile = await get_user_profile(booking["created_by"], user.token)
+    patient_profile = await get_user_profile(booking["patient_id"], user.access_token)
+    clinician_profile = await get_user_profile(booking["clinician_id"], user.access_token)
+    creator_profile = await get_user_profile(booking["created_by"], user.access_token)
     service_details = FEE_SCHEDULE.get(ServiceType(booking["service_type"]), {})
     
     return BookingResponse(
@@ -485,7 +485,7 @@ async def update_booking(
     user: AuthenticatedUser = Depends(get_current_user)
 ):
     """Update a booking"""
-    role = await get_user_role(user.id, user.token)
+    role = await get_user_role(user.id, user.access_token)
     if role not in ["admin", "nurse", "doctor", "receptionist"]:
         raise HTTPException(status_code=403, detail="Not authorized")
     
@@ -493,7 +493,7 @@ async def update_booking(
         "bookings",
         columns="*",
         filters={"id": booking_id},
-        access_token=user.token
+        access_token=user.access_token
     )
     
     if not bookings:
@@ -510,7 +510,7 @@ async def update_booking(
         update_data["notes"] = data.notes
     
     if update_data:
-        await supabase.update("bookings", update_data, {"id": booking_id}, user.token)
+        await supabase.update("bookings", update_data, {"id": booking_id}, user.access_token)
         
         # Update linked appointment if exists
         if booking.get("appointment_id"):
@@ -520,7 +520,7 @@ async def update_booking(
             if data.status:
                 apt_update["status"] = data.status.value
             if apt_update:
-                await supabase.update("appointments", apt_update, {"id": booking["appointment_id"]}, user.token)
+                await supabase.update("appointments", apt_update, {"id": booking["appointment_id"]}, user.access_token)
     
     # Fetch updated booking
     return await get_booking(booking_id, user)
@@ -531,13 +531,13 @@ async def cancel_booking(
     user: AuthenticatedUser = Depends(get_current_user)
 ):
     """Cancel a booking"""
-    role = await get_user_role(user.id, user.token)
+    role = await get_user_role(user.id, user.access_token)
     
     bookings = await supabase.select(
         "bookings",
         columns="*",
         filters={"id": booking_id},
-        access_token=user.token
+        access_token=user.access_token
     )
     
     if not bookings:
@@ -553,7 +553,7 @@ async def cancel_booking(
         "bookings",
         {"status": BookingStatus.CANCELLED.value},
         {"id": booking_id},
-        user.token
+        user.access_token
     )
     
     # Cancel linked appointment
@@ -562,7 +562,7 @@ async def cancel_booking(
             "appointments",
             {"status": "cancelled"},
             {"id": booking["appointment_id"]},
-            user.token
+            user.access_token
         )
     
     # Cancel related invoice if exists
@@ -571,7 +571,7 @@ async def cancel_booking(
             "invoices",
             {"status": InvoiceStatus.CANCELLED.value},
             {"id": booking["invoice_id"]},
-            user.token
+            user.access_token
         )
     
     # Update conversation if linked
@@ -580,7 +580,7 @@ async def cancel_booking(
             "chat_conversations",
             {"status": "active", "booking_id": None},
             {"id": booking["conversation_id"]},
-            user.token
+            user.access_token
         )
         
         # Add system message
@@ -592,7 +592,7 @@ async def cancel_booking(
             "content": "❌ Booking has been cancelled",
             "message_type": "system"
         }
-        await supabase.insert("chat_messages", system_message, user.token)
+        await supabase.insert("chat_messages", system_message, user.access_token)
     
     return {"message": "Booking cancelled successfully"}
 
@@ -615,13 +615,13 @@ async def get_patient_invoices(
         filters=filters,
         order="created_at.desc",
         limit=limit,
-        access_token=user.token
+        access_token=user.access_token
     )
     
     result = []
     for inv in invoices:
-        patient_profile = await get_user_profile(inv["patient_id"], user.token)
-        clinician_profile = await get_user_profile(inv["clinician_id"], user.token)
+        patient_profile = await get_user_profile(inv["patient_id"], user.access_token)
+        clinician_profile = await get_user_profile(inv["clinician_id"], user.access_token)
         
         result.append(InvoiceResponse(
             id=inv["id"],
@@ -654,20 +654,20 @@ async def get_invoice(
         "invoices",
         columns="*",
         filters={"id": invoice_id},
-        access_token=user.token
+        access_token=user.access_token
     )
     
     if not invoices:
         raise HTTPException(status_code=404, detail="Invoice not found")
     
     inv = invoices[0]
-    role = await get_user_role(user.id, user.token)
+    role = await get_user_role(user.id, user.access_token)
     
     if role == "patient" and inv["patient_id"] != user.id:
         raise HTTPException(status_code=403, detail="Not authorized")
     
-    patient_profile = await get_user_profile(inv["patient_id"], user.token)
-    clinician_profile = await get_user_profile(inv["clinician_id"], user.token)
+    patient_profile = await get_user_profile(inv["patient_id"], user.access_token)
+    clinician_profile = await get_user_profile(inv["clinician_id"], user.access_token)
     
     return InvoiceResponse(
         id=inv["id"],
@@ -698,21 +698,21 @@ async def get_invoice_pdf(
         "invoices",
         columns="*",
         filters={"id": invoice_id},
-        access_token=user.token
+        access_token=user.access_token
     )
     
     if not invoices:
         raise HTTPException(status_code=404, detail="Invoice not found")
     
     inv = invoices[0]
-    role = await get_user_role(user.id, user.token)
+    role = await get_user_role(user.id, user.access_token)
     
     if role == "patient" and inv["patient_id"] != user.id:
         raise HTTPException(status_code=403, detail="Not authorized")
     
     # Get names for PDF
-    patient_profile = await get_user_profile(inv["patient_id"], user.token)
-    clinician_profile = await get_user_profile(inv["clinician_id"], user.token)
+    patient_profile = await get_user_profile(inv["patient_id"], user.access_token)
+    clinician_profile = await get_user_profile(inv["clinician_id"], user.access_token)
     
     # Prepare invoice data for PDF
     invoice_data = {
@@ -754,7 +754,7 @@ async def update_invoice_status(
     user: AuthenticatedUser = Depends(get_current_user)
 ):
     """Update invoice status (admin only)"""
-    role = await get_user_role(user.id, user.token)
+    role = await get_user_role(user.id, user.access_token)
     if role not in ["admin", "receptionist"]:
         raise HTTPException(status_code=403, detail="Not authorized")
     
@@ -764,7 +764,7 @@ async def update_invoice_status(
     if status == InvoiceStatus.PAID:
         update_data["paid_at"] = datetime.utcnow().isoformat()
     
-    await supabase.update("invoices", update_data, {"id": invoice_id}, user.token)
+    await supabase.update("invoices", update_data, {"id": invoice_id}, user.access_token)
     
     return {"message": "Invoice status updated"}
 
@@ -779,7 +779,7 @@ async def get_available_clinicians(
     clinicians = await supabase.select(
         "clinician_profiles",
         columns="id, specialization, is_available",
-        access_token=user.token
+        access_token=user.access_token
     )
     
     if not clinicians:
@@ -787,7 +787,7 @@ async def get_available_clinicians(
     
     result = []
     for clinician in clinicians:
-        profile = await get_user_profile(clinician["id"], user.token)
+        profile = await get_user_profile(clinician["id"], user.access_token)
         result.append({
             "id": clinician["id"],
             "name": format_name(profile),
