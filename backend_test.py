@@ -9,6 +9,8 @@ Tests the following APIs:
 5. Prescription PDF Generation API - POST /api/prescriptions/generate-pdf
 6. Analytics Dashboard API - GET /api/analytics/dashboard
 7. Analytics Overview API - GET /api/analytics/overview
+8. NEW PHASE 2: Chat System APIs - GET /api/chat/stats, POST/GET /api/chat/conversations
+9. NEW PHASE 2: Bookings APIs - GET /api/bookings/fee-schedule, POST/GET /api/bookings
 """
 
 import requests
