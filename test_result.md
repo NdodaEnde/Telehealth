@@ -276,6 +276,30 @@ backend:
         agent: "testing"
         comment: "✅ PASSED: GET /api/triage/queue correctly requires clinician authentication (returns 401 without token). GET /api/triage/reference-ranges returns comprehensive vital sign reference ranges for 6 vital signs (BP, HR, RR, temp, O2 sat) without authentication. GET /api/triage/ready-for-doctor/list correctly requires clinician authentication. All endpoints working as expected."
 
+  - task: "Chat System API"
+    implemented: true
+    working: "NA"
+    file: "backend/routes/chat.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "NEW: Chat-based booking system using Supabase. POST /api/chat/conversations, GET /api/chat/conversations, GET /api/chat/conversations/unassigned, POST /api/chat/conversations/{id}/claim, POST /api/chat/conversations/{id}/messages, GET /api/chat/stats. Real-time via Supabase Realtime."
+
+  - task: "Bookings API with Fee Schedule"
+    implemented: true
+    working: "NA"
+    file: "backend/routes/bookings.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "NEW: Receptionist booking management. GET /api/bookings/fee-schedule (Quadcare prices), POST /api/bookings, GET /api/bookings, DELETE /api/bookings/{id}, GET /api/bookings/invoices/my-invoices, GET /api/bookings/invoices/{id}/pdf. Invoice auto-generation for cash patients."
+
 frontend:
   - task: "API Service Layer"
     implemented: true
