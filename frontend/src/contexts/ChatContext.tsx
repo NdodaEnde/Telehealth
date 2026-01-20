@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './AuthContext';
 import { chatAPI } from '@/lib/api';
@@ -74,44 +74,17 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Use ref to access current conversation in realtime callbacks
+  const currentConversationRef = useRef<Conversation | null>(null);
+  
+  // Keep ref in sync with state
+  useEffect(() => {
+    currentConversationRef.current = currentConversation;
+  }, [currentConversation]);
 
   // Calculate total unread count
   const unreadCount = conversations.reduce((acc, conv) => acc + (conv.unread_count || 0), 0);
-
-  // Helper: Deduplicate conversations by id
-  const deduplicateConversations = (convs: Conversation[]): Conversation[] => {
-    const seen = new Map<string, Conversation>();
-    convs.forEach(conv => {
-      if (!seen.has(conv.id)) {
-        seen.set(conv.id, conv);
-      }
-    });
-    return Array.from(seen.values());
-  };
-
-  // Helper: Enrich message with sender name from conversation context
-  const enrichMessageName = (message: any, conversation: Conversation | null): Message => {
-    let senderName = message.sender_name;
-    
-    if (!senderName && conversation) {
-      if (message.sender_role === 'system') {
-        senderName = 'System';
-      } else if (message.sender_id === conversation.patient_id) {
-        senderName = conversation.patient_name || 'Patient';
-      } else if (message.sender_id === conversation.receptionist_id) {
-        senderName = conversation.receptionist_name || 'Receptionist';
-      } else if (['receptionist', 'admin', 'nurse', 'doctor'].includes(message.sender_role)) {
-        senderName = conversation.receptionist_name || 'Staff';
-      } else {
-        senderName = 'Unknown';
-      }
-    }
-    
-    return {
-      ...message,
-      sender_name: senderName || message.sender_role || 'Unknown'
-    };
-  };
 
   // Load conversations for the current user
   const loadConversations = useCallback(async () => {
@@ -122,9 +95,8 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
     
     try {
       const data = await chatAPI.getConversations();
-      // Deduplicate conversations
-      const uniqueConvs = deduplicateConversations(data || []);
-      setConversations(uniqueConvs);
+      // API returns enriched data with names
+      setConversations(data || []);
     } catch (err: any) {
       console.error('Error loading conversations:', err);
       setError(err.message || 'Failed to load conversations');
@@ -155,7 +127,7 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
     }
   }, []);
 
-  // Select and load a conversation - FIX #2: Properly set conversation with names
+  // Select and load a conversation
   const selectConversation = useCallback(async (conversationId: string) => {
     setIsLoading(true);
     setError(null);
@@ -164,27 +136,28 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
       // Fetch full conversation details from API (includes names)
       const conversation = await chatAPI.getConversation(conversationId);
       
-      console.log('[ChatContext] Selected conversation:', conversation);
+      console.log('[ChatContext] Selected conversation with names:', {
+        id: conversation.id,
+        patient_name: conversation.patient_name,
+        receptionist_name: conversation.receptionist_name
+      });
       
       // Set current conversation with all enriched fields
       setCurrentConversation(conversation);
       
-      // Load messages
+      // Load messages (API returns with sender_name)
       const messagesData = await chatAPI.getMessages(conversationId);
-      
-      // Enrich messages with names
-      const enrichedMessages = (messagesData || []).map((msg: any) => 
-        enrichMessageName(msg, conversation)
-      );
-      
-      setMessages(enrichedMessages);
+      setMessages(messagesData || []);
       
       // Mark as read
       await chatAPI.markAsRead(conversationId);
       
-      // FIX: Update the conversation in the list with enriched data
+      // Update the conversation in the list with enriched data
       setConversations(prev => 
-        prev.map(c => c.id === conversationId ? { ...c, ...conversation, unread_count: 0 } : c)
+        prev.map(c => c.id === conversationId 
+          ? { ...conversation, unread_count: 0 } 
+          : c
+        )
       );
     } catch (err: any) {
       console.error('Error loading conversation:', err);
@@ -212,10 +185,7 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
       
       // Load messages
       const messagesData = await chatAPI.getMessages(conversation.id);
-      const enrichedMessages = (messagesData || []).map((msg: any) => 
-        enrichMessageName(msg, conversation)
-      );
-      setMessages(enrichedMessages);
+      setMessages(messagesData || []);
       
       return conversation;
     } catch (err: any) {
@@ -247,7 +217,7 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
         fileName
       );
       
-      // Add message to list (it should have sender_name from API)
+      // Add message to list (API returns with sender_name)
       setMessages(prev => {
         if (prev.some(m => m.id === message.id)) return prev;
         return [...prev, message];
@@ -330,20 +300,39 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
         (payload) => {
           const newMessage = payload.new as any;
           
-          console.log('[ChatContext] Realtime message received:', newMessage);
+          console.log('[ChatContext] Realtime message received:', {
+            id: newMessage.id,
+            sender_name: newMessage.sender_name,
+            sender_role: newMessage.sender_role,
+            content: newMessage.content?.substring(0, 50)
+          });
+          
+          const currentConv = currentConversationRef.current;
           
           // If this is for the current conversation, add it to messages
-          if (currentConversation && newMessage.conversation_id === currentConversation.id) {
+          if (currentConv && newMessage.conversation_id === currentConv.id) {
             // Only add if not sent by current user (to avoid duplicates)
             if (newMessage.sender_id !== user.id) {
+              // Enrich the message with sender name if missing
+              let enrichedMessage = { ...newMessage };
+              
+              if (!enrichedMessage.sender_name || enrichedMessage.sender_name === null) {
+                // Determine name based on role and current conversation
+                if (enrichedMessage.sender_role === 'patient') {
+                  enrichedMessage.sender_name = currentConv.patient_name || 'Patient';
+                } else if (enrichedMessage.sender_role === 'system') {
+                  enrichedMessage.sender_name = 'System';
+                } else {
+                  // Receptionist, admin, nurse, doctor
+                  enrichedMessage.sender_name = currentConv.receptionist_name || 'Staff';
+                }
+                
+                console.log('[ChatContext] Enriched message sender_name to:', enrichedMessage.sender_name);
+              }
+              
               setMessages(prev => {
-                // Check if message already exists
                 if (prev.some(m => m.id === newMessage.id)) return prev;
-                
-                // FIX #5: Enrich message with name if missing
-                const enrichedMessage = enrichMessageName(newMessage, currentConversation);
-                
-                return [...prev, enrichedMessage];
+                return [...prev, enrichedMessage as Message];
               });
             }
           }
@@ -356,7 +345,7 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
                   ...c,
                   last_message: newMessage.content?.substring(0, 100),
                   last_message_at: newMessage.created_at,
-                  unread_count: c.id === currentConversation?.id ? 0 : (c.unread_count || 0) + 1
+                  unread_count: c.id === currentConv?.id ? 0 : (c.unread_count || 0) + 1
                 };
               }
               return c;
@@ -378,26 +367,51 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
         },
         (payload) => {
           const updatedConv = payload.new as any;
+          const currentConv = currentConversationRef.current;
           
-          console.log('[ChatContext] Realtime conversation update:', payload.eventType, updatedConv);
+          console.log('[ChatContext] Realtime conversation update:', payload.eventType, {
+            id: updatedConv.id,
+            status: updatedConv.status,
+            has_patient_name: !!updatedConv.patient_name,
+            has_receptionist_name: !!updatedConv.receptionist_name
+          });
           
           if (payload.eventType === 'INSERT') {
+            // NEW conversation - add with placeholder, then fetch enriched data
             setConversations(prev => {
-              // FIX #6: Prevent duplicates
               if (prev.some(c => c.id === updatedConv.id)) return prev;
-              return [updatedConv as Conversation, ...prev];
+              return [{
+                ...updatedConv,
+                patient_name: 'Loading...',
+                receptionist_name: null,
+              } as Conversation, ...prev];
             });
+            
+            // Fetch enriched data after a short delay
+            setTimeout(async () => {
+              try {
+                const enriched = await chatAPI.getConversation(updatedConv.id);
+                console.log('[ChatContext] Fetched enriched new conversation:', enriched.patient_name);
+                setConversations(prev => 
+                  prev.map(c => c.id === enriched.id ? enriched : c)
+                );
+              } catch (err) {
+                console.error('[ChatContext] Failed to fetch enriched conversation:', err);
+              }
+            }, 500);
+            
           } else if (payload.eventType === 'UPDATE') {
-            // FIX #3: Preserve existing names when updating
+            // EXISTING conversation - PRESERVE existing names
             setConversations(prev => 
               prev.map(c => {
                 if (c.id === updatedConv.id) {
+                  // Merge: keep existing names, update other fields
                   return {
-                    ...c,
-                    ...updatedConv,
-                    // Preserve names if not in update
-                    patient_name: updatedConv.patient_name || c.patient_name,
-                    receptionist_name: updatedConv.receptionist_name || c.receptionist_name,
+                    ...c,                    // Keep existing data (including names)
+                    ...updatedConv,          // Override with new data
+                    // But PRESERVE names since realtime doesn't include them
+                    patient_name: c.patient_name,
+                    receptionist_name: c.receptionist_name,
                   };
                 }
                 return c;
@@ -405,13 +419,13 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
             );
             
             // Also update currentConversation if it's the one being updated
-            if (currentConversation?.id === updatedConv.id) {
+            if (currentConv?.id === updatedConv.id) {
               setCurrentConversation(prev => prev ? {
                 ...prev,
                 ...updatedConv,
                 // Preserve names
-                patient_name: updatedConv.patient_name || prev.patient_name,
-                receptionist_name: updatedConv.receptionist_name || prev.receptionist_name,
+                patient_name: prev.patient_name,
+                receptionist_name: prev.receptionist_name,
               } : null);
             }
           }
@@ -423,7 +437,7 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
       supabase.removeChannel(messagesChannel);
       supabase.removeChannel(conversationsChannel);
     };
-  }, [user, session, currentConversation]);
+  }, [user, session]);
 
   // Load conversations on mount
   useEffect(() => {
