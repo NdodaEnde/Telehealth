@@ -1096,6 +1096,16 @@ def main():
     test_results['nurse_triage_reference_ranges'] = test_nurse_triage_reference_ranges()
     test_results['nurse_triage_ready_for_doctor_auth'] = test_nurse_triage_ready_for_doctor_auth()
     
+    # Run NEW Phase 2 Chat & Bookings API tests
+    print("\n" + "=" * 60)
+    print("🆕 PHASE 2 CHAT & BOOKINGS TESTING")
+    print("=" * 60)
+    
+    test_results['chat_stats_auth'] = test_chat_stats_auth()
+    test_results['chat_conversations_auth'] = test_chat_conversations_auth()
+    test_results['bookings_fee_schedule'] = test_bookings_fee_schedule()
+    test_results['bookings_auth'] = test_bookings_auth()
+    
     # Summary
     print("\n" + "=" * 60)
     print("📊 TEST SUMMARY")
