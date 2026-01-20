@@ -703,31 +703,75 @@ async def update_invoice_status(
     
     return {"message": "Invoice status updated"}
 
-# ============ Clinician List for Booking ============
+# ============ Post-Consultation Invoice Generation ============
 
-@router.get("/clinicians/available")
-async def get_available_clinicians(
+class GenerateInvoiceRequest(BaseModel):
+    booking_id: str
+
+@router.post("/invoices/generate", response_model=InvoiceResponse)
+async def generate_invoice_for_booking(
+    data: GenerateInvoiceRequest,
     user: AuthenticatedUser = Depends(get_current_user)
 ):
-    """Get list of available clinicians for booking"""
-    # Get clinicians from Supabase
-    clinicians = await supabase.select(
-        "clinician_profiles",
-        columns="id, specialization, is_available",
+    """
+    Generate invoice for a completed booking (post-consultation).
+    Called by receptionist/clinician after consultation is complete.
+    """
+    role = await get_user_role(user.id, user.access_token)
+    if role not in ["admin", "nurse", "doctor", "receptionist"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    # Get the booking
+    bookings = await supabase.select(
+        "bookings",
+        columns="*",
+        filters={"id": data.booking_id},
         access_token=user.access_token
     )
     
-    if not clinicians:
-        return []
+    if not bookings:
+        raise HTTPException(status_code=404, detail="Booking not found")
     
-    result = []
-    for clinician in clinicians:
-        profile = await get_user_profile(clinician["id"], user.access_token)
-        result.append({
-            "id": clinician["id"],
-            "name": format_name(profile),
-            "specialization": clinician.get("specialization"),
-            "is_available": clinician.get("is_available", False)
-        })
+    booking = bookings[0]
     
-    return result
+    # Check if invoice already exists
+    if booking.get("invoice_id"):
+        raise HTTPException(status_code=400, detail="Invoice already exists for this booking")
+    
+    # Get service details
+    service_details = FEE_SCHEDULE.get(ServiceType(booking["service_type"]), {})
+    
+    # Create invoice
+    invoice_id = await create_invoice(
+        booking_id=data.booking_id,
+        patient_id=booking["patient_id"],
+        clinician_name=booking.get("clinician_name"),
+        service_type=ServiceType(booking["service_type"]),
+        service_details=service_details,
+        consultation_date=datetime.fromisoformat(booking["scheduled_at"].replace('Z', '+00:00')) if isinstance(booking["scheduled_at"], str) else booking["scheduled_at"],
+        access_token=user.access_token
+    )
+    
+    # Update booking with invoice_id
+    await supabase.update(
+        "bookings",
+        {"invoice_id": invoice_id},
+        {"id": data.booking_id},
+        user.access_token
+    )
+    
+    # Add system message if conversation exists
+    if booking.get("conversation_id"):
+        system_message = {
+            "id": str(uuid.uuid4()),
+            "conversation_id": booking["conversation_id"],
+            "sender_id": user.id,
+            "sender_role": "system",
+            "sender_name": "System",
+            "content": f"📄 Invoice generated: R{service_details.get('price', 0):.2f} for {service_details.get('name', 'Service')}",
+            "message_type": "invoice_generated"
+        }
+        await supabase.insert("chat_messages", system_message, user.access_token)
+    
+    # Return the created invoice
+    return await get_invoice(invoice_id, user)
