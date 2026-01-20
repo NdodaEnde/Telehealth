@@ -21,6 +21,8 @@ from routes.auth import router as auth_router
 from routes.patient_onboarding import router as patient_onboarding_router
 from routes.symptom_assessment import router as symptom_assessment_router
 from routes.nurse_triage import router as nurse_triage_router
+from routes.chat import router as chat_router
+from routes.bookings import router as bookings_router
 
 # Analytics (existing)
 from analytics_service import get_full_analytics_dashboard, get_analytics_overview
