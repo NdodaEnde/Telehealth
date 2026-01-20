@@ -297,7 +297,7 @@ backend:
     file: "backend/routes/bookings.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
@@ -308,6 +308,9 @@ backend:
       - working: "NA"
         agent: "main"
         comment: "SIMPLIFIED: Removed clinician_id requirement. Now uses optional free-text clinician_name for display only (e.g., 'Sr. Nkosi'). Clinician assignment happens in HealthBridge externally. Invoice generation is now POST-CONSULTATION via /api/bookings/invoices/generate endpoint. Booking fields: patient_id, scheduled_at, service_type, billing_type, clinician_name (optional), notes (optional). SQL migration: supabase_booking_schema_update.sql"
+      - working: true
+        agent: "testing"
+        comment: "✅ PASSED: SIMPLIFIED BOOKINGS API TESTING COMPLETE. GET /api/bookings/fee-schedule returns correct 7 service types with exact Quadcare prices (Teleconsultation R260, Follow-ups R0/R300, Scripts R160/R300/R400, Medical Forms R400). POST /api/bookings/ correctly requires authentication and accepts simplified fields: patient_id, scheduled_at, service_type, billing_type, clinician_name (optional free text), notes (optional), conversation_id (optional). NO clinician_id required as specified. GET /api/bookings/ correctly requires authentication. POST /api/bookings/invoices/generate (new post-consultation endpoint) correctly requires authentication. All endpoints working as expected with simplified booking flow."
 
 frontend:
   - task: "API Service Layer"
