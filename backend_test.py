@@ -1068,7 +1068,7 @@ def test_bookings_auth():
 
 def main():
     """Run all backend API tests"""
-    print("🚀 Starting HCF Telehealth Backend API Tests - Phase 1 Focus")
+    print("🚀 Starting HCF Telehealth Backend API Tests - Phase 2 Chat & Bookings Focus")
     print(f"Backend URL: {BASE_URL}")
     print("=" * 60)
     
