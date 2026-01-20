@@ -202,7 +202,13 @@ async def create_booking(
     data: BookingCreate,
     user: AuthenticatedUser = Depends(get_current_user)
 ):
-    """Create a new booking (receptionist action)"""
+    """
+    Create a new booking (receptionist action)
+    
+    Note: Clinician assignment happens in HealthBridge (external system).
+    The clinician_name field is optional free text for display purposes only.
+    Invoice generation happens post-consultation, not during booking.
+    """
     role = await get_user_role(user.id, user.access_token)
     if role not in ["admin", "nurse", "doctor", "receptionist"]:
         raise HTTPException(status_code=403, detail="Not authorized to create bookings")
@@ -213,12 +219,6 @@ async def create_booking(
         raise HTTPException(status_code=404, detail="Patient not found")
     patient_name = format_name(patient_profile)
     
-    # Get clinician info
-    clinician_profile = await get_user_profile(data.clinician_id, user.access_token)
-    if not clinician_profile:
-        raise HTTPException(status_code=404, detail="Clinician not found")
-    clinician_name = format_name(clinician_profile)
-    
     # Get creator info
     creator_profile = await get_user_profile(user.id, user.access_token)
     creator_name = format_name(creator_profile)
@@ -228,27 +228,12 @@ async def create_booking(
     
     booking_id = str(uuid.uuid4())
     
-    # Create appointment in Supabase first
-    appointment_data = {
-        "patient_id": data.patient_id,
-        "clinician_id": data.clinician_id,
-        "scheduled_at": data.scheduled_at.isoformat(),
-        "duration_minutes": data.duration_minutes,
-        "consultation_type": "video",
-        "status": "confirmed",
-        "notes": data.notes
-    }
-    
-    appointment_result = await supabase.insert("appointments", appointment_data, user.access_token)
-    appointment_id = appointment_result.get("id") if appointment_result else None
-    
-    # Create booking
+    # Create booking (simplified - no appointment table dependency)
     booking_data = {
         "id": booking_id,
         "patient_id": data.patient_id,
-        "clinician_id": data.clinician_id,
+        "clinician_name": data.clinician_name,  # Free text field for display
         "conversation_id": data.conversation_id,
-        "appointment_id": appointment_id,
         "scheduled_at": data.scheduled_at.isoformat(),
         "duration_minutes": data.duration_minutes,
         "service_type": data.service_type.value,
@@ -276,36 +261,20 @@ async def create_booking(
         )
         
         # Add system message to conversation
+        clinician_text = f" with {data.clinician_name}" if data.clinician_name else ""
         system_message = {
             "id": str(uuid.uuid4()),
             "conversation_id": data.conversation_id,
             "sender_id": user.id,
             "sender_role": "system",
-            "content": f"✅ Booking confirmed with {clinician_name} on {data.scheduled_at.strftime('%B %d, %Y at %H:%M')}",
+            "sender_name": "System",
+            "content": f"✅ Booking confirmed{clinician_text} on {data.scheduled_at.strftime('%B %d, %Y at %H:%M')}",
             "message_type": "booking_confirmation"
         }
         await supabase.insert("chat_messages", system_message, user.access_token)
     
-    # Generate invoice for cash patients
-    invoice_id = None
-    if data.billing_type == PatientBillingType.CASH and service_details.get("price", 0) > 0:
-        invoice_id = await create_invoice(
-            booking_id=booking_id,
-            patient_id=data.patient_id,
-            clinician_id=data.clinician_id,
-            service_type=data.service_type,
-            service_details=service_details,
-            consultation_date=data.scheduled_at,
-            access_token=user.access_token
-        )
-        
-        # Update booking with invoice_id
-        await supabase.update(
-            "bookings",
-            {"invoice_id": invoice_id},
-            {"id": booking_id},
-            user.access_token
-        )
+    # NOTE: Invoice is NOT auto-generated during booking
+    # Invoice will be created post-consultation by receptionist/clinician
     
     logger.info(f"Booking created: {booking_id} for patient {data.patient_id}")
     
@@ -313,10 +282,8 @@ async def create_booking(
         id=booking_id,
         patient_id=data.patient_id,
         patient_name=patient_name,
-        clinician_id=data.clinician_id,
-        clinician_name=clinician_name,
+        clinician_name=data.clinician_name,
         conversation_id=data.conversation_id,
-        appointment_id=appointment_id,
         scheduled_at=data.scheduled_at,
         duration_minutes=data.duration_minutes,
         service_type=data.service_type.value,
@@ -327,7 +294,7 @@ async def create_booking(
         notes=data.notes,
         created_by=user.id,
         created_by_name=creator_name,
-        invoice_id=invoice_id,
+        invoice_id=None,  # Invoice created post-consultation
         created_at=datetime.utcnow(),
         updated_at=datetime.utcnow()
     )
