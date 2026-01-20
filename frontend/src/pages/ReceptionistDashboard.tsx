@@ -177,7 +177,7 @@ const ReceptionistDashboardContent = () => {
   };
 
   // Check if user has permission
-  if (role !== "admin" && role !== "nurse" && role !== "doctor") {
+  if (role !== "admin" && role !== "nurse" && role !== "doctor" && role !== "receptionist") {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Card className="p-8 text-center">
