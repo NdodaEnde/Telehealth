@@ -431,6 +431,7 @@ async def claim_conversation(
         "conversation_id": conversation_id,
         "sender_id": user.id,
         "sender_role": "system",
+        "sender_name": "System",
         "content": f"{receptionist_name} has joined the conversation",
         "message_type": MessageType.SYSTEM.value
     }
