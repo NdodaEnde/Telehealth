@@ -358,26 +358,19 @@ const ReceptionistDashboardContent = () => {
                           </DialogHeader>
                           <div className="space-y-4 py-4">
                             <div className="space-y-2">
-                              <Label>Clinical Associate</Label>
-                              <Select
-                                value={bookingForm.clinician_id}
-                                onValueChange={(v) => setBookingForm(f => ({ ...f, clinician_id: v }))}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select clinician" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {clinicians.map((c) => (
-                                    <SelectItem key={c.id} value={c.id}>
-                                      {c.name} {c.specialization && `(${c.specialization})`}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
+                              <Label>Clinical Associate (optional)</Label>
+                              <Input
+                                placeholder="e.g., Sr. Nkosi"
+                                value={bookingForm.clinician_name}
+                                onChange={(e) => setBookingForm(f => ({ ...f, clinician_name: e.target.value }))}
+                              />
+                              <p className="text-xs text-muted-foreground">
+                                For display only - clinician confirmed via HealthBridge
+                              </p>
                             </div>
 
                             <div className="space-y-2">
-                              <Label>Date & Time</Label>
+                              <Label>Date & Time *</Label>
                               <Input
                                 type="datetime-local"
                                 value={bookingForm.scheduled_at}
@@ -431,13 +424,11 @@ const ReceptionistDashboardContent = () => {
                               />
                             </div>
 
-                            {bookingForm.billing_type === 'cash' && getSelectedServicePrice() > 0 && (
-                              <div className="p-3 bg-muted rounded-lg">
-                                <p className="text-sm font-medium">
-                                  Invoice will be generated: R{getSelectedServicePrice().toFixed(2)}
-                                </p>
-                              </div>
-                            )}
+                            <div className="p-3 bg-muted rounded-lg">
+                              <p className="text-sm text-muted-foreground">
+                                💡 Invoice will be generated after consultation if needed
+                              </p>
+                            </div>
                           </div>
                           <DialogFooter>
                             <Button variant="outline" onClick={() => setShowBookingDialog(false)}>
