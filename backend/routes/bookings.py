@@ -1,15 +1,15 @@
 """
-Booking Routes for Receptionist-Created Bookings
+Booking Routes for Receptionist-Created Bookings (Supabase Version)
 Handles booking creation, management, and invoicing
 """
 from fastapi import APIRouter, HTTPException, Depends, Query
+from fastapi.responses import Response
 from pydantic import BaseModel, Field
 from typing import List, Optional
 from datetime import datetime, date
-from motor.motor_asyncio import AsyncIOMotorClient
-from config import MONGO_URL, DB_NAME
 from auth import get_current_user, AuthenticatedUser
 from supabase_client import supabase
+from pdf_generator import generate_invoice_pdf
 import uuid
 import logging
 from enum import Enum
@@ -17,10 +17,6 @@ from enum import Enum
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/bookings", tags=["Bookings"])
-
-# MongoDB connection
-client = AsyncIOMotorClient(MONGO_URL)
-db = client[DB_NAME]
 
 # ============ Enums ============
 
@@ -106,20 +102,21 @@ class BookingCreate(BaseModel):
 class BookingResponse(BaseModel):
     id: str
     patient_id: str
-    patient_name: str
+    patient_name: Optional[str] = None
     clinician_id: str
-    clinician_name: str
+    clinician_name: Optional[str] = None
     conversation_id: Optional[str] = None
+    appointment_id: Optional[str] = None
     scheduled_at: datetime
     duration_minutes: int
-    service_type: ServiceType
+    service_type: str
     service_name: str
     service_price: float
-    billing_type: PatientBillingType
-    status: BookingStatus
+    billing_type: str
+    status: str
     notes: Optional[str] = None
     created_by: str
-    created_by_name: str
+    created_by_name: Optional[str] = None
     invoice_id: Optional[str] = None
     created_at: datetime
     updated_at: datetime
@@ -133,16 +130,17 @@ class InvoiceResponse(BaseModel):
     id: str
     booking_id: str
     patient_id: str
-    patient_name: str
-    patient_email: Optional[str] = None
-    patient_phone: Optional[str] = None
+    patient_name: Optional[str] = None
+    service_type: str
     service_name: str
-    service_description: str
-    consultation_date: datetime
-    clinician_name: str
+    service_description: Optional[str] = None
     amount: float
-    status: InvoiceStatus
-    payment_instructions: str
+    consultation_date: datetime
+    clinician_id: str
+    clinician_name: Optional[str] = None
+    status: str
+    payment_reference: Optional[str] = None
+    paid_at: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime
 
@@ -154,32 +152,35 @@ class FeeScheduleItem(BaseModel):
 
 # ============ Helper Functions ============
 
-async def get_user_profile(user_id: str):
+async def get_user_profile(user_id: str, access_token: str = None):
     """Get user profile from Supabase"""
     profiles = await supabase.select(
         "profiles",
         columns="id, first_name, last_name, phone",
-        filters={"id": user_id}
+        filters={"id": user_id},
+        access_token=access_token
     )
     if profiles:
         return profiles[0]
     return None
 
-async def get_user_email(user_id: str):
-    """Get user email from Supabase auth"""
-    # This would require service key access
-    return None
-
-async def get_user_role(user_id: str) -> str:
+async def get_user_role(user_id: str, access_token: str = None) -> str:
     """Get user role from Supabase"""
     roles = await supabase.select(
         "user_roles",
         columns="role",
-        filters={"user_id": user_id}
+        filters={"user_id": user_id},
+        access_token=access_token
     )
     if roles:
         return roles[0].get("role", "patient")
     return "patient"
+
+def format_name(profile: dict) -> str:
+    """Format user's full name"""
+    if not profile:
+        return "Unknown"
+    return f"{profile.get('first_name', '')} {profile.get('last_name', '')}".strip() or "Unknown"
 
 # ============ Routes ============
 
@@ -202,54 +203,32 @@ async def create_booking(
     user: AuthenticatedUser = Depends(get_current_user)
 ):
     """Create a new booking (receptionist action)"""
-    role = await get_user_role(user.id)
-    if role not in ["admin", "nurse", "doctor"]:
+    role = await get_user_role(user.id, user.token)
+    if role not in ["admin", "nurse", "doctor", "receptionist"]:
         raise HTTPException(status_code=403, detail="Not authorized to create bookings")
     
     # Get patient info
-    patient_profile = await get_user_profile(data.patient_id)
+    patient_profile = await get_user_profile(data.patient_id, user.token)
     if not patient_profile:
         raise HTTPException(status_code=404, detail="Patient not found")
-    patient_name = f"{patient_profile.get('first_name', '')} {patient_profile.get('last_name', '')}".strip()
+    patient_name = format_name(patient_profile)
     
     # Get clinician info
-    clinician_profile = await get_user_profile(data.clinician_id)
+    clinician_profile = await get_user_profile(data.clinician_id, user.token)
     if not clinician_profile:
         raise HTTPException(status_code=404, detail="Clinician not found")
-    clinician_name = f"{clinician_profile.get('first_name', '')} {clinician_profile.get('last_name', '')}".strip()
+    clinician_name = format_name(clinician_profile)
     
     # Get creator info
-    creator_profile = await get_user_profile(user.id)
-    creator_name = f"{creator_profile.get('first_name', '')} {creator_profile.get('last_name', '')}".strip() if creator_profile else "Unknown"
+    creator_profile = await get_user_profile(user.id, user.token)
+    creator_name = format_name(creator_profile)
     
     # Get service details
     service_details = FEE_SCHEDULE.get(data.service_type, {})
     
-    booking = {
-        "id": str(uuid.uuid4()),
-        "patient_id": data.patient_id,
-        "patient_name": patient_name,
-        "clinician_id": data.clinician_id,
-        "clinician_name": clinician_name,
-        "conversation_id": data.conversation_id,
-        "scheduled_at": data.scheduled_at,
-        "duration_minutes": data.duration_minutes,
-        "service_type": data.service_type.value,
-        "service_name": service_details.get("name", ""),
-        "service_price": service_details.get("price", 0),
-        "billing_type": data.billing_type.value,
-        "status": BookingStatus.CONFIRMED.value,
-        "notes": data.notes,
-        "created_by": user.id,
-        "created_by_name": creator_name,
-        "invoice_id": None,
-        "created_at": datetime.utcnow(),
-        "updated_at": datetime.utcnow()
-    }
+    booking_id = str(uuid.uuid4())
     
-    await db.bookings.insert_one(booking)
-    
-    # Also create appointment in Supabase for consistency
+    # Create appointment in Supabase first
     appointment_data = {
         "patient_id": data.patient_id,
         "clinician_id": data.clinician_id,
@@ -260,86 +239,194 @@ async def create_booking(
         "notes": data.notes
     }
     
-    await supabase.insert("appointments", appointment_data)
+    appointment_result = await supabase.insert("appointments", appointment_data, user.token)
+    appointment_id = appointment_result.get("id") if appointment_result else None
+    
+    # Create booking
+    booking_data = {
+        "id": booking_id,
+        "patient_id": data.patient_id,
+        "clinician_id": data.clinician_id,
+        "conversation_id": data.conversation_id,
+        "appointment_id": appointment_id,
+        "scheduled_at": data.scheduled_at.isoformat(),
+        "duration_minutes": data.duration_minutes,
+        "service_type": data.service_type.value,
+        "billing_type": data.billing_type.value,
+        "status": BookingStatus.CONFIRMED.value,
+        "notes": data.notes,
+        "created_by": user.id
+    }
+    
+    result = await supabase.insert("bookings", booking_data, user.token)
+    
+    if not result:
+        raise HTTPException(status_code=500, detail="Failed to create booking")
     
     # Update conversation status if linked
     if data.conversation_id:
-        from routes.chat import ChatStatus
-        await db.chat_conversations.update_one(
-            {"id": data.conversation_id},
+        await supabase.update(
+            "chat_conversations",
             {
-                "$set": {
-                    "status": ChatStatus.BOOKED.value,
-                    "booking_id": booking["id"],
-                    "updated_at": datetime.utcnow()
-                }
-            }
+                "status": "booked",
+                "booking_id": booking_id
+            },
+            {"id": data.conversation_id},
+            user.token
         )
         
         # Add system message to conversation
         system_message = {
             "id": str(uuid.uuid4()),
             "conversation_id": data.conversation_id,
-            "sender_id": "system",
-            "sender_name": "System",
+            "sender_id": user.id,
             "sender_role": "system",
-            "content": f"Booking confirmed with {clinician_name} on {data.scheduled_at.strftime('%B %d, %Y at %H:%M')}",
-            "message_type": "booking_confirmation",
-            "created_at": datetime.utcnow()
+            "content": f"✅ Booking confirmed with {clinician_name} on {data.scheduled_at.strftime('%B %d, %Y at %H:%M')}",
+            "message_type": "booking_confirmation"
         }
-        await db.chat_messages.insert_one(system_message)
+        await supabase.insert("chat_messages", system_message, user.token)
     
     # Generate invoice for cash patients
+    invoice_id = None
     if data.billing_type == PatientBillingType.CASH and service_details.get("price", 0) > 0:
-        invoice = await generate_invoice(booking, patient_profile)
-        booking["invoice_id"] = invoice["id"]
-        await db.bookings.update_one(
-            {"id": booking["id"]},
-            {"$set": {"invoice_id": invoice["id"]}}
+        invoice_id = await create_invoice(
+            booking_id=booking_id,
+            patient_id=data.patient_id,
+            clinician_id=data.clinician_id,
+            service_type=data.service_type,
+            service_details=service_details,
+            consultation_date=data.scheduled_at,
+            access_token=user.token
+        )
+        
+        # Update booking with invoice_id
+        await supabase.update(
+            "bookings",
+            {"invoice_id": invoice_id},
+            {"id": booking_id},
+            user.token
         )
     
-    logger.info(f"Booking created: {booking['id']} for patient {data.patient_id}")
+    logger.info(f"Booking created: {booking_id} for patient {data.patient_id}")
     
-    return BookingResponse(**booking)
+    return BookingResponse(
+        id=booking_id,
+        patient_id=data.patient_id,
+        patient_name=patient_name,
+        clinician_id=data.clinician_id,
+        clinician_name=clinician_name,
+        conversation_id=data.conversation_id,
+        appointment_id=appointment_id,
+        scheduled_at=data.scheduled_at,
+        duration_minutes=data.duration_minutes,
+        service_type=data.service_type.value,
+        service_name=service_details.get("name", ""),
+        service_price=service_details.get("price", 0),
+        billing_type=data.billing_type.value,
+        status=BookingStatus.CONFIRMED.value,
+        notes=data.notes,
+        created_by=user.id,
+        created_by_name=creator_name,
+        invoice_id=invoice_id,
+        created_at=datetime.utcnow(),
+        updated_at=datetime.utcnow()
+    )
+
+async def create_invoice(
+    booking_id: str,
+    patient_id: str,
+    clinician_id: str,
+    service_type: ServiceType,
+    service_details: dict,
+    consultation_date: datetime,
+    access_token: str
+) -> str:
+    """Create an invoice for a cash patient"""
+    invoice_id = str(uuid.uuid4())
+    
+    invoice_data = {
+        "id": invoice_id,
+        "booking_id": booking_id,
+        "patient_id": patient_id,
+        "service_type": service_type.value,
+        "service_name": service_details.get("name", ""),
+        "service_description": service_details.get("description", ""),
+        "amount": service_details.get("price", 0),
+        "consultation_date": consultation_date.isoformat(),
+        "clinician_id": clinician_id,
+        "status": InvoiceStatus.PENDING.value
+    }
+    
+    await supabase.insert("invoices", invoice_data, access_token)
+    logger.info(f"Invoice created: {invoice_id} for booking {booking_id}")
+    
+    return invoice_id
 
 @router.get("", response_model=List[BookingResponse])
 async def get_bookings(
     patient_id: Optional[str] = None,
     clinician_id: Optional[str] = None,
     status: Optional[BookingStatus] = None,
-    date_from: Optional[date] = None,
-    date_to: Optional[date] = None,
     limit: int = Query(50, ge=1, le=100),
     user: AuthenticatedUser = Depends(get_current_user)
 ):
     """Get bookings with optional filters"""
-    role = await get_user_role(user.id)
+    role = await get_user_role(user.id, user.token)
     
-    query = {}
+    filters = {}
     
     if role == "patient":
-        # Patients only see their own bookings
-        query["patient_id"] = user.id
+        filters["patient_id"] = user.id
     else:
         if patient_id:
-            query["patient_id"] = patient_id
+            filters["patient_id"] = patient_id
         if clinician_id:
-            query["clinician_id"] = clinician_id
+            filters["clinician_id"] = clinician_id
     
     if status:
-        query["status"] = status.value
+        filters["status"] = status.value
     
-    if date_from:
-        query["scheduled_at"] = {"$gte": datetime.combine(date_from, datetime.min.time())}
-    if date_to:
-        if "scheduled_at" in query:
-            query["scheduled_at"]["$lte"] = datetime.combine(date_to, datetime.max.time())
-        else:
-            query["scheduled_at"] = {"$lte": datetime.combine(date_to, datetime.max.time())}
+    bookings = await supabase.select(
+        "bookings",
+        columns="*",
+        filters=filters,
+        order="scheduled_at.desc",
+        limit=limit,
+        access_token=user.token
+    )
     
-    bookings = await db.bookings.find(query).sort("scheduled_at", -1).limit(limit).to_list(limit)
+    result = []
+    for booking in bookings:
+        patient_profile = await get_user_profile(booking["patient_id"], user.token)
+        clinician_profile = await get_user_profile(booking["clinician_id"], user.token)
+        creator_profile = await get_user_profile(booking["created_by"], user.token)
+        
+        service_details = FEE_SCHEDULE.get(ServiceType(booking["service_type"]), {})
+        
+        result.append(BookingResponse(
+            id=booking["id"],
+            patient_id=booking["patient_id"],
+            patient_name=format_name(patient_profile),
+            clinician_id=booking["clinician_id"],
+            clinician_name=format_name(clinician_profile),
+            conversation_id=booking.get("conversation_id"),
+            appointment_id=booking.get("appointment_id"),
+            scheduled_at=booking["scheduled_at"],
+            duration_minutes=booking["duration_minutes"],
+            service_type=booking["service_type"],
+            service_name=service_details.get("name", ""),
+            service_price=service_details.get("price", 0),
+            billing_type=booking["billing_type"],
+            status=booking["status"],
+            notes=booking.get("notes"),
+            created_by=booking["created_by"],
+            created_by_name=format_name(creator_profile),
+            invoice_id=booking.get("invoice_id"),
+            created_at=booking["created_at"],
+            updated_at=booking["updated_at"]
+        ))
     
-    return [BookingResponse(**booking) for booking in bookings]
+    return result
 
 @router.get("/{booking_id}", response_model=BookingResponse)
 async def get_booking(
@@ -347,15 +434,49 @@ async def get_booking(
     user: AuthenticatedUser = Depends(get_current_user)
 ):
     """Get a specific booking"""
-    booking = await db.bookings.find_one({"id": booking_id})
-    if not booking:
+    bookings = await supabase.select(
+        "bookings",
+        columns="*",
+        filters={"id": booking_id},
+        access_token=user.token
+    )
+    
+    if not bookings:
         raise HTTPException(status_code=404, detail="Booking not found")
     
-    role = await get_user_role(user.id)
+    booking = bookings[0]
+    role = await get_user_role(user.id, user.token)
+    
     if role == "patient" and booking["patient_id"] != user.id:
         raise HTTPException(status_code=403, detail="Not authorized")
     
-    return BookingResponse(**booking)
+    patient_profile = await get_user_profile(booking["patient_id"], user.token)
+    clinician_profile = await get_user_profile(booking["clinician_id"], user.token)
+    creator_profile = await get_user_profile(booking["created_by"], user.token)
+    service_details = FEE_SCHEDULE.get(ServiceType(booking["service_type"]), {})
+    
+    return BookingResponse(
+        id=booking["id"],
+        patient_id=booking["patient_id"],
+        patient_name=format_name(patient_profile),
+        clinician_id=booking["clinician_id"],
+        clinician_name=format_name(clinician_profile),
+        conversation_id=booking.get("conversation_id"),
+        appointment_id=booking.get("appointment_id"),
+        scheduled_at=booking["scheduled_at"],
+        duration_minutes=booking["duration_minutes"],
+        service_type=booking["service_type"],
+        service_name=service_details.get("name", ""),
+        service_price=service_details.get("price", 0),
+        billing_type=booking["billing_type"],
+        status=booking["status"],
+        notes=booking.get("notes"),
+        created_by=booking["created_by"],
+        created_by_name=format_name(creator_profile),
+        invoice_id=booking.get("invoice_id"),
+        created_at=booking["created_at"],
+        updated_at=booking["updated_at"]
+    )
 
 @router.patch("/{booking_id}", response_model=BookingResponse)
 async def update_booking(
@@ -364,42 +485,45 @@ async def update_booking(
     user: AuthenticatedUser = Depends(get_current_user)
 ):
     """Update a booking"""
-    role = await get_user_role(user.id)
-    if role not in ["admin", "nurse", "doctor"]:
+    role = await get_user_role(user.id, user.token)
+    if role not in ["admin", "nurse", "doctor", "receptionist"]:
         raise HTTPException(status_code=403, detail="Not authorized")
     
-    booking = await db.bookings.find_one({"id": booking_id})
-    if not booking:
+    bookings = await supabase.select(
+        "bookings",
+        columns="*",
+        filters={"id": booking_id},
+        access_token=user.token
+    )
+    
+    if not bookings:
         raise HTTPException(status_code=404, detail="Booking not found")
     
-    update_data = {"updated_at": datetime.utcnow()}
+    booking = bookings[0]
+    update_data = {}
     
     if data.scheduled_at:
-        update_data["scheduled_at"] = data.scheduled_at
+        update_data["scheduled_at"] = data.scheduled_at.isoformat()
     if data.status:
         update_data["status"] = data.status.value
     if data.notes is not None:
         update_data["notes"] = data.notes
     
-    await db.bookings.update_one({"id": booking_id}, {"$set": update_data})
-    
-    # Update conversation status if linked
-    if booking.get("conversation_id"):
-        from routes.chat import ChatStatus
-        new_conv_status = None
-        if data.status == BookingStatus.COMPLETED:
-            new_conv_status = ChatStatus.CONSULTATION_COMPLETE.value
-        elif data.status == BookingStatus.CANCELLED:
-            new_conv_status = ChatStatus.ACTIVE.value
+    if update_data:
+        await supabase.update("bookings", update_data, {"id": booking_id}, user.token)
         
-        if new_conv_status:
-            await db.chat_conversations.update_one(
-                {"id": booking["conversation_id"]},
-                {"$set": {"status": new_conv_status, "updated_at": datetime.utcnow()}}
-            )
+        # Update linked appointment if exists
+        if booking.get("appointment_id"):
+            apt_update = {}
+            if data.scheduled_at:
+                apt_update["scheduled_at"] = data.scheduled_at.isoformat()
+            if data.status:
+                apt_update["status"] = data.status.value
+            if apt_update:
+                await supabase.update("appointments", apt_update, {"id": booking["appointment_id"]}, user.token)
     
-    updated_booking = await db.bookings.find_one({"id": booking_id})
-    return BookingResponse(**updated_booking)
+    # Fetch updated booking
+    return await get_booking(booking_id, user)
 
 @router.delete("/{booking_id}")
 async def cancel_booking(
@@ -407,79 +531,195 @@ async def cancel_booking(
     user: AuthenticatedUser = Depends(get_current_user)
 ):
     """Cancel a booking"""
-    role = await get_user_role(user.id)
+    role = await get_user_role(user.id, user.token)
     
-    booking = await db.bookings.find_one({"id": booking_id})
-    if not booking:
+    bookings = await supabase.select(
+        "bookings",
+        columns="*",
+        filters={"id": booking_id},
+        access_token=user.token
+    )
+    
+    if not bookings:
         raise HTTPException(status_code=404, detail="Booking not found")
+    
+    booking = bookings[0]
     
     # Patients can cancel their own bookings, staff can cancel any
     if role == "patient" and booking["patient_id"] != user.id:
         raise HTTPException(status_code=403, detail="Not authorized")
     
-    await db.bookings.update_one(
+    await supabase.update(
+        "bookings",
+        {"status": BookingStatus.CANCELLED.value},
         {"id": booking_id},
-        {
-            "$set": {
-                "status": BookingStatus.CANCELLED.value,
-                "updated_at": datetime.utcnow()
-            }
-        }
+        user.token
     )
+    
+    # Cancel linked appointment
+    if booking.get("appointment_id"):
+        await supabase.update(
+            "appointments",
+            {"status": "cancelled"},
+            {"id": booking["appointment_id"]},
+            user.token
+        )
     
     # Cancel related invoice if exists
     if booking.get("invoice_id"):
-        await db.invoices.update_one(
+        await supabase.update(
+            "invoices",
+            {"status": InvoiceStatus.CANCELLED.value},
             {"id": booking["invoice_id"]},
-            {"$set": {"status": InvoiceStatus.CANCELLED.value, "updated_at": datetime.utcnow()}}
+            user.token
         )
     
     # Update conversation if linked
     if booking.get("conversation_id"):
-        from routes.chat import ChatStatus
-        await db.chat_conversations.update_one(
+        await supabase.update(
+            "chat_conversations",
+            {"status": "active", "booking_id": None},
             {"id": booking["conversation_id"]},
-            {
-                "$set": {
-                    "status": ChatStatus.ACTIVE.value,
-                    "booking_id": None,
-                    "updated_at": datetime.utcnow()
-                }
-            }
+            user.token
         )
         
         # Add system message
         system_message = {
             "id": str(uuid.uuid4()),
             "conversation_id": booking["conversation_id"],
-            "sender_id": "system",
-            "sender_name": "System",
+            "sender_id": user.id,
             "sender_role": "system",
-            "content": "Booking has been cancelled",
-            "message_type": "system",
-            "created_at": datetime.utcnow()
+            "content": "❌ Booking has been cancelled",
+            "message_type": "system"
         }
-        await db.chat_messages.insert_one(system_message)
+        await supabase.insert("chat_messages", system_message, user.token)
     
     return {"message": "Booking cancelled successfully"}
 
-# ============ Invoice Functions ============
+# ============ Invoice Routes ============
 
-async def generate_invoice(booking: dict, patient_profile: dict) -> dict:
-    """Generate an invoice for a cash patient"""
-    invoice = {
-        "id": str(uuid.uuid4()),
-        "booking_id": booking["id"],
-        "patient_id": booking["patient_id"],
-        "patient_name": booking["patient_name"],
-        "patient_email": None,  # Would need to fetch from auth
-        "patient_phone": patient_profile.get("phone"),
-        "service_name": booking["service_name"],
-        "service_description": FEE_SCHEDULE.get(ServiceType(booking["service_type"]), {}).get("description", ""),
-        "consultation_date": booking["scheduled_at"],
-        "clinician_name": booking["clinician_name"],
-        "amount": booking["service_price"],
-        "status": InvoiceStatus.PENDING.value,
+@router.get("/invoices/my-invoices", response_model=List[InvoiceResponse])
+async def get_patient_invoices(
+    status: Optional[InvoiceStatus] = None,
+    limit: int = Query(50, ge=1, le=100),
+    user: AuthenticatedUser = Depends(get_current_user)
+):
+    """Get invoices for the current patient"""
+    filters = {"patient_id": user.id}
+    if status:
+        filters["status"] = status.value
+    
+    invoices = await supabase.select(
+        "invoices",
+        columns="*",
+        filters=filters,
+        order="created_at.desc",
+        limit=limit,
+        access_token=user.token
+    )
+    
+    result = []
+    for inv in invoices:
+        patient_profile = await get_user_profile(inv["patient_id"], user.token)
+        clinician_profile = await get_user_profile(inv["clinician_id"], user.token)
+        
+        result.append(InvoiceResponse(
+            id=inv["id"],
+            booking_id=inv["booking_id"],
+            patient_id=inv["patient_id"],
+            patient_name=format_name(patient_profile),
+            service_type=inv["service_type"],
+            service_name=inv["service_name"],
+            service_description=inv.get("service_description"),
+            amount=float(inv["amount"]),
+            consultation_date=inv["consultation_date"],
+            clinician_id=inv["clinician_id"],
+            clinician_name=format_name(clinician_profile),
+            status=inv["status"],
+            payment_reference=inv.get("payment_reference"),
+            paid_at=inv.get("paid_at"),
+            created_at=inv["created_at"],
+            updated_at=inv["updated_at"]
+        ))
+    
+    return result
+
+@router.get("/invoices/{invoice_id}", response_model=InvoiceResponse)
+async def get_invoice(
+    invoice_id: str,
+    user: AuthenticatedUser = Depends(get_current_user)
+):
+    """Get a specific invoice"""
+    invoices = await supabase.select(
+        "invoices",
+        columns="*",
+        filters={"id": invoice_id},
+        access_token=user.token
+    )
+    
+    if not invoices:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+    
+    inv = invoices[0]
+    role = await get_user_role(user.id, user.token)
+    
+    if role == "patient" and inv["patient_id"] != user.id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    patient_profile = await get_user_profile(inv["patient_id"], user.token)
+    clinician_profile = await get_user_profile(inv["clinician_id"], user.token)
+    
+    return InvoiceResponse(
+        id=inv["id"],
+        booking_id=inv["booking_id"],
+        patient_id=inv["patient_id"],
+        patient_name=format_name(patient_profile),
+        service_type=inv["service_type"],
+        service_name=inv["service_name"],
+        service_description=inv.get("service_description"),
+        amount=float(inv["amount"]),
+        consultation_date=inv["consultation_date"],
+        clinician_id=inv["clinician_id"],
+        clinician_name=format_name(clinician_profile),
+        status=inv["status"],
+        payment_reference=inv.get("payment_reference"),
+        paid_at=inv.get("paid_at"),
+        created_at=inv["created_at"],
+        updated_at=inv["updated_at"]
+    )
+
+@router.get("/invoices/{invoice_id}/pdf")
+async def get_invoice_pdf(
+    invoice_id: str,
+    user: AuthenticatedUser = Depends(get_current_user)
+):
+    """Generate and return invoice as PDF"""
+    invoices = await supabase.select(
+        "invoices",
+        columns="*",
+        filters={"id": invoice_id},
+        access_token=user.token
+    )
+    
+    if not invoices:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+    
+    inv = invoices[0]
+    role = await get_user_role(user.id, user.token)
+    
+    if role == "patient" and inv["patient_id"] != user.id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    # Get names for PDF
+    patient_profile = await get_user_profile(inv["patient_id"], user.token)
+    clinician_profile = await get_user_profile(inv["clinician_id"], user.token)
+    
+    # Prepare invoice data for PDF
+    invoice_data = {
+        **inv,
+        "patient_name": format_name(patient_profile),
+        "clinician_name": format_name(clinician_profile),
+        "patient_phone": patient_profile.get("phone") if patient_profile else None,
         "payment_instructions": """
 Payment Methods:
 1. EFT Transfer:
@@ -492,71 +732,17 @@ Payment Methods:
 2. Cash Payment at Clinic
 
 Please bring proof of payment to your consultation.
-        """.strip(),
-        "created_at": datetime.utcnow(),
-        "updated_at": datetime.utcnow()
+        """.strip()
     }
     
-    await db.invoices.insert_one(invoice)
-    logger.info(f"Invoice generated: {invoice['id']} for booking {booking['id']}")
-    
-    return invoice
-
-@router.get("/invoices/patient", response_model=List[InvoiceResponse])
-async def get_patient_invoices(
-    status: Optional[InvoiceStatus] = None,
-    limit: int = Query(50, ge=1, le=100),
-    user: AuthenticatedUser = Depends(get_current_user)
-):
-    """Get invoices for the current patient"""
-    query = {"patient_id": user.id}
-    if status:
-        query["status"] = status.value
-    
-    invoices = await db.invoices.find(query).sort("created_at", -1).limit(limit).to_list(limit)
-    return [InvoiceResponse(**inv) for inv in invoices]
-
-@router.get("/invoices/{invoice_id}", response_model=InvoiceResponse)
-async def get_invoice(
-    invoice_id: str,
-    user: AuthenticatedUser = Depends(get_current_user)
-):
-    """Get a specific invoice"""
-    invoice = await db.invoices.find_one({"id": invoice_id})
-    if not invoice:
-        raise HTTPException(status_code=404, detail="Invoice not found")
-    
-    role = await get_user_role(user.id)
-    if role == "patient" and invoice["patient_id"] != user.id:
-        raise HTTPException(status_code=403, detail="Not authorized")
-    
-    return InvoiceResponse(**invoice)
-
-@router.get("/invoices/{invoice_id}/pdf")
-async def get_invoice_pdf(
-    invoice_id: str,
-    user: AuthenticatedUser = Depends(get_current_user)
-):
-    """Generate and return invoice as PDF"""
-    from fastapi.responses import Response
-    from pdf_generator import generate_invoice_pdf
-    
-    invoice = await db.invoices.find_one({"id": invoice_id})
-    if not invoice:
-        raise HTTPException(status_code=404, detail="Invoice not found")
-    
-    role = await get_user_role(user.id)
-    if role == "patient" and invoice["patient_id"] != user.id:
-        raise HTTPException(status_code=403, detail="Not authorized")
-    
     # Generate PDF
-    pdf_content = await generate_invoice_pdf(invoice)
+    pdf_content = await generate_invoice_pdf(invoice_data)
     
     return Response(
         content=pdf_content,
         media_type="application/pdf",
         headers={
-            "Content-Disposition": f'attachment; filename="invoice_{invoice_id}.pdf"'
+            "Content-Disposition": f'attachment; filename="invoice_{invoice_id[:8]}.pdf"'
         }
     )
 
@@ -564,17 +750,21 @@ async def get_invoice_pdf(
 async def update_invoice_status(
     invoice_id: str,
     status: InvoiceStatus,
+    payment_reference: Optional[str] = None,
     user: AuthenticatedUser = Depends(get_current_user)
 ):
     """Update invoice status (admin only)"""
-    role = await get_user_role(user.id)
-    if role not in ["admin"]:
+    role = await get_user_role(user.id, user.token)
+    if role not in ["admin", "receptionist"]:
         raise HTTPException(status_code=403, detail="Not authorized")
     
-    await db.invoices.update_one(
-        {"id": invoice_id},
-        {"$set": {"status": status.value, "updated_at": datetime.utcnow()}}
-    )
+    update_data = {"status": status.value}
+    if payment_reference:
+        update_data["payment_reference"] = payment_reference
+    if status == InvoiceStatus.PAID:
+        update_data["paid_at"] = datetime.utcnow().isoformat()
+    
+    await supabase.update("invoices", update_data, {"id": invoice_id}, user.token)
     
     return {"message": "Invoice status updated"}
 
@@ -588,28 +778,19 @@ async def get_available_clinicians(
     # Get clinicians from Supabase
     clinicians = await supabase.select(
         "clinician_profiles",
-        columns="id, specialization, is_available"
+        columns="id, specialization, is_available",
+        access_token=user.token
     )
     
     if not clinicians:
         return []
     
-    # Get profiles for names
-    clinician_ids = [c["id"] for c in clinicians]
-    profiles = await supabase.select(
-        "profiles",
-        columns="id, first_name, last_name",
-        filters={"id": {"in": f"({','.join(clinician_ids)})"}} if clinician_ids else {}
-    )
-    
-    profile_map = {p["id"]: p for p in (profiles or [])}
-    
     result = []
     for clinician in clinicians:
-        profile = profile_map.get(clinician["id"], {})
+        profile = await get_user_profile(clinician["id"], user.token)
         result.append({
             "id": clinician["id"],
-            "name": f"{profile.get('first_name', '')} {profile.get('last_name', '')}".strip() or "Unknown",
+            "name": format_name(profile),
             "specialization": clinician.get("specialization"),
             "is_available": clinician.get("is_available", False)
         })
