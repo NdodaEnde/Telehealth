@@ -11,6 +11,7 @@ import PatientDashboard from "./pages/PatientDashboard";
 import BookAppointment from "./pages/BookAppointment";
 import ClinicianDashboard from "./pages/ClinicianDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
+import ReceptionistDashboard from "./pages/ReceptionistDashboard";
 import Consultation from "./pages/Consultation";
 import DemoConsultation from "./pages/DemoConsultation";
 import OnboardingPage from "./pages/Onboarding";
