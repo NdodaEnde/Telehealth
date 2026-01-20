@@ -91,11 +91,11 @@ FEE_SCHEDULE = {
 
 class BookingCreate(BaseModel):
     patient_id: str
+    clinician_id: str  # Foreign key to user with nurse/doctor role
     conversation_id: Optional[str] = None
     scheduled_at: datetime
     service_type: ServiceType
     billing_type: PatientBillingType
-    clinician_name: Optional[str] = None  # Free text - for display only (e.g., "Sr. Nkosi")
     notes: Optional[str] = None
     duration_minutes: int = 30
 
@@ -103,8 +103,10 @@ class BookingResponse(BaseModel):
     id: str
     patient_id: str
     patient_name: Optional[str] = None
-    clinician_name: Optional[str] = None  # Free text display name
+    clinician_id: str
+    clinician_name: Optional[str] = None
     conversation_id: Optional[str] = None
+    appointment_id: Optional[str] = None
     scheduled_at: datetime
     duration_minutes: int
     service_type: str
@@ -122,7 +124,7 @@ class BookingResponse(BaseModel):
 class BookingUpdate(BaseModel):
     scheduled_at: Optional[datetime] = None
     status: Optional[BookingStatus] = None
-    clinician_name: Optional[str] = None
+    clinician_id: Optional[str] = None
     notes: Optional[str] = None
 
 class InvoiceResponse(BaseModel):
@@ -135,7 +137,8 @@ class InvoiceResponse(BaseModel):
     service_description: Optional[str] = None
     amount: float
     consultation_date: datetime
-    clinician_name: Optional[str] = None  # Free text display name
+    clinician_id: str
+    clinician_name: Optional[str] = None
     status: str
     payment_reference: Optional[str] = None
     paid_at: Optional[datetime] = None
@@ -195,19 +198,72 @@ async def get_fee_schedule():
         for service_type, details in FEE_SCHEDULE.items()
     ]
 
+# ============ Clinician List for Booking ============
+
+@router.get("/clinicians/available")
+async def get_available_clinicians(
+    user: AuthenticatedUser = Depends(get_current_user)
+):
+    """
+    Get list of available clinicians (nurses/doctors) for booking.
+    This queries users with nurse/doctor roles from user_roles table.
+    """
+    try:
+        # Get all users with nurse or doctor roles
+        # Using raw query approach since we need to join tables
+        nurse_roles = await supabase.select(
+            "user_roles",
+            columns="user_id, role",
+            access_token=user.access_token
+        )
+        
+        if not nurse_roles:
+            logger.info("No user_roles found")
+            return []
+        
+        # Filter for nurses and doctors
+        clinician_user_ids = [
+            r["user_id"] for r in nurse_roles 
+            if r.get("role") in ["nurse", "doctor"]
+        ]
+        
+        if not clinician_user_ids:
+            logger.info("No clinicians found in user_roles")
+            return []
+        
+        logger.info(f"Found {len(clinician_user_ids)} clinician user IDs: {clinician_user_ids}")
+        
+        # Get profiles for these users
+        result = []
+        for user_id in clinician_user_ids:
+            profile = await get_user_profile(user_id, user.access_token)
+            if profile:
+                # Get the role for this user
+                role = next((r["role"] for r in nurse_roles if r["user_id"] == user_id), "nurse")
+                result.append({
+                    "id": user_id,
+                    "name": format_name(profile),
+                    "role": role,
+                    "specialization": "Clinical Associate" if role == "nurse" else "Doctor",
+                    "is_available": True
+                })
+            else:
+                logger.warning(f"No profile found for clinician user_id: {user_id}")
+        
+        logger.info(f"Returning {len(result)} available clinicians")
+        return result
+        
+    except Exception as e:
+        logger.error(f"Error fetching clinicians: {e}")
+        return []
+
 @router.post("/", response_model=BookingResponse)
 @router.post("", response_model=BookingResponse, include_in_schema=False)
 async def create_booking(
     data: BookingCreate,
     user: AuthenticatedUser = Depends(get_current_user)
 ):
-    """
-    Create a new booking (receptionist action)
-    
-    Note: Clinician assignment happens in HealthBridge (external system).
-    The clinician_name field is optional free text for display purposes only.
-    Invoice generation happens post-consultation, not during booking.
-    """
+    """Create a new booking (receptionist action)"""
     role = await get_user_role(user.id, user.access_token)
     if role not in ["admin", "nurse", "doctor", "receptionist"]:
         raise HTTPException(status_code=403, detail="Not authorized to create bookings")
@@ -218,6 +274,17 @@ async def create_booking(
         raise HTTPException(status_code=404, detail="Patient not found")
     patient_name = format_name(patient_profile)
     
+    # Get clinician info
+    clinician_profile = await get_user_profile(data.clinician_id, user.access_token)
+    if not clinician_profile:
+        raise HTTPException(status_code=404, detail="Clinician not found")
+    clinician_name = format_name(clinician_profile)
+    
+    # Verify clinician has appropriate role
+    clinician_role = await get_user_role(data.clinician_id, user.access_token)
+    if clinician_role not in ["nurse", "doctor"]:
+        raise HTTPException(status_code=400, detail="Selected user is not a clinician")
+    
     # Get creator info
     creator_profile = await get_user_profile(user.id, user.access_token)
     creator_name = format_name(creator_profile)
@@ -227,12 +294,27 @@ async def create_booking(
     
     booking_id = str(uuid.uuid4())
     
-    # Create booking (simplified - no appointment table dependency)
+    # Create appointment in Supabase first (for video consultation flow)
+    appointment_data = {
+        "patient_id": data.patient_id,
+        "clinician_id": data.clinician_id,
+        "scheduled_at": data.scheduled_at.isoformat(),
+        "duration_minutes": data.duration_minutes,
+        "consultation_type": "video",
+        "status": "confirmed",
+        "notes": data.notes
+    }
+    
+    appointment_result = await supabase.insert("appointments", appointment_data, user.access_token)
+    appointment_id = appointment_result.get("id") if appointment_result else None
+    
+    # Create booking
     booking_data = {
         "id": booking_id,
         "patient_id": data.patient_id,
-        "clinician_name": data.clinician_name,  # Free text field for display
+        "clinician_id": data.clinician_id,
         "conversation_id": data.conversation_id,
+        "appointment_id": appointment_id,
         "scheduled_at": data.scheduled_at.isoformat(),
         "duration_minutes": data.duration_minutes,
         "service_type": data.service_type.value,
@@ -260,29 +342,48 @@ async def create_booking(
         )
         
         # Add system message to conversation
-        clinician_text = f" with {data.clinician_name}" if data.clinician_name else ""
         system_message = {
             "id": str(uuid.uuid4()),
             "conversation_id": data.conversation_id,
             "sender_id": user.id,
             "sender_role": "system",
             "sender_name": "System",
-            "content": f"✅ Booking confirmed{clinician_text} on {data.scheduled_at.strftime('%B %d, %Y at %H:%M')}",
+            "content": f"✅ Booking confirmed with {clinician_name} on {data.scheduled_at.strftime('%B %d, %Y at %H:%M')}",
             "message_type": "booking_confirmation"
         }
         await supabase.insert("chat_messages", system_message, user.access_token)
     
-    # NOTE: Invoice is NOT auto-generated during booking
-    # Invoice will be created post-consultation by receptionist/clinician
+    # Generate invoice for cash patients
+    invoice_id = None
+    if data.billing_type == PatientBillingType.CASH and service_details.get("price", 0) > 0:
+        invoice_id = await create_invoice(
+            booking_id=booking_id,
+            patient_id=data.patient_id,
+            clinician_id=data.clinician_id,
+            service_type=data.service_type,
+            service_details=service_details,
+            consultation_date=data.scheduled_at,
+            access_token=user.access_token
+        )
+        
+        # Update booking with invoice_id
+        await supabase.update(
+            "bookings",
+            {"invoice_id": invoice_id},
+            {"id": booking_id},
+            user.access_token
+        )
     
-    logger.info(f"Booking created: {booking_id} for patient {data.patient_id}")
+    logger.info(f"Booking created: {booking_id} for patient {data.patient_id} with clinician {data.clinician_id}")
     
     return BookingResponse(
         id=booking_id,
         patient_id=data.patient_id,
         patient_name=patient_name,
-        clinician_name=data.clinician_name,
+        clinician_id=data.clinician_id,
+        clinician_name=clinician_name,
         conversation_id=data.conversation_id,
+        appointment_id=appointment_id,
         scheduled_at=data.scheduled_at,
         duration_minutes=data.duration_minutes,
         service_type=data.service_type.value,
@@ -293,7 +394,7 @@ async def create_booking(
         notes=data.notes,
         created_by=user.id,
         created_by_name=creator_name,
-        invoice_id=None,  # Invoice created post-consultation
+        invoice_id=invoice_id,
         created_at=datetime.utcnow(),
         updated_at=datetime.utcnow()
     )
@@ -301,13 +402,13 @@ async def create_booking(
 async def create_invoice(
     booking_id: str,
     patient_id: str,
-    clinician_name: Optional[str],
+    clinician_id: str,
     service_type: ServiceType,
     service_details: dict,
     consultation_date: datetime,
     access_token: str
 ) -> str:
-    """Create an invoice for a cash patient (called post-consultation)"""
+    """Create an invoice for a cash patient"""
     invoice_id = str(uuid.uuid4())
     
     invoice_data = {
@@ -319,7 +420,7 @@ async def create_invoice(
         "service_description": service_details.get("description", ""),
         "amount": service_details.get("price", 0),
         "consultation_date": consultation_date.isoformat(),
-        "clinician_name": clinician_name,  # Free text
+        "clinician_id": clinician_id,
         "status": InvoiceStatus.PENDING.value
     }
     
@@ -331,6 +432,7 @@ async def create_invoice(
 @router.get("/", response_model=List[BookingResponse])
 async def get_bookings(
     patient_id: Optional[str] = None,
+    clinician_id: Optional[str] = None,
     status: Optional[BookingStatus] = None,
     limit: int = Query(50, ge=1, le=100),
     user: AuthenticatedUser = Depends(get_current_user)
@@ -345,6 +447,8 @@ async def get_bookings(
     else:
         if patient_id:
             filters["patient_id"] = patient_id
+        if clinician_id:
+            filters["clinician_id"] = clinician_id
     
     if status:
         filters["status"] = status.value
@@ -361,6 +465,7 @@ async def get_bookings(
     result = []
     for booking in bookings:
         patient_profile = await get_user_profile(booking["patient_id"], user.access_token)
+        clinician_profile = await get_user_profile(booking.get("clinician_id"), user.access_token) if booking.get("clinician_id") else None
         creator_profile = await get_user_profile(booking["created_by"], user.access_token)
         
         service_details = FEE_SCHEDULE.get(ServiceType(booking["service_type"]), {})
@@ -369,8 +474,10 @@ async def get_bookings(
             id=booking["id"],
             patient_id=booking["patient_id"],
             patient_name=format_name(patient_profile),
-            clinician_name=booking.get("clinician_name"),  # Free text from DB
+            clinician_id=booking.get("clinician_id", ""),
+            clinician_name=format_name(clinician_profile) if clinician_profile else "Unknown",
             conversation_id=booking.get("conversation_id"),
+            appointment_id=booking.get("appointment_id"),
             scheduled_at=booking["scheduled_at"],
             duration_minutes=booking["duration_minutes"],
             service_type=booking["service_type"],
@@ -411,6 +518,7 @@ async def get_booking(
         raise HTTPException(status_code=403, detail="Not authorized")
     
     patient_profile = await get_user_profile(booking["patient_id"], user.access_token)
+    clinician_profile = await get_user_profile(booking.get("clinician_id"), user.access_token) if booking.get("clinician_id") else None
     creator_profile = await get_user_profile(booking["created_by"], user.access_token)
     service_details = FEE_SCHEDULE.get(ServiceType(booking["service_type"]), {})
     
@@ -418,8 +526,10 @@ async def get_booking(
         id=booking["id"],
         patient_id=booking["patient_id"],
         patient_name=format_name(patient_profile),
-        clinician_name=booking.get("clinician_name"),  # Free text from DB
+        clinician_id=booking.get("clinician_id", ""),
+        clinician_name=format_name(clinician_profile) if clinician_profile else "Unknown",
         conversation_id=booking.get("conversation_id"),
+        appointment_id=booking.get("appointment_id"),
         scheduled_at=booking["scheduled_at"],
         duration_minutes=booking["duration_minutes"],
         service_type=booking["service_type"],
@@ -456,19 +566,32 @@ async def update_booking(
     if not bookings:
         raise HTTPException(status_code=404, detail="Booking not found")
     
+    booking = bookings[0]
     update_data = {}
     
     if data.scheduled_at:
         update_data["scheduled_at"] = data.scheduled_at.isoformat()
     if data.status:
         update_data["status"] = data.status.value
-    if data.clinician_name is not None:
-        update_data["clinician_name"] = data.clinician_name
+    if data.clinician_id:
+        update_data["clinician_id"] = data.clinician_id
     if data.notes is not None:
         update_data["notes"] = data.notes
     
     if update_data:
         await supabase.update("bookings", update_data, {"id": booking_id}, user.access_token)
+        
+        # Update linked appointment if exists
+        if booking.get("appointment_id"):
+            apt_update = {}
+            if data.scheduled_at:
+                apt_update["scheduled_at"] = data.scheduled_at.isoformat()
+            if data.status:
+                apt_update["status"] = data.status.value
+            if data.clinician_id:
+                apt_update["clinician_id"] = data.clinician_id
+            if apt_update:
+                await supabase.update("appointments", apt_update, {"id": booking["appointment_id"]}, user.access_token)
     
     # Fetch updated booking
     return await get_booking(booking_id, user)
@@ -503,6 +626,15 @@ async def cancel_booking(
         {"id": booking_id},
         user.access_token
     )
+    
+    # Cancel linked appointment
+    if booking.get("appointment_id"):
+        await supabase.update(
+            "appointments",
+            {"status": "cancelled"},
+            {"id": booking["appointment_id"]},
+            user.access_token
+        )
     
     # Cancel related invoice if exists
     if booking.get("invoice_id"):
@@ -561,6 +693,7 @@ async def get_patient_invoices(
     result = []
     for inv in invoices:
         patient_profile = await get_user_profile(inv["patient_id"], user.access_token)
+        clinician_profile = await get_user_profile(inv.get("clinician_id"), user.access_token) if inv.get("clinician_id") else None
         
         result.append(InvoiceResponse(
             id=inv["id"],
@@ -572,7 +705,8 @@ async def get_patient_invoices(
             service_description=inv.get("service_description"),
             amount=float(inv["amount"]),
             consultation_date=inv["consultation_date"],
-            clinician_name=inv.get("clinician_name"),  # Free text from DB
+            clinician_id=inv.get("clinician_id", ""),
+            clinician_name=format_name(clinician_profile) if clinician_profile else "Unknown",
             status=inv["status"],
             payment_reference=inv.get("payment_reference"),
             paid_at=inv.get("paid_at"),
@@ -605,6 +739,7 @@ async def get_invoice(
         raise HTTPException(status_code=403, detail="Not authorized")
     
     patient_profile = await get_user_profile(inv["patient_id"], user.access_token)
+    clinician_profile = await get_user_profile(inv.get("clinician_id"), user.access_token) if inv.get("clinician_id") else None
     
     return InvoiceResponse(
         id=inv["id"],
@@ -616,7 +751,8 @@ async def get_invoice(
         service_description=inv.get("service_description"),
         amount=float(inv["amount"]),
         consultation_date=inv["consultation_date"],
-        clinician_name=inv.get("clinician_name"),  # Free text from DB
+        clinician_id=inv.get("clinician_id", ""),
+        clinician_name=format_name(clinician_profile) if clinician_profile else "Unknown",
         status=inv["status"],
         payment_reference=inv.get("payment_reference"),
         paid_at=inv.get("paid_at"),
@@ -646,14 +782,15 @@ async def get_invoice_pdf(
     if role == "patient" and inv["patient_id"] != user.id:
         raise HTTPException(status_code=403, detail="Not authorized")
     
-    # Get patient name for PDF
+    # Get names for PDF
     patient_profile = await get_user_profile(inv["patient_id"], user.access_token)
+    clinician_profile = await get_user_profile(inv.get("clinician_id"), user.access_token) if inv.get("clinician_id") else None
     
     # Prepare invoice data for PDF
     invoice_data = {
         **inv,
         "patient_name": format_name(patient_profile),
-        "clinician_name": inv.get("clinician_name", ""),  # Free text from DB
+        "clinician_name": format_name(clinician_profile) if clinician_profile else "Clinical Associate",
         "patient_phone": patient_profile.get("phone") if patient_profile else None,
         "payment_instructions": """
 Payment Methods:
@@ -702,76 +839,3 @@ async def update_invoice_status(
     await supabase.update("invoices", update_data, {"id": invoice_id}, user.access_token)
     
     return {"message": "Invoice status updated"}
-
-# ============ Post-Consultation Invoice Generation ============
-
-class GenerateInvoiceRequest(BaseModel):
-    booking_id: str
-
-@router.post("/invoices/generate", response_model=InvoiceResponse)
-async def generate_invoice_for_booking(
-    data: GenerateInvoiceRequest,
-    user: AuthenticatedUser = Depends(get_current_user)
-):
-    """
-    Generate invoice for a completed booking (post-consultation).
-    Called by receptionist/clinician after consultation is complete.
-    """
-    role = await get_user_role(user.id, user.access_token)
-    if role not in ["admin", "nurse", "doctor", "receptionist"]:
-        raise HTTPException(status_code=403, detail="Not authorized")
-    
-    # Get the booking
-    bookings = await supabase.select(
-        "bookings",
-        columns="*",
-        filters={"id": data.booking_id},
-        access_token=user.access_token
-    )
-    
-    if not bookings:
-        raise HTTPException(status_code=404, detail="Booking not found")
-    
-    booking = bookings[0]
-    
-    # Check if invoice already exists
-    if booking.get("invoice_id"):
-        raise HTTPException(status_code=400, detail="Invoice already exists for this booking")
-    
-    # Get service details
-    service_details = FEE_SCHEDULE.get(ServiceType(booking["service_type"]), {})
-    
-    # Create invoice
-    invoice_id = await create_invoice(
-        booking_id=data.booking_id,
-        patient_id=booking["patient_id"],
-        clinician_name=booking.get("clinician_name"),
-        service_type=ServiceType(booking["service_type"]),
-        service_details=service_details,
-        consultation_date=datetime.fromisoformat(booking["scheduled_at"].replace('Z', '+00:00')) if isinstance(booking["scheduled_at"], str) else booking["scheduled_at"],
-        access_token=user.access_token
-    )
-    
-    # Update booking with invoice_id
-    await supabase.update(
-        "bookings",
-        {"invoice_id": invoice_id},
-        {"id": data.booking_id},
-        user.access_token
-    )
-    
-    # Add system message if conversation exists
-    if booking.get("conversation_id"):
-        system_message = {
-            "id": str(uuid.uuid4()),
-            "conversation_id": booking["conversation_id"],
-            "sender_id": user.id,
-            "sender_role": "system",
-            "sender_name": "System",
-            "content": f"📄 Invoice generated: R{service_details.get('price', 0):.2f} for {service_details.get('name', 'Service')}",
-            "message_type": "invoice_generated"
-        }
-        await supabase.insert("chat_messages", system_message, user.access_token)
-    
-    # Return the created invoice
-    return await get_invoice(invoice_id, user)
