@@ -412,7 +412,6 @@ async def get_booking(
         raise HTTPException(status_code=403, detail="Not authorized")
     
     patient_profile = await get_user_profile(booking["patient_id"], user.access_token)
-    clinician_profile = await get_user_profile(booking["clinician_id"], user.access_token)
     creator_profile = await get_user_profile(booking["created_by"], user.access_token)
     service_details = FEE_SCHEDULE.get(ServiceType(booking["service_type"]), {})
     
@@ -420,10 +419,8 @@ async def get_booking(
         id=booking["id"],
         patient_id=booking["patient_id"],
         patient_name=format_name(patient_profile),
-        clinician_id=booking["clinician_id"],
-        clinician_name=format_name(clinician_profile),
+        clinician_name=booking.get("clinician_name"),  # Free text from DB
         conversation_id=booking.get("conversation_id"),
-        appointment_id=booking.get("appointment_id"),
         scheduled_at=booking["scheduled_at"],
         duration_minutes=booking["duration_minutes"],
         service_type=booking["service_type"],
