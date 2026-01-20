@@ -559,19 +559,28 @@ async def get_messages(
     
     for msg in messages:
         sender_id = msg["sender_id"]
-        if sender_id not in sender_cache:
-            if msg["sender_role"] == "system":
-                sender_cache[sender_id] = "System"
-            else:
+        sender_role = msg["sender_role"]
+        
+        # FIXED: Use sender_name from database if it exists
+        # Only fall back to profile lookup if sender_name is NULL
+        if msg.get("sender_name"):
+            sender_name = msg["sender_name"]
+        elif sender_role == "system":
+            sender_name = "System"
+        else:
+            # Cache key should include role to avoid conflicts
+            cache_key = f"{sender_id}:{sender_role}"
+            if cache_key not in sender_cache:
                 profile = await get_user_profile(sender_id, user.access_token)
-                sender_cache[sender_id] = format_name(profile)
+                sender_cache[cache_key] = format_name(profile)
+            sender_name = sender_cache[cache_key]
         
         result.append(MessageResponse(
             id=msg["id"],
             conversation_id=msg["conversation_id"],
             sender_id=sender_id,
-            sender_name=sender_cache[sender_id],
-            sender_role=msg["sender_role"],
+            sender_name=sender_name,
+            sender_role=sender_role,
             content=msg["content"],
             message_type=msg["message_type"],
             file_url=msg.get("file_url"),
