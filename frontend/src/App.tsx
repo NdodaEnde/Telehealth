@@ -79,6 +79,14 @@ const App = () => (
               }
             />
             <Route
+              path="/receptionist/*"
+              element={
+                <ProtectedRoute allowedRoles={["admin", "nurse", "doctor", "receptionist"]}>
+                  <ReceptionistDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/consultation"
               element={
                 <ProtectedRoute allowedRoles={["patient", "nurse", "doctor"]}>
