@@ -29,13 +29,6 @@ interface FeeScheduleItem {
   description: string;
 }
 
-interface Clinician {
-  id: string;
-  name: string;
-  specialization?: string;
-  is_available: boolean;
-}
-
 const ReceptionistDashboardContent = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -61,9 +54,8 @@ const ReceptionistDashboardContent = () => {
   // Booking dialog state
   const [showBookingDialog, setShowBookingDialog] = useState(false);
   const [feeSchedule, setFeeSchedule] = useState<FeeScheduleItem[]>([]);
-  const [clinicians, setClinicians] = useState<Clinician[]>([]);
   const [bookingForm, setBookingForm] = useState({
-    clinician_id: "",
+    clinician_name: "",  // Free text field
     scheduled_at: "",
     service_type: "teleconsultation",
     billing_type: "cash",
