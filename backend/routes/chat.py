@@ -605,6 +605,8 @@ async def send_message(
     profile = await get_user_profile(user.id, user.access_token)
     sender_name = format_name(profile)
     
+    logger.info(f"Sending message as {sender_name} (role: {role})")
+    
     message_id = str(uuid.uuid4())
     message_data = {
         "id": message_id,
