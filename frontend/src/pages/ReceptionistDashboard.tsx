@@ -136,8 +136,8 @@ const ReceptionistDashboardContent = () => {
   };
 
   const handleCreateBooking = async () => {
-    if (!currentConversation || !bookingForm.scheduled_at) {
-      toast({ title: "Error", description: "Please select a date and time", variant: "destructive" });
+    if (!currentConversation || !bookingForm.clinician_id || !bookingForm.scheduled_at) {
+      toast({ title: "Error", description: "Please select a clinician and date/time", variant: "destructive" });
       return;
     }
 
@@ -145,18 +145,18 @@ const ReceptionistDashboardContent = () => {
     try {
       await bookingsAPI.create({
         patient_id: currentConversation.patient_id,
+        clinician_id: bookingForm.clinician_id,
         conversation_id: currentConversation.id,
         scheduled_at: new Date(bookingForm.scheduled_at).toISOString(),
         service_type: bookingForm.service_type,
         billing_type: bookingForm.billing_type,
-        clinician_name: bookingForm.clinician_name || undefined,  // Optional free text
         notes: bookingForm.notes || undefined,
       });
 
       toast({ title: "Booking created", description: "The patient has been notified" });
       setShowBookingDialog(false);
       setBookingForm({
-        clinician_name: "",
+        clinician_id: "",
         scheduled_at: "",
         service_type: "teleconsultation",
         billing_type: "cash",
