@@ -561,7 +561,6 @@ async def get_patient_invoices(
     result = []
     for inv in invoices:
         patient_profile = await get_user_profile(inv["patient_id"], user.access_token)
-        clinician_profile = await get_user_profile(inv["clinician_id"], user.access_token)
         
         result.append(InvoiceResponse(
             id=inv["id"],
@@ -573,8 +572,7 @@ async def get_patient_invoices(
             service_description=inv.get("service_description"),
             amount=float(inv["amount"]),
             consultation_date=inv["consultation_date"],
-            clinician_id=inv["clinician_id"],
-            clinician_name=format_name(clinician_profile),
+            clinician_name=inv.get("clinician_name"),  # Free text from DB
             status=inv["status"],
             payment_reference=inv.get("payment_reference"),
             paid_at=inv.get("paid_at"),
@@ -607,7 +605,6 @@ async def get_invoice(
         raise HTTPException(status_code=403, detail="Not authorized")
     
     patient_profile = await get_user_profile(inv["patient_id"], user.access_token)
-    clinician_profile = await get_user_profile(inv["clinician_id"], user.access_token)
     
     return InvoiceResponse(
         id=inv["id"],
@@ -619,8 +616,7 @@ async def get_invoice(
         service_description=inv.get("service_description"),
         amount=float(inv["amount"]),
         consultation_date=inv["consultation_date"],
-        clinician_id=inv["clinician_id"],
-        clinician_name=format_name(clinician_profile),
+        clinician_name=inv.get("clinician_name"),  # Free text from DB
         status=inv["status"],
         payment_reference=inv.get("payment_reference"),
         paid_at=inv.get("paid_at"),
