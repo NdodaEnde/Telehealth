@@ -159,11 +159,6 @@ const ReceptionistDashboardContent = () => {
     }
   };
 
-  const getSelectedServicePrice = () => {
-    const service = feeSchedule.find(f => f.service_type === bookingForm.service_type);
-    return service?.price || 0;
-  };
-
   // Check if user has permission
   if (role !== "admin" && role !== "nurse" && role !== "doctor" && role !== "receptionist") {
     return (
