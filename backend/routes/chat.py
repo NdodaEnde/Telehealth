@@ -322,16 +322,19 @@ async def get_my_assigned_conversations(
         access_token=user.access_token
     )
     
+    # Get current user's profile for receptionist_name
+    receptionist_profile = await get_user_profile(user.id, user.access_token)
+    receptionist_name = format_name(receptionist_profile)
+    
     result = []
     for conv in conversations:
         patient_profile = await get_user_profile(conv["patient_id"], user.access_token)
-        receptionist_profile = await get_user_profile(user.id, user.access_token)
         result.append(ConversationResponse(
             id=conv["id"],
             patient_id=conv["patient_id"],
             patient_name=format_name(patient_profile),
             receptionist_id=user.id,
-            receptionist_name=format_name(receptionist_profile),
+            receptionist_name=receptionist_name,
             status=conv["status"],
             patient_type=conv.get("patient_type"),
             booking_id=conv.get("booking_id"),
