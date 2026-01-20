@@ -385,13 +385,15 @@ export const chatAPI = {
 export const bookingsAPI = {
   getFeeSchedule: () => apiRequest('/api/bookings/fee-schedule'),
   
+  getAvailableClinicians: () => apiRequest('/api/bookings/clinicians/available'),
+  
   create: (data: {
     patient_id: string;
+    clinician_id: string;
     conversation_id?: string;
     scheduled_at: string;
     service_type: string;
     billing_type: string;
-    clinician_name?: string;  // Free text for display (e.g., "Sr. Nkosi")
     notes?: string;
     duration_minutes?: number;
   }) => apiRequest('/api/bookings', {
@@ -399,9 +401,10 @@ export const bookingsAPI = {
     body: JSON.stringify(data),
   }),
   
-  list: (params?: { patient_id?: string; status?: string }) => {
+  list: (params?: { patient_id?: string; clinician_id?: string; status?: string }) => {
     const searchParams = new URLSearchParams();
     if (params?.patient_id) searchParams.set('patient_id', params.patient_id);
+    if (params?.clinician_id) searchParams.set('clinician_id', params.clinician_id);
     if (params?.status) searchParams.set('status', params.status);
     const query = searchParams.toString() ? `?${searchParams}` : '';
     return apiRequest(`/api/bookings${query}`);
@@ -409,7 +412,7 @@ export const bookingsAPI = {
   
   get: (id: string) => apiRequest(`/api/bookings/${id}`),
   
-  update: (id: string, data: { scheduled_at?: string; status?: string; clinician_name?: string; notes?: string }) =>
+  update: (id: string, data: { scheduled_at?: string; status?: string; clinician_id?: string; notes?: string }) =>
     apiRequest(`/api/bookings/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(data),
@@ -430,13 +433,6 @@ export const bookingsAPI = {
   updateInvoiceStatus: (id: string, status: string, paymentReference?: string) =>
     apiRequest(`/api/bookings/invoices/${id}/status?status=${status}${paymentReference ? `&payment_reference=${paymentReference}` : ''}`, {
       method: 'PATCH',
-    }),
-  
-  // Generate invoice post-consultation
-  generateInvoice: (bookingId: string) =>
-    apiRequest('/api/bookings/invoices/generate', {
-      method: 'POST',
-      body: JSON.stringify({ booking_id: bookingId }),
     }),
 };
 
