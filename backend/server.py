@@ -189,6 +189,10 @@ app.include_router(patient_onboarding_router, prefix="/api")
 app.include_router(symptom_assessment_router, prefix="/api")
 app.include_router(nurse_triage_router, prefix="/api")
 
+# Phase 2: Chat-based booking system
+app.include_router(chat_router, prefix="/api")
+app.include_router(bookings_router, prefix="/api")
+
 
 # ============ Middleware ============
 
