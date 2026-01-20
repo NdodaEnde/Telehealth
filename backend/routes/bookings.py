@@ -457,28 +457,19 @@ async def update_booking(
     if not bookings:
         raise HTTPException(status_code=404, detail="Booking not found")
     
-    booking = bookings[0]
     update_data = {}
     
     if data.scheduled_at:
         update_data["scheduled_at"] = data.scheduled_at.isoformat()
     if data.status:
         update_data["status"] = data.status.value
+    if data.clinician_name is not None:
+        update_data["clinician_name"] = data.clinician_name
     if data.notes is not None:
         update_data["notes"] = data.notes
     
     if update_data:
         await supabase.update("bookings", update_data, {"id": booking_id}, user.access_token)
-        
-        # Update linked appointment if exists
-        if booking.get("appointment_id"):
-            apt_update = {}
-            if data.scheduled_at:
-                apt_update["scheduled_at"] = data.scheduled_at.isoformat()
-            if data.status:
-                apt_update["status"] = data.status.value
-            if apt_update:
-                await supabase.update("appointments", apt_update, {"id": booking["appointment_id"]}, user.access_token)
     
     # Fetch updated booking
     return await get_booking(booking_id, user)
