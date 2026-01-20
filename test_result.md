@@ -409,6 +409,42 @@ frontend:
         agent: "main"
         comment: "NEW: Nurse triage workflow page with queue view, triage form with vitals, chief complaint, priority levels, pre-consultation checklist. Accessible from Clinician Dashboard for nurses."
 
+  - task: "Patient Chat Space UI"
+    implemented: true
+    working: "NA"
+    file: "frontend/src/components/chat/PatientChatSpace.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "NEW: Patient chat interface with conversation list, real-time messaging, image upload support. Integrated into PatientDashboard with Chat/Consultations/Profile tabs."
+
+  - task: "Receptionist Dashboard UI"
+    implemented: true
+    working: "NA"
+    file: "frontend/src/pages/ReceptionistDashboard.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "NEW: Receptionist dashboard with Unassigned/My Chats/All tabs, chat queue with claim functionality, booking creation dialog with Quadcare fee schedule, patient type selection."
+
+  - task: "Patient Dashboard Restructure"
+    implemented: true
+    working: "NA"
+    file: "frontend/src/pages/PatientDashboard.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "UPDATED: Restructured with 3 tabs - Chat Space, Consultations, Profile. Includes invoice display and PDF download for cash patients."
+
 metadata:
   created_by: "main_agent"
   version: "2.3"
