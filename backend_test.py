@@ -1016,8 +1016,8 @@ def test_bookings_auth():
     print("\n=== Testing Simplified Bookings APIs (No Auth) ===")
     
     endpoints = [
-        ("POST", "/bookings", "Create Booking"),
-        ("GET", "/bookings", "Get Bookings")
+        ("POST", "/bookings/", "Create Booking"),  # Note: trailing slash required
+        ("GET", "/bookings/", "Get Bookings")      # Note: trailing slash required
     ]
     
     all_passed = True
