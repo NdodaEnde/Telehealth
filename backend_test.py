@@ -1167,7 +1167,7 @@ def main():
     ]
     
     phase2_tests = [
-        'chat_stats_auth', 'chat_conversations_auth', 'bookings_fee_schedule', 'bookings_auth'
+        'chat_stats_auth', 'chat_conversations_auth', 'bookings_fee_schedule', 'bookings_auth', 'bookings_invoice_generation_auth'
     ]
     
     print("EXISTING APIs:")
