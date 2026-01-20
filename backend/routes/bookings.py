@@ -91,11 +91,11 @@ FEE_SCHEDULE = {
 
 class BookingCreate(BaseModel):
     patient_id: str
-    clinician_id: str
     conversation_id: Optional[str] = None
     scheduled_at: datetime
     service_type: ServiceType
     billing_type: PatientBillingType
+    clinician_name: Optional[str] = None  # Free text - for display only (e.g., "Sr. Nkosi")
     notes: Optional[str] = None
     duration_minutes: int = 30
 
@@ -103,10 +103,8 @@ class BookingResponse(BaseModel):
     id: str
     patient_id: str
     patient_name: Optional[str] = None
-    clinician_id: str
-    clinician_name: Optional[str] = None
+    clinician_name: Optional[str] = None  # Free text display name
     conversation_id: Optional[str] = None
-    appointment_id: Optional[str] = None
     scheduled_at: datetime
     duration_minutes: int
     service_type: str
@@ -124,6 +122,7 @@ class BookingResponse(BaseModel):
 class BookingUpdate(BaseModel):
     scheduled_at: Optional[datetime] = None
     status: Optional[BookingStatus] = None
+    clinician_name: Optional[str] = None
     notes: Optional[str] = None
 
 class InvoiceResponse(BaseModel):
