@@ -362,7 +362,7 @@ async def create_invoice(
     
     return invoice_id
 
-@router.get("", response_model=List[BookingResponse])
+@router.get("/", response_model=List[BookingResponse])
 async def get_bookings(
     patient_id: Optional[str] = None,
     clinician_id: Optional[str] = None,
