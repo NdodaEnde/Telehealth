@@ -197,7 +197,7 @@ async def get_fee_schedule():
         for service_type, details in FEE_SCHEDULE.items()
     ]
 
-@router.post("", response_model=BookingResponse)
+@router.post("/", response_model=BookingResponse)
 async def create_booking(
     data: BookingCreate,
     user: AuthenticatedUser = Depends(get_current_user)
