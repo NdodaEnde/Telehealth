@@ -646,15 +646,14 @@ async def get_invoice_pdf(
     if role == "patient" and inv["patient_id"] != user.id:
         raise HTTPException(status_code=403, detail="Not authorized")
     
-    # Get names for PDF
+    # Get patient name for PDF
     patient_profile = await get_user_profile(inv["patient_id"], user.access_token)
-    clinician_profile = await get_user_profile(inv["clinician_id"], user.access_token)
     
     # Prepare invoice data for PDF
     invoice_data = {
         **inv,
         "patient_name": format_name(patient_profile),
-        "clinician_name": format_name(clinician_profile),
+        "clinician_name": inv.get("clinician_name", ""),  # Free text from DB
         "patient_phone": patient_profile.get("phone") if patient_profile else None,
         "payment_instructions": """
 Payment Methods:
