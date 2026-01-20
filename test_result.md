@@ -387,12 +387,14 @@ frontend:
 
 metadata:
   created_by: "main_agent"
-  version: "2.2"
-  test_sequence: 4
+  version: "2.3"
+  test_sequence: 5
   run_ui: false
 
 test_plan:
-  current_focus: []
+  current_focus:
+    - "Chat System API"
+    - "Bookings API"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
@@ -406,3 +408,5 @@ agent_communication:
     message: "NEW FEATURES IMPLEMENTED: 1) AI Symptom Assessment using OpenAI GPT-4o-mini - POST /api/symptoms/assess with fallback to rule-based. 2) Patient Onboarding - SA ID validation, medical aid schemes list, full profile submission. 3) Nurse Triage - queue management, vitals entry, priority assignment. Please test these new APIs focusing on: GET /api/symptoms/common, GET /api/patient/medical-aid-schemes, GET /api/triage/queue"
   - agent: "testing"
     message: "✅ PHASE 1 BACKEND TESTING COMPLETE: All new Phase 1 APIs tested successfully. AI Symptom Assessment: GET /api/symptoms/common returns 10 categorized symptom groups, POST /api/symptoms/assess correctly requires auth. Patient Onboarding: GET /api/patient/medical-aid-schemes returns 13 SA medical schemes, POST /api/patient/validate-id validates SA IDs with proper checksum. Nurse Triage: All endpoints correctly require clinician auth, GET /api/triage/reference-ranges returns vital sign ranges. All 15/15 backend tests passed. OpenAI integration ready, HealthBridge is PLACEHOLDER."
+  - agent: "main"
+    message: "PHASE 2 CHAT-BASED BOOKING SYSTEM IMPLEMENTED: New Supabase tables created (chat_conversations, chat_messages, bookings, invoices). Backend routes added: /api/chat/* for conversations/messages, /api/bookings/* for booking management with Quadcare fee schedule. Frontend components: PatientChatSpace, ReceptionistDashboard with chat queue, booking creation dialog. Please test: GET /api/chat/stats, GET /api/bookings/fee-schedule, POST /api/chat/conversations (requires auth)"
