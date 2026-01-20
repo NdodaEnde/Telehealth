@@ -218,9 +218,10 @@ async def complete_patient_onboarding(
         "medical_history": data.medical_history.dict() if data.medical_history else None
     })
     
-    if sync_result.success:
+    # EHRSyncResult uses 'synced' attribute, not 'success'
+    if sync_result.synced:
         healthbridge_synced = True
-        healthbridge_patient_id = sync_result.healthbridge_record_id
+        healthbridge_patient_id = sync_result.encounter_id
     
     return PatientOnboardingResponse(
         id=extended_profile_id,
