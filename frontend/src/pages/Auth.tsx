@@ -153,7 +153,7 @@ const Auth = () => {
 
   const handleRoleChange = (value: string) => {
     setSelectedRole(value as AppRole);
-    signupForm.setValue("role", value as "patient" | "nurse" | "doctor");
+    signupForm.setValue("role", value as "patient" | "nurse" | "doctor" | "receptionist");
   };
 
   return (
