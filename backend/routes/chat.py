@@ -125,7 +125,7 @@ async def create_conversation(
     user: AuthenticatedUser = Depends(get_current_user)
 ):
     """Create a new chat conversation (patient initiates)"""
-    profile = await get_user_profile(user.id, user.token)
+    profile = await get_user_profile(user.id, user.access_token)
     patient_name = format_name(profile)
     
     conversation_id = str(uuid.uuid4())
@@ -139,7 +139,7 @@ async def create_conversation(
         "unread_count": 1
     }
     
-    result = await supabase.insert("chat_conversations", conversation_data, user.token)
+    result = await supabase.insert("chat_conversations", conversation_data, user.access_token)
     
     if not result:
         raise HTTPException(status_code=500, detail="Failed to create conversation")
@@ -154,7 +154,7 @@ async def create_conversation(
         "message_type": MessageType.TEXT.value
     }
     
-    await supabase.insert("chat_messages", message_data, user.token)
+    await supabase.insert("chat_messages", message_data, user.access_token)
     
     logger.info(f"New conversation created: {conversation_id} by patient {user.id}")
     
@@ -179,7 +179,7 @@ async def get_conversations(
     user: AuthenticatedUser = Depends(get_current_user)
 ):
     """Get conversations based on user role and filters"""
-    role = await get_user_role(user.id, user.token)
+    role = await get_user_role(user.id, user.access_token)
     
     filters = {}
     
@@ -200,16 +200,16 @@ async def get_conversations(
         filters=filters,
         order="updated_at.desc",
         limit=limit,
-        access_token=user.token
+        access_token=user.access_token
     )
     
     # Enrich with user names
     result = []
     for conv in conversations:
-        patient_profile = await get_user_profile(conv["patient_id"], user.token)
+        patient_profile = await get_user_profile(conv["patient_id"], user.access_token)
         receptionist_name = None
         if conv.get("receptionist_id"):
-            receptionist_profile = await get_user_profile(conv["receptionist_id"], user.token)
+            receptionist_profile = await get_user_profile(conv["receptionist_id"], user.access_token)
             receptionist_name = format_name(receptionist_profile)
         
         result.append(ConversationResponse(
@@ -236,7 +236,7 @@ async def get_unassigned_conversations(
     user: AuthenticatedUser = Depends(get_current_user)
 ):
     """Get unassigned conversations (for receptionist queue)"""
-    role = await get_user_role(user.id, user.token)
+    role = await get_user_role(user.id, user.access_token)
     if role not in ["admin", "nurse", "doctor", "receptionist"]:
         raise HTTPException(status_code=403, detail="Not authorized to view unassigned chats")
     
@@ -247,12 +247,12 @@ async def get_unassigned_conversations(
         filters={"receptionist_id": {"is": "null"}, "status": {"neq": ChatStatus.CLOSED.value}},
         order="created_at.asc",
         limit=limit,
-        access_token=user.token
+        access_token=user.access_token
     )
     
     result = []
     for conv in conversations:
-        patient_profile = await get_user_profile(conv["patient_id"], user.token)
+        patient_profile = await get_user_profile(conv["patient_id"], user.access_token)
         result.append(ConversationResponse(
             id=conv["id"],
             patient_id=conv["patient_id"],
@@ -277,7 +277,7 @@ async def get_my_assigned_conversations(
     user: AuthenticatedUser = Depends(get_current_user)
 ):
     """Get conversations assigned to current user (receptionist)"""
-    role = await get_user_role(user.id, user.token)
+    role = await get_user_role(user.id, user.access_token)
     if role not in ["admin", "nurse", "doctor", "receptionist"]:
         raise HTTPException(status_code=403, detail="Not authorized")
     
@@ -287,13 +287,13 @@ async def get_my_assigned_conversations(
         filters={"receptionist_id": user.id, "status": {"neq": ChatStatus.CLOSED.value}},
         order="updated_at.desc",
         limit=limit,
-        access_token=user.token
+        access_token=user.access_token
     )
     
     result = []
     for conv in conversations:
-        patient_profile = await get_user_profile(conv["patient_id"], user.token)
-        receptionist_profile = await get_user_profile(user.id, user.token)
+        patient_profile = await get_user_profile(conv["patient_id"], user.access_token)
+        receptionist_profile = await get_user_profile(user.id, user.access_token)
         result.append(ConversationResponse(
             id=conv["id"],
             patient_id=conv["patient_id"],
@@ -322,22 +322,22 @@ async def get_conversation(
         "chat_conversations",
         columns="*",
         filters={"id": conversation_id},
-        access_token=user.token
+        access_token=user.access_token
     )
     
     if not conversations:
         raise HTTPException(status_code=404, detail="Conversation not found")
     
     conv = conversations[0]
-    role = await get_user_role(user.id, user.token)
+    role = await get_user_role(user.id, user.access_token)
     
     if role == "patient" and conv["patient_id"] != user.id:
         raise HTTPException(status_code=403, detail="Not authorized to view this conversation")
     
-    patient_profile = await get_user_profile(conv["patient_id"], user.token)
+    patient_profile = await get_user_profile(conv["patient_id"], user.access_token)
     receptionist_name = None
     if conv.get("receptionist_id"):
-        receptionist_profile = await get_user_profile(conv["receptionist_id"], user.token)
+        receptionist_profile = await get_user_profile(conv["receptionist_id"], user.access_token)
         receptionist_name = format_name(receptionist_profile)
     
     return ConversationResponse(
@@ -362,7 +362,7 @@ async def claim_conversation(
     user: AuthenticatedUser = Depends(get_current_user)
 ):
     """Receptionist claims an unassigned conversation"""
-    role = await get_user_role(user.id, user.token)
+    role = await get_user_role(user.id, user.access_token)
     if role not in ["admin", "nurse", "doctor", "receptionist"]:
         raise HTTPException(status_code=403, detail="Not authorized to claim chats")
     
@@ -370,7 +370,7 @@ async def claim_conversation(
         "chat_conversations",
         columns="*",
         filters={"id": conversation_id},
-        access_token=user.token
+        access_token=user.access_token
     )
     
     if not conversations:
@@ -380,7 +380,7 @@ async def claim_conversation(
     if conv.get("receptionist_id"):
         raise HTTPException(status_code=400, detail="Conversation already assigned")
     
-    profile = await get_user_profile(user.id, user.token)
+    profile = await get_user_profile(user.id, user.access_token)
     receptionist_name = format_name(profile)
     
     await supabase.update(
@@ -390,7 +390,7 @@ async def claim_conversation(
             "status": ChatStatus.ACTIVE.value
         },
         {"id": conversation_id},
-        user.token
+        user.access_token
     )
     
     # Add system message
@@ -402,7 +402,7 @@ async def claim_conversation(
         "content": f"{receptionist_name} has joined the conversation",
         "message_type": MessageType.SYSTEM.value
     }
-    await supabase.insert("chat_messages", system_message, user.token)
+    await supabase.insert("chat_messages", system_message, user.access_token)
     
     logger.info(f"Conversation {conversation_id} claimed by {user.id}")
     
@@ -415,18 +415,18 @@ async def reassign_conversation(
     user: AuthenticatedUser = Depends(get_current_user)
 ):
     """Reassign a conversation to another receptionist"""
-    role = await get_user_role(user.id, user.token)
+    role = await get_user_role(user.id, user.access_token)
     if role not in ["admin"]:
         raise HTTPException(status_code=403, detail="Only admins can reassign chats")
     
-    new_profile = await get_user_profile(data.receptionist_id, user.token)
+    new_profile = await get_user_profile(data.receptionist_id, user.access_token)
     new_name = format_name(new_profile)
     
     await supabase.update(
         "chat_conversations",
         {"receptionist_id": data.receptionist_id},
         {"id": conversation_id},
-        user.token
+        user.access_token
     )
     
     # Add system message
@@ -438,7 +438,7 @@ async def reassign_conversation(
         "content": f"Conversation reassigned to {new_name}",
         "message_type": MessageType.SYSTEM.value
     }
-    await supabase.insert("chat_messages", system_message, user.token)
+    await supabase.insert("chat_messages", system_message, user.access_token)
     
     return {"message": "Conversation reassigned successfully"}
 
@@ -449,7 +449,7 @@ async def update_conversation_status(
     user: AuthenticatedUser = Depends(get_current_user)
 ):
     """Update conversation status"""
-    role = await get_user_role(user.id, user.token)
+    role = await get_user_role(user.id, user.access_token)
     if role not in ["admin", "nurse", "doctor", "receptionist"]:
         raise HTTPException(status_code=403, detail="Not authorized to update status")
     
@@ -457,7 +457,7 @@ async def update_conversation_status(
         "chat_conversations",
         {"status": data.status.value},
         {"id": conversation_id},
-        user.token
+        user.access_token
     )
     
     return {"message": "Status updated successfully"}
@@ -469,7 +469,7 @@ async def update_patient_type(
     user: AuthenticatedUser = Depends(get_current_user)
 ):
     """Update patient type for billing purposes"""
-    role = await get_user_role(user.id, user.token)
+    role = await get_user_role(user.id, user.access_token)
     if role not in ["admin", "nurse", "doctor", "receptionist"]:
         raise HTTPException(status_code=403, detail="Not authorized")
     
@@ -477,7 +477,7 @@ async def update_patient_type(
         "chat_conversations",
         {"patient_type": data.patient_type.value},
         {"id": conversation_id},
-        user.token
+        user.access_token
     )
     
     return {"message": "Patient type updated successfully"}
@@ -496,14 +496,14 @@ async def get_messages(
         "chat_conversations",
         columns="*",
         filters={"id": conversation_id},
-        access_token=user.token
+        access_token=user.access_token
     )
     
     if not conversations:
         raise HTTPException(status_code=404, detail="Conversation not found")
     
     conv = conversations[0]
-    role = await get_user_role(user.id, user.token)
+    role = await get_user_role(user.id, user.access_token)
     
     if role == "patient" and conv["patient_id"] != user.id:
         raise HTTPException(status_code=403, detail="Not authorized")
@@ -514,7 +514,7 @@ async def get_messages(
         filters={"conversation_id": conversation_id},
         order="created_at.asc",
         limit=limit,
-        access_token=user.token
+        access_token=user.access_token
     )
     
     # Enrich with sender names
@@ -527,7 +527,7 @@ async def get_messages(
             if msg["sender_role"] == "system":
                 sender_cache[sender_id] = "System"
             else:
-                profile = await get_user_profile(sender_id, user.token)
+                profile = await get_user_profile(sender_id, user.access_token)
                 sender_cache[sender_id] = format_name(profile)
         
         result.append(MessageResponse(
@@ -558,19 +558,19 @@ async def send_message(
         "chat_conversations",
         columns="*",
         filters={"id": conversation_id},
-        access_token=user.token
+        access_token=user.access_token
     )
     
     if not conversations:
         raise HTTPException(status_code=404, detail="Conversation not found")
     
     conv = conversations[0]
-    role = await get_user_role(user.id, user.token)
+    role = await get_user_role(user.id, user.access_token)
     
     if role == "patient" and conv["patient_id"] != user.id:
         raise HTTPException(status_code=403, detail="Not authorized")
     
-    profile = await get_user_profile(user.id, user.token)
+    profile = await get_user_profile(user.id, user.access_token)
     sender_name = format_name(profile)
     
     message_id = str(uuid.uuid4())
@@ -585,7 +585,7 @@ async def send_message(
         "file_name": data.file_name
     }
     
-    result = await supabase.insert("chat_messages", message_data, user.token)
+    result = await supabase.insert("chat_messages", message_data, user.access_token)
     
     if not result:
         raise HTTPException(status_code=500, detail="Failed to send message")
@@ -616,7 +616,7 @@ async def mark_messages_read(
         "chat_conversations",
         columns="*",
         filters={"id": conversation_id},
-        access_token=user.token
+        access_token=user.access_token
     )
     
     if not conversations:
@@ -627,7 +627,7 @@ async def mark_messages_read(
         "chat_conversations",
         {"unread_count": 0},
         {"id": conversation_id},
-        user.token
+        user.access_token
     )
     
     return {"message": "Messages marked as read"}
@@ -639,7 +639,7 @@ async def get_chat_stats(
     user: AuthenticatedUser = Depends(get_current_user)
 ):
     """Get chat statistics for receptionist dashboard"""
-    role = await get_user_role(user.id, user.token)
+    role = await get_user_role(user.id, user.access_token)
     if role not in ["admin", "nurse", "doctor", "receptionist"]:
         raise HTTPException(status_code=403, detail="Not authorized")
     
@@ -648,7 +648,7 @@ async def get_chat_stats(
         "chat_conversations",
         columns="id",
         filters={"receptionist_id": {"is": "null"}, "status": {"neq": ChatStatus.CLOSED.value}},
-        access_token=user.token
+        access_token=user.access_token
     )
     
     # Get my chats count
@@ -656,7 +656,7 @@ async def get_chat_stats(
         "chat_conversations",
         columns="id",
         filters={"receptionist_id": user.id, "status": {"neq": ChatStatus.CLOSED.value}},
-        access_token=user.token
+        access_token=user.access_token
     )
     
     # Get total active
@@ -664,7 +664,7 @@ async def get_chat_stats(
         "chat_conversations",
         columns="id",
         filters={"status": {"neq": ChatStatus.CLOSED.value}},
-        access_token=user.token
+        access_token=user.access_token
     )
     
     return {
