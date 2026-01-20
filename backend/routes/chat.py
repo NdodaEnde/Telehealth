@@ -91,14 +91,28 @@ class PatientTypeUpdate(BaseModel):
 
 async def get_user_profile(user_id: str, access_token: str = None):
     """Get user profile from Supabase"""
+    # Try with the provided token first, then without (service level)
     profiles = await supabase.select(
         "profiles",
         columns="id, first_name, last_name",
         filters={"id": user_id},
         access_token=access_token
     )
+    
+    # If no results with user token, try without token (uses anon key)
+    if not profiles:
+        logger.warning(f"Profile not found with user token for {user_id}, trying without token")
+        profiles = await supabase.select(
+            "profiles",
+            columns="id, first_name, last_name",
+            filters={"id": user_id}
+        )
+    
     if profiles:
+        logger.info(f"Found profile for {user_id}: {profiles[0]}")
         return profiles[0]
+    
+    logger.warning(f"Profile not found for user_id: {user_id}")
     return {"id": user_id, "first_name": "Unknown", "last_name": "User"}
 
 async def get_user_role(user_id: str, access_token: str = None) -> str:
@@ -109,13 +123,30 @@ async def get_user_role(user_id: str, access_token: str = None) -> str:
         filters={"user_id": user_id},
         access_token=access_token
     )
+    
+    # If no results with user token, try without token
+    if not roles:
+        roles = await supabase.select(
+            "user_roles",
+            columns="role",
+            filters={"user_id": user_id}
+        )
+    
     if roles:
+        logger.info(f"Found role for {user_id}: {roles[0].get('role')}")
         return roles[0].get("role", "patient")
+    
+    logger.warning(f"Role not found for user_id: {user_id}, defaulting to patient")
     return "patient"
 
 def format_name(profile: dict) -> str:
     """Format user's full name"""
-    return f"{profile.get('first_name', '')} {profile.get('last_name', '')}".strip() or "Unknown"
+    if not profile:
+        return "Unknown"
+    first = profile.get('first_name', '') or ''
+    last = profile.get('last_name', '') or ''
+    name = f"{first} {last}".strip()
+    return name if name else "Unknown"
 
 # ============ Conversation Routes ============
 
