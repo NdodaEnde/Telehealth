@@ -35,6 +35,7 @@ const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
       nurse: "/clinician",
       doctor: "/clinician",
       admin: "/admin",
+      receptionist: "/receptionist",
     };
     return <Navigate to={roleRoutes[role]} replace />;
   }
