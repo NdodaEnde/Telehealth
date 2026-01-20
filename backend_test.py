@@ -841,6 +841,229 @@ def test_nurse_triage_ready_for_doctor_auth():
         print(f"❌ FAILED: Unexpected error - {str(e)}")
         return False
 
+
+# ============ NEW PHASE 2 CHAT & BOOKINGS API TESTS ============
+
+def test_chat_stats_auth():
+    """Test the chat stats endpoint (requires auth)"""
+    print("\n=== Testing Chat Stats API (No Auth) ===")
+    
+    try:
+        response = requests.get(f"{BASE_URL}/chat/stats", timeout=10)
+        print(f"Status Code: {response.status_code}")
+        
+        if response.status_code == 401:
+            print("✅ PASSED: Chat stats correctly requires authentication")
+            return True
+        else:
+            print(f"❌ FAILED: Expected status 401, got {response.status_code}")
+            print(f"Response: {response.text}")
+            return False
+            
+    except requests.exceptions.RequestException as e:
+        print(f"❌ FAILED: Request error - {str(e)}")
+        return False
+    except Exception as e:
+        print(f"❌ FAILED: Unexpected error - {str(e)}")
+        return False
+
+
+def test_chat_conversations_auth():
+    """Test the chat conversations endpoints (require auth)"""
+    print("\n=== Testing Chat Conversations APIs (No Auth) ===")
+    
+    endpoints = [
+        ("POST", "/chat/conversations", "Create Conversation"),
+        ("GET", "/chat/conversations", "Get Conversations")
+    ]
+    
+    all_passed = True
+    
+    for method, endpoint, name in endpoints:
+        try:
+            print(f"\nTesting {name}: {method} {endpoint}")
+            
+            if method == "GET":
+                response = requests.get(f"{BASE_URL}{endpoint}", timeout=10)
+            elif method == "POST":
+                test_data = {"initial_message": "Hello, I need help"}
+                response = requests.post(
+                    f"{BASE_URL}{endpoint}",
+                    json=test_data,
+                    headers={'Content-Type': 'application/json'},
+                    timeout=10
+                )
+            
+            print(f"Status Code: {response.status_code}")
+            
+            if response.status_code == 401:
+                print(f"✅ PASSED: {name} correctly requires authentication")
+            else:
+                print(f"❌ FAILED: {name} expected 401, got {response.status_code}")
+                print(f"Response: {response.text[:200]}...")
+                all_passed = False
+                
+        except requests.exceptions.RequestException as e:
+            print(f"❌ FAILED: {name} request error - {str(e)}")
+            all_passed = False
+        except Exception as e:
+            print(f"❌ FAILED: {name} unexpected error - {str(e)}")
+            all_passed = False
+    
+    if all_passed:
+        print("\n✅ PASSED: All chat conversation endpoints correctly require authentication")
+    else:
+        print("\n❌ FAILED: Some chat conversation endpoints do not require authentication")
+    
+    return all_passed
+
+
+def test_bookings_fee_schedule():
+    """Test the fee schedule endpoint (no auth required)"""
+    print("\n=== Testing Bookings Fee Schedule API ===")
+    
+    # Expected fee schedule from the review request
+    expected_fees = {
+        "teleconsultation": 260.00,
+        "follow_up_0_3": 0.00,
+        "follow_up_4_7": 300.00,
+        "script_1_month": 160.00,
+        "script_3_months": 300.00,
+        "script_6_months": 400.00,
+        "medical_forms": 400.00
+    }
+    
+    try:
+        response = requests.get(f"{BASE_URL}/bookings/fee-schedule", timeout=10)
+        print(f"Status Code: {response.status_code}")
+        
+        if response.status_code == 200:
+            data = response.json()
+            print(f"Response: {len(data)} fee schedule items found")
+            
+            if not isinstance(data, list):
+                print("❌ FAILED: Fee schedule should be a list")
+                return False
+            
+            if len(data) != 7:
+                print(f"❌ FAILED: Expected 7 fee schedule items, got {len(data)}")
+                return False
+            
+            # Validate each fee item
+            found_services = {}
+            for item in data:
+                if not isinstance(item, dict):
+                    print("❌ FAILED: Each fee item should be a dictionary")
+                    return False
+                
+                required_fields = ['service_type', 'name', 'price', 'description']
+                for field in required_fields:
+                    if field not in item:
+                        print(f"❌ FAILED: Missing required field: {field}")
+                        return False
+                
+                service_type = item['service_type']
+                price = item['price']
+                found_services[service_type] = price
+                
+                print(f"   - {item['name']}: R{price}")
+            
+            # Verify specific prices from review request
+            price_checks = [
+                ("teleconsultation", 260.00, "Teleconsultation"),
+                ("follow_up_0_3", 0.00, "Follow-up (0-3 days)"),
+                ("follow_up_4_7", 300.00, "Follow-up (4-7 days)"),
+                ("script_1_month", 160.00, "Script 1 month"),
+                ("script_3_months", 300.00, "Script 3 months"),
+                ("script_6_months", 400.00, "Script 6 months"),
+                ("medical_forms", 400.00, "Medical Forms")
+            ]
+            
+            all_prices_correct = True
+            for service_type, expected_price, name in price_checks:
+                if service_type not in found_services:
+                    print(f"❌ FAILED: Missing service type: {service_type}")
+                    all_prices_correct = False
+                elif found_services[service_type] != expected_price:
+                    print(f"❌ FAILED: {name} price mismatch - expected R{expected_price}, got R{found_services[service_type]}")
+                    all_prices_correct = False
+                else:
+                    print(f"✅ {name}: R{expected_price} ✓")
+            
+            if all_prices_correct:
+                print("✅ PASSED: Fee schedule API working correctly with correct Quadcare prices")
+                return True
+            else:
+                print("❌ FAILED: Some fee schedule prices are incorrect")
+                return False
+        else:
+            print(f"❌ FAILED: Expected status 200, got {response.status_code}")
+            print(f"Response: {response.text}")
+            return False
+            
+    except requests.exceptions.RequestException as e:
+        print(f"❌ FAILED: Request error - {str(e)}")
+        return False
+    except Exception as e:
+        print(f"❌ FAILED: Unexpected error - {str(e)}")
+        return False
+
+
+def test_bookings_auth():
+    """Test the bookings endpoints (require auth)"""
+    print("\n=== Testing Bookings APIs (No Auth) ===")
+    
+    endpoints = [
+        ("POST", "/bookings", "Create Booking"),
+        ("GET", "/bookings", "Get Bookings")
+    ]
+    
+    all_passed = True
+    
+    for method, endpoint, name in endpoints:
+        try:
+            print(f"\nTesting {name}: {method} {endpoint}")
+            
+            if method == "GET":
+                response = requests.get(f"{BASE_URL}{endpoint}", timeout=10)
+            elif method == "POST":
+                test_data = {
+                    "patient_id": "test-patient-id",
+                    "clinician_id": "test-clinician-id",
+                    "scheduled_at": "2025-01-20T10:00:00Z",
+                    "service_type": "teleconsultation",
+                    "billing_type": "cash"
+                }
+                response = requests.post(
+                    f"{BASE_URL}{endpoint}",
+                    json=test_data,
+                    headers={'Content-Type': 'application/json'},
+                    timeout=10
+                )
+            
+            print(f"Status Code: {response.status_code}")
+            
+            if response.status_code == 401:
+                print(f"✅ PASSED: {name} correctly requires authentication")
+            else:
+                print(f"❌ FAILED: {name} expected 401, got {response.status_code}")
+                print(f"Response: {response.text[:200]}...")
+                all_passed = False
+                
+        except requests.exceptions.RequestException as e:
+            print(f"❌ FAILED: {name} request error - {str(e)}")
+            all_passed = False
+        except Exception as e:
+            print(f"❌ FAILED: {name} unexpected error - {str(e)}")
+            all_passed = False
+    
+    if all_passed:
+        print("\n✅ PASSED: All booking endpoints correctly require authentication")
+    else:
+        print("\n❌ FAILED: Some booking endpoints do not require authentication")
+    
+    return all_passed
+
 def main():
     """Run all backend API tests"""
     print("🚀 Starting HCF Telehealth Backend API Tests - Phase 1 Focus")
