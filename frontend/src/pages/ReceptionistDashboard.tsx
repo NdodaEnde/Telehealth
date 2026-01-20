@@ -329,12 +329,12 @@ const ReceptionistDashboardContent = () => {
                       <CardTitle className="text-lg">
                         {currentConversation.patient_name}
                       </CardTitle>
-                      <CardDescription className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 mt-1">
                         <Badge variant="outline">{currentConversation.status.replace('_', ' ')}</Badge>
                         {currentConversation.patient_type && (
                           <Badge variant="secondary">{currentConversation.patient_type.replace('_', ' ')}</Badge>
                         )}
-                      </CardDescription>
+                      </div>
                     </div>
                     <div className="flex items-center gap-2">
                       {/* Patient Type Selector */}
