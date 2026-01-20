@@ -505,15 +505,6 @@ async def cancel_booking(
         user.access_token
     )
     
-    # Cancel linked appointment
-    if booking.get("appointment_id"):
-        await supabase.update(
-            "appointments",
-            {"status": "cancelled"},
-            {"id": booking["appointment_id"]},
-            user.access_token
-        )
-    
     # Cancel related invoice if exists
     if booking.get("invoice_id"):
         await supabase.update(
@@ -538,6 +529,7 @@ async def cancel_booking(
             "conversation_id": booking["conversation_id"],
             "sender_id": user.id,
             "sender_role": "system",
+            "sender_name": "System",
             "content": "❌ Booking has been cancelled",
             "message_type": "system"
         }
