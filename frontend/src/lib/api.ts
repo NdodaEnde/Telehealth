@@ -309,6 +309,134 @@ export const auditAPI = {
   },
 };
 
+// ============ Chat API ============
+
+export const chatAPI = {
+  // Conversations
+  createConversation: (initialMessage: string) =>
+    apiRequest('/api/chat/conversations', {
+      method: 'POST',
+      body: JSON.stringify({ initial_message: initialMessage }),
+    }),
+  
+  getConversations: (params?: { status?: string; assigned_to_me?: boolean; unassigned_only?: boolean }) => {
+    const searchParams = new URLSearchParams();
+    if (params?.status) searchParams.set('status', params.status);
+    if (params?.assigned_to_me) searchParams.set('assigned_to_me', 'true');
+    if (params?.unassigned_only) searchParams.set('unassigned_only', 'true');
+    const query = searchParams.toString() ? `?${searchParams}` : '';
+    return apiRequest(`/api/chat/conversations${query}`);
+  },
+  
+  getUnassignedConversations: () =>
+    apiRequest('/api/chat/conversations/unassigned'),
+  
+  getMyChats: () =>
+    apiRequest('/api/chat/conversations/my-chats'),
+  
+  getConversation: (id: string) =>
+    apiRequest(`/api/chat/conversations/${id}`),
+  
+  claimConversation: (id: string) =>
+    apiRequest(`/api/chat/conversations/${id}/claim`, { method: 'POST' }),
+  
+  reassignConversation: (id: string, receptionistId: string) =>
+    apiRequest(`/api/chat/conversations/${id}/reassign`, {
+      method: 'POST',
+      body: JSON.stringify({ receptionist_id: receptionistId }),
+    }),
+  
+  updateConversationStatus: (id: string, status: string) =>
+    apiRequest(`/api/chat/conversations/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    }),
+  
+  updatePatientType: (id: string, patientType: string) =>
+    apiRequest(`/api/chat/conversations/${id}/patient-type`, {
+      method: 'PATCH',
+      body: JSON.stringify({ patient_type: patientType }),
+    }),
+  
+  // Messages
+  getMessages: (conversationId: string, limit: number = 100) =>
+    apiRequest(`/api/chat/conversations/${conversationId}/messages?limit=${limit}`),
+  
+  sendMessage: (conversationId: string, content: string, messageType: string = 'text', fileUrl?: string, fileName?: string) =>
+    apiRequest(`/api/chat/conversations/${conversationId}/messages`, {
+      method: 'POST',
+      body: JSON.stringify({
+        content,
+        message_type: messageType,
+        file_url: fileUrl,
+        file_name: fileName,
+      }),
+    }),
+  
+  markAsRead: (conversationId: string) =>
+    apiRequest(`/api/chat/conversations/${conversationId}/read`, { method: 'POST' }),
+  
+  // Stats
+  getStats: () => apiRequest('/api/chat/stats'),
+};
+
+// ============ Bookings API ============
+
+export const bookingsAPI = {
+  getFeeSchedule: () => apiRequest('/api/bookings/fee-schedule'),
+  
+  create: (data: {
+    patient_id: string;
+    clinician_id: string;
+    conversation_id?: string;
+    scheduled_at: string;
+    service_type: string;
+    billing_type: string;
+    notes?: string;
+    duration_minutes?: number;
+  }) => apiRequest('/api/bookings', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
+  
+  list: (params?: { patient_id?: string; clinician_id?: string; status?: string }) => {
+    const searchParams = new URLSearchParams();
+    if (params?.patient_id) searchParams.set('patient_id', params.patient_id);
+    if (params?.clinician_id) searchParams.set('clinician_id', params.clinician_id);
+    if (params?.status) searchParams.set('status', params.status);
+    const query = searchParams.toString() ? `?${searchParams}` : '';
+    return apiRequest(`/api/bookings${query}`);
+  },
+  
+  get: (id: string) => apiRequest(`/api/bookings/${id}`),
+  
+  update: (id: string, data: { scheduled_at?: string; status?: string; notes?: string }) =>
+    apiRequest(`/api/bookings/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+  
+  cancel: (id: string) => apiRequest(`/api/bookings/${id}`, { method: 'DELETE' }),
+  
+  // Invoices
+  getMyInvoices: (status?: string) => {
+    const query = status ? `?status=${status}` : '';
+    return apiRequest(`/api/bookings/invoices/my-invoices${query}`);
+  },
+  
+  getInvoice: (id: string) => apiRequest(`/api/bookings/invoices/${id}`),
+  
+  getInvoicePDF: (id: string) => apiRequest(`/api/bookings/invoices/${id}/pdf`),
+  
+  updateInvoiceStatus: (id: string, status: string, paymentReference?: string) =>
+    apiRequest(`/api/bookings/invoices/${id}/status?status=${status}${paymentReference ? `&payment_reference=${paymentReference}` : ''}`, {
+      method: 'PATCH',
+    }),
+  
+  // Clinicians
+  getAvailableClinicians: () => apiRequest('/api/bookings/clinicians/available'),
+};
+
 // Export all APIs
 export const api = {
   user: userAPI,
@@ -318,6 +446,8 @@ export const api = {
   auth: authAPI,
   analytics: analyticsAPI,
   audit: auditAPI,
+  chat: chatAPI,
+  bookings: bookingsAPI,
 };
 
 export default api;
