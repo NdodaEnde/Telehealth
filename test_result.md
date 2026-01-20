@@ -474,6 +474,9 @@ frontend:
       - working: "NA"
         agent: "testing"
         comment: "⚠️ NOT TESTED: Receptionist dashboard requires receptionist/admin/nurse/doctor authentication. Route /receptionist exists and properly redirects unauthenticated users to auth. Cannot test chat queue and booking functionality without proper credentials."
+      - working: "NA"
+        agent: "main"
+        comment: "UPDATED: Simplified booking form. Removed clinician dropdown (was causing 404/Unknown issues). Now has optional free-text clinician_name field for display (e.g., 'Sr. Nkosi'). Invoice generation note added - will be generated post-consultation."
 
   - task: "Patient Dashboard Restructure"
     implemented: true
