@@ -1143,6 +1143,7 @@ def main():
     test_results['chat_conversations_auth'] = test_chat_conversations_auth()
     test_results['bookings_fee_schedule'] = test_bookings_fee_schedule()
     test_results['bookings_auth'] = test_bookings_auth()
+    test_results['bookings_invoice_generation_auth'] = test_bookings_invoice_generation_auth()
     
     # Summary
     print("\n" + "=" * 60)
