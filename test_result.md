@@ -278,27 +278,33 @@ backend:
 
   - task: "Chat System API"
     implemented: true
-    working: "NA"
+    working: true
     file: "backend/routes/chat.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "NEW: Chat-based booking system using Supabase. POST /api/chat/conversations, GET /api/chat/conversations, GET /api/chat/conversations/unassigned, POST /api/chat/conversations/{id}/claim, POST /api/chat/conversations/{id}/messages, GET /api/chat/stats. Real-time via Supabase Realtime."
+      - working: true
+        agent: "testing"
+        comment: "✅ PASSED: GET /api/chat/stats correctly returns 401 without authentication (protected endpoint). POST /api/chat/conversations and GET /api/chat/conversations both correctly require authentication and return 401 without valid JWT token. All chat endpoints properly protected with auth middleware."
 
   - task: "Bookings API with Fee Schedule"
     implemented: true
-    working: "NA"
+    working: true
     file: "backend/routes/bookings.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "NEW: Receptionist booking management. GET /api/bookings/fee-schedule (Quadcare prices), POST /api/bookings, GET /api/bookings, DELETE /api/bookings/{id}, GET /api/bookings/invoices/my-invoices, GET /api/bookings/invoices/{id}/pdf. Invoice auto-generation for cash patients."
+      - working: true
+        agent: "testing"
+        comment: "✅ PASSED: GET /api/bookings/fee-schedule returns correct Quadcare fee schedule with 7 items and exact prices - Teleconsultation: R260, Follow-up (0-3 days): R0, Follow-up (4-7 days): R300, Script 1 month: R160, Script 3 months: R300, Script 6 months: R400, Medical Forms: R400. POST /api/bookings and GET /api/bookings correctly require authentication (401 without token). All booking endpoints working as expected."
 
 frontend:
   - task: "API Service Layer"
