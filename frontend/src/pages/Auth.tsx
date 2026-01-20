@@ -39,7 +39,7 @@ const signupSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
   password: z.string().min(8, "Password must be at least 8 characters"),
   confirm_password: z.string(),
-  role: z.enum(["patient", "nurse", "doctor"] as const),
+  role: z.enum(["patient", "nurse", "doctor", "receptionist"] as const),
   hpcsa_number: z.string().optional(),
 }).refine((data) => data.password === data.confirm_password, {
   message: "Passwords don't match",
