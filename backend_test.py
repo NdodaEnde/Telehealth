@@ -1012,8 +1012,8 @@ def test_bookings_fee_schedule():
 
 
 def test_bookings_auth():
-    """Test the bookings endpoints (require auth)"""
-    print("\n=== Testing Bookings APIs (No Auth) ===")
+    """Test the bookings endpoints (require auth) - SIMPLIFIED VERSION"""
+    print("\n=== Testing Simplified Bookings APIs (No Auth) ===")
     
     endpoints = [
         ("POST", "/bookings", "Create Booking"),
@@ -1029,12 +1029,15 @@ def test_bookings_auth():
             if method == "GET":
                 response = requests.get(f"{BASE_URL}{endpoint}", timeout=10)
             elif method == "POST":
+                # Updated test data for simplified booking (NO clinician_id required)
                 test_data = {
                     "patient_id": "test-patient-id",
-                    "clinician_id": "test-clinician-id",
                     "scheduled_at": "2025-01-20T10:00:00Z",
                     "service_type": "teleconsultation",
-                    "billing_type": "cash"
+                    "billing_type": "cash",
+                    "clinician_name": "Sr. Nkosi",  # Optional free text
+                    "notes": "Test booking",
+                    "conversation_id": "test-conversation-id"
                 }
                 response = requests.post(
                     f"{BASE_URL}{endpoint}",
@@ -1065,6 +1068,39 @@ def test_bookings_auth():
         print("\n❌ FAILED: Some booking endpoints do not require authentication")
     
     return all_passed
+
+def test_bookings_invoice_generation_auth():
+    """Test the invoice generation endpoint (requires auth)"""
+    print("\n=== Testing Invoice Generation API (No Auth) ===")
+    
+    test_data = {
+        "booking_id": "test-booking-id"
+    }
+    
+    try:
+        response = requests.post(
+            f"{BASE_URL}/bookings/invoices/generate",
+            json=test_data,
+            headers={'Content-Type': 'application/json'},
+            timeout=10
+        )
+        
+        print(f"Status Code: {response.status_code}")
+        
+        if response.status_code == 401:
+            print("✅ PASSED: Invoice generation correctly requires authentication")
+            return True
+        else:
+            print(f"❌ FAILED: Expected status 401, got {response.status_code}")
+            print(f"Response: {response.text}")
+            return False
+            
+    except requests.exceptions.RequestException as e:
+        print(f"❌ FAILED: Request error - {str(e)}")
+        return False
+    except Exception as e:
+        print(f"❌ FAILED: Unexpected error - {str(e)}")
+        return False
 
 def main():
     """Run all backend API tests"""
