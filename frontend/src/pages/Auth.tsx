@@ -300,6 +300,7 @@ const Auth = () => {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="patient">Patient</SelectItem>
+                      <SelectItem value="receptionist">Receptionist</SelectItem>
                       <SelectItem value="nurse">Nurse</SelectItem>
                       <SelectItem value="doctor">Doctor</SelectItem>
                     </SelectContent>
