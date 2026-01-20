@@ -613,6 +613,7 @@ async def send_message(
         "conversation_id": conversation_id,
         "sender_id": user.id,
         "sender_role": role,
+        "sender_name": sender_name,  # Store name in DB for real-time updates
         "content": data.content,
         "message_type": data.message_type.value,
         "file_url": data.file_url,
