@@ -199,29 +199,19 @@ async def complete_patient_onboarding(
         )
         medical_aid_verified = verification.verified
     
-    # Sync to HealthBridge EHR (placeholder)
+    # HealthBridge EHR sync is DISABLED for now
+    # Will be enabled when real API access is provided
     healthbridge_synced = False
     healthbridge_patient_id = None
     
-    sync_result = await healthbridge.sync_patient_to_ehr({
-        "id_type": data.id_type.value,
-        "id_number": data.id_number if data.id_type.value == "sa_id" else None,
-        "passport_number": data.passport_number if data.id_type.value == "passport" else None,
-        "passport_country": data.passport_country if data.id_type.value == "passport" else None,
-        "first_name": data.first_name,
-        "last_name": data.last_name,
-        "date_of_birth": dob,
-        "gender": data.gender.value,
-        "email": data.email,
-        "phone": data.phone,
-        "medical_aid": data.medical_aid.dict() if data.medical_aid else None,
-        "medical_history": data.medical_history.dict() if data.medical_history else None
-    })
+    # NOTE: HealthBridge integration is a placeholder - sync disabled
+    # When ready to enable, uncomment the following:
+    # sync_result = await healthbridge.sync_patient_to_ehr({...})
+    # if sync_result.synced:
+    #     healthbridge_synced = True
+    #     healthbridge_patient_id = sync_result.encounter_id
     
-    # EHRSyncResult uses 'synced' attribute, not 'success'
-    if sync_result.synced:
-        healthbridge_synced = True
-        healthbridge_patient_id = sync_result.encounter_id
+    logger.info(f"Onboarding complete for user {user.id} (HealthBridge sync: DISABLED)")
     
     return PatientOnboardingResponse(
         id=extended_profile_id,
