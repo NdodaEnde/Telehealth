@@ -91,10 +91,10 @@ class PatientTypeUpdate(BaseModel):
 
 async def get_user_profile(user_id: str, access_token: str = None):
     """Get user profile from Supabase"""
-    # Try with the provided token first, then without (service level)
+    # Use full select to avoid column-level RLS issues
     profiles = await supabase.select(
         "profiles",
-        columns="id, first_name, last_name",
+        columns="*",
         filters={"id": user_id},
         access_token=access_token
     )
@@ -104,13 +104,14 @@ async def get_user_profile(user_id: str, access_token: str = None):
         logger.warning(f"Profile not found with user token for {user_id}, trying without token")
         profiles = await supabase.select(
             "profiles",
-            columns="id, first_name, last_name",
+            columns="*",
             filters={"id": user_id}
         )
     
     if profiles:
-        logger.info(f"Found profile for {user_id}: {profiles[0]}")
-        return profiles[0]
+        profile = profiles[0]
+        logger.info(f"Found profile for {user_id}: {profile.get('first_name')} {profile.get('last_name')}")
+        return profile
     
     logger.warning(f"Profile not found for user_id: {user_id}")
     return {"id": user_id, "first_name": "Unknown", "last_name": "User"}
