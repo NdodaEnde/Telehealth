@@ -93,18 +93,14 @@ const ReceptionistDashboardContent = () => {
     return () => clearInterval(interval);
   }, [loadData]);
 
-  // Load fee schedule and clinicians for booking
+  // Load fee schedule for booking
   useEffect(() => {
     const loadBookingData = async () => {
       try {
-        const [fees, docs] = await Promise.all([
-          bookingsAPI.getFeeSchedule(),
-          bookingsAPI.getAvailableClinicians(),
-        ]);
+        const fees = await bookingsAPI.getFeeSchedule();
         setFeeSchedule(fees || []);
-        setClinicians(docs || []);
       } catch (error) {
-        console.error("Error loading booking data:", error);
+        console.error("Error loading fee schedule:", error);
       }
     };
     loadBookingData();
