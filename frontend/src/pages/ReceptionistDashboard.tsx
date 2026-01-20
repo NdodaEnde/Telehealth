@@ -367,15 +367,31 @@ const ReceptionistDashboardContent = () => {
                           </DialogHeader>
                           <div className="space-y-4 py-4">
                             <div className="space-y-2">
-                              <Label>Clinical Associate (optional)</Label>
-                              <Input
-                                placeholder="e.g., Sr. Nkosi"
-                                value={bookingForm.clinician_name}
-                                onChange={(e) => setBookingForm(f => ({ ...f, clinician_name: e.target.value }))}
-                              />
-                              <p className="text-xs text-muted-foreground">
-                                For display only - clinician confirmed via HealthBridge
-                              </p>
+                              <Label>Clinical Associate *</Label>
+                              <Select
+                                value={bookingForm.clinician_id}
+                                onValueChange={(v) => setBookingForm(f => ({ ...f, clinician_id: v }))}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select clinician" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {clinicians.length === 0 ? (
+                                    <SelectItem value="" disabled>No clinicians available</SelectItem>
+                                  ) : (
+                                    clinicians.map((c) => (
+                                      <SelectItem key={c.id} value={c.id}>
+                                        {c.name} ({c.specialization || c.role})
+                                      </SelectItem>
+                                    ))
+                                  )}
+                                </SelectContent>
+                              </Select>
+                              {clinicians.length === 0 && (
+                                <p className="text-xs text-destructive">
+                                  No clinicians found. Please create Clinical Associate accounts first.
+                                </p>
+                              )}
                             </div>
 
                             <div className="space-y-2">
@@ -433,17 +449,22 @@ const ReceptionistDashboardContent = () => {
                               />
                             </div>
 
-                            <div className="p-3 bg-muted rounded-lg">
-                              <p className="text-sm text-muted-foreground">
-                                💡 Invoice will be generated after consultation if needed
-                              </p>
-                            </div>
+                            {bookingForm.billing_type === 'cash' && (
+                              <div className="p-3 bg-muted rounded-lg">
+                                <p className="text-sm text-muted-foreground">
+                                  💰 Invoice will be auto-generated for cash patients
+                                </p>
+                              </div>
+                            )}
                           </div>
                           <DialogFooter>
                             <Button variant="outline" onClick={() => setShowBookingDialog(false)}>
                               Cancel
                             </Button>
-                            <Button onClick={handleCreateBooking} disabled={isCreatingBooking}>
+                            <Button 
+                              onClick={handleCreateBooking} 
+                              disabled={isCreatingBooking || !bookingForm.clinician_id}
+                            >
                               {isCreatingBooking ? (
                                 <>
                                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
