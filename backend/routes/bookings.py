@@ -301,13 +301,13 @@ async def create_booking(
 async def create_invoice(
     booking_id: str,
     patient_id: str,
-    clinician_id: str,
+    clinician_name: Optional[str],
     service_type: ServiceType,
     service_details: dict,
     consultation_date: datetime,
     access_token: str
 ) -> str:
-    """Create an invoice for a cash patient"""
+    """Create an invoice for a cash patient (called post-consultation)"""
     invoice_id = str(uuid.uuid4())
     
     invoice_data = {
@@ -319,7 +319,7 @@ async def create_invoice(
         "service_description": service_details.get("description", ""),
         "amount": service_details.get("price", 0),
         "consultation_date": consultation_date.isoformat(),
-        "clinician_id": clinician_id,
+        "clinician_name": clinician_name,  # Free text
         "status": InvoiceStatus.PENDING.value
     }
     
