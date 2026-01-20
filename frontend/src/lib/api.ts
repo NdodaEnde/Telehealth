@@ -394,7 +394,7 @@ export const bookingsAPI = {
     billing_type: string;
     notes?: string;
     duration_minutes?: number;
-  }) => apiRequest('/api/bookings/', {
+  }) => apiRequest('/api/bookings', {
     method: 'POST',
     body: JSON.stringify(data),
   }),
