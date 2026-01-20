@@ -1,13 +1,20 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { ChatProvider } from "@/contexts/ChatContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Clock, FileText, Video, User, LogOut, Plus, Pill, Home, Menu, X, AlertCircle } from "lucide-react";
-import { Link, useNavigate, useLocation } from "react-router-dom";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { 
+  Calendar, Clock, FileText, Video, User, LogOut, 
+  MessageCircle, Receipt, Menu, X, Settings 
+} from "lucide-react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { PatientPrescriptionHistory } from "@/components/prescriptions/PatientPrescriptionHistory";
+import { PatientChatSpace } from "@/components/chat/PatientChatSpace";
+import { bookingsAPI } from "@/lib/api";
 
 interface Appointment {
   id: string;
@@ -18,20 +25,29 @@ interface Appointment {
   specialization: string | null;
 }
 
-const PatientDashboard = () => {
+interface Invoice {
+  id: string;
+  service_name: string;
+  amount: number;
+  status: string;
+  consultation_date: string;
+  clinician_name: string;
+}
+
+const PatientDashboardContent = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, profile, signOut, onboardingComplete, isLoading } = useAuth();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showPrescriptions, setShowPrescriptions] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("chat");
 
-  // Check if user just completed onboarding (passed via navigation state)
+  // Check if user just completed onboarding
   const justOnboarded = location.state?.justOnboarded;
 
   // Auto-redirect to onboarding if not complete
-  // But skip if user just completed onboarding (state might not have updated yet)
   useEffect(() => {
     if (justOnboarded) {
       console.log("[PatientDashboard] User just completed onboarding, skipping redirect check");
@@ -45,10 +61,11 @@ const PatientDashboard = () => {
   }, [isLoading, onboardingComplete, navigate, justOnboarded]);
 
   useEffect(() => {
-    const fetchAppointments = async () => {
+    const fetchData = async () => {
       if (!user) return;
 
       try {
+        // Fetch appointments
         const { data: appointmentsData, error } = await supabase
           .from("appointments")
           .select("id, scheduled_at, consultation_type, status, clinician_id")
@@ -58,9 +75,7 @@ const PatientDashboard = () => {
           .order("scheduled_at", { ascending: true })
           .limit(5);
 
-        if (error) throw error;
-
-        if (appointmentsData && appointmentsData.length > 0) {
+        if (!error && appointmentsData && appointmentsData.length > 0) {
           const clinicianIds = appointmentsData.map(a => a.clinician_id);
           
           const [profilesResult, cliniciansResult] = await Promise.all([
@@ -69,28 +84,37 @@ const PatientDashboard = () => {
           ]);
 
           const merged = appointmentsData.map(apt => {
-            const profile = profilesResult.data?.find(p => p.id === apt.clinician_id);
+            const profileData = profilesResult.data?.find(p => p.id === apt.clinician_id);
             const clinician = cliniciansResult.data?.find(c => c.id === apt.clinician_id);
             return {
               id: apt.id,
               scheduled_at: apt.scheduled_at,
               consultation_type: apt.consultation_type,
               status: apt.status,
-              clinician_name: profile ? `Dr. ${profile.first_name} ${profile.last_name}` : "Unknown",
+              clinician_name: profileData ? `${profileData.first_name} ${profileData.last_name}` : "Unknown",
               specialization: clinician?.specialization || null,
             };
           });
 
           setAppointments(merged);
         }
+
+        // Fetch invoices
+        try {
+          const invoicesData = await bookingsAPI.getMyInvoices();
+          setInvoices(invoicesData || []);
+        } catch (e) {
+          console.log("No invoices or error fetching:", e);
+        }
+
       } catch (error) {
-        console.error("Error fetching appointments:", error);
+        console.error("Error fetching data:", error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchAppointments();
+    fetchData();
   }, [user]);
 
   // Show loading while checking onboarding status
@@ -154,186 +178,227 @@ const PatientDashboard = () => {
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-4 sm:py-8">
-        <div className="mb-6 sm:mb-8">
+      <main className="container mx-auto px-4 py-4 sm:py-6">
+        <div className="mb-4 sm:mb-6">
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Patient Dashboard</h1>
           <p className="text-sm sm:text-base text-muted-foreground mt-1">Manage your healthcare journey</p>
         </div>
 
-        {/* Quick Actions - Responsive Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 lg:gap-6 mb-6 sm:mb-8">
-          <Card 
-            className="hover:shadow-lg transition-shadow cursor-pointer border-primary/20 hover:border-primary"
-            onClick={() => navigate("/book-appointment")}
-          >
-            <CardHeader className="p-3 sm:p-4 flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 pb-2">
-              <div className="p-2 sm:p-3 rounded-xl bg-primary/10">
-                <Plus className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
-              </div>
-              <div>
-                <CardTitle className="text-sm sm:text-lg">Book</CardTitle>
-                <CardDescription className="text-xs sm:text-sm hidden sm:block">Schedule appointment</CardDescription>
-              </div>
-            </CardHeader>
-          </Card>
+        {/* Main Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+          <TabsList className="grid w-full grid-cols-3 lg:w-[400px]">
+            <TabsTrigger value="chat" className="flex items-center gap-2">
+              <MessageCircle className="w-4 h-4" />
+              <span className="hidden sm:inline">Chat</span>
+            </TabsTrigger>
+            <TabsTrigger value="consultations" className="flex items-center gap-2">
+              <Video className="w-4 h-4" />
+              <span className="hidden sm:inline">Consultations</span>
+            </TabsTrigger>
+            <TabsTrigger value="profile" className="flex items-center gap-2">
+              <User className="w-4 h-4" />
+              <span className="hidden sm:inline">Profile</span>
+            </TabsTrigger>
+          </TabsList>
 
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer border-primary/20 hover:border-primary">
-            <CardHeader className="p-3 sm:p-4 flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 pb-2">
-              <div className="p-2 sm:p-3 rounded-xl bg-success/10">
-                <Video className="w-5 h-5 sm:w-6 sm:h-6 text-success" />
-              </div>
-              <div>
-                <CardTitle className="text-sm sm:text-lg">Video Call</CardTitle>
-                <CardDescription className="text-xs sm:text-sm hidden sm:block">Join consultation</CardDescription>
-              </div>
-            </CardHeader>
-          </Card>
+          {/* Chat Tab */}
+          <TabsContent value="chat" className="min-h-[600px]">
+            <PatientChatSpace />
+          </TabsContent>
 
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer border-primary/20 hover:border-primary">
-            <CardHeader className="p-3 sm:p-4 flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 pb-2">
-              <div className="p-2 sm:p-3 rounded-xl bg-secondary/20">
-                <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-secondary-foreground" />
-              </div>
-              <div>
-                <CardTitle className="text-sm sm:text-lg">Records</CardTitle>
-                <CardDescription className="text-xs sm:text-sm hidden sm:block">View history</CardDescription>
-              </div>
-            </CardHeader>
-          </Card>
-
-          <Card 
-            className={`hover:shadow-lg transition-shadow cursor-pointer border-primary/20 hover:border-primary ${showPrescriptions ? 'ring-2 ring-primary' : ''}`}
-            onClick={() => setShowPrescriptions(!showPrescriptions)}
-          >
-            <CardHeader className="p-3 sm:p-4 flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 pb-2">
-              <div className="p-2 sm:p-3 rounded-xl bg-warning/10">
-                <Pill className="w-5 h-5 sm:w-6 sm:h-6 text-warning" />
-              </div>
-              <div>
-                <CardTitle className="text-sm sm:text-lg">Prescriptions</CardTitle>
-                <CardDescription className="text-xs sm:text-sm hidden sm:block">View history</CardDescription>
-              </div>
-            </CardHeader>
-          </Card>
-
-          <Card 
-            className="hover:shadow-lg transition-shadow cursor-pointer border-primary/20 hover:border-primary col-span-2 sm:col-span-1"
-            onClick={() => navigate("/onboarding")}
-          >
-            <CardHeader className="p-3 sm:p-4 flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 pb-2">
-              <div className="p-2 sm:p-3 rounded-xl bg-accent/50">
-                <User className="w-5 h-5 sm:w-6 sm:h-6 text-accent-foreground" />
-              </div>
-              <div>
-                <CardTitle className="text-sm sm:text-lg">Profile</CardTitle>
-                <CardDescription className="text-xs sm:text-sm hidden sm:block">Complete profile</CardDescription>
-              </div>
-            </CardHeader>
-          </Card>
-        </div>
-
-        {/* Prescriptions Section (toggleable) */}
-        {showPrescriptions && (
-          <div className="mb-6 sm:mb-8 animate-fade-in">
-            <PatientPrescriptionHistory />
-          </div>
-        )}
-
-        {/* Upcoming Appointments */}
-        <Card className="mb-6 sm:mb-8">
-          <CardHeader className="p-4 sm:p-6">
-            <CardTitle className="flex items-center gap-2 text-base sm:text-xl">
-              <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
-              Upcoming Appointments
-            </CardTitle>
-            <CardDescription className="text-xs sm:text-sm">Your scheduled consultations</CardDescription>
-          </CardHeader>
-          <CardContent className="p-4 sm:p-6 pt-0">
-            {loading ? (
-              <div className="space-y-3 sm:space-y-4">
-                {[1, 2].map((i) => (
-                  <div key={i} className="h-16 sm:h-20 bg-muted animate-pulse rounded-lg" />
-                ))}
-              </div>
-            ) : appointments.length === 0 ? (
-              <div className="text-center py-6 sm:py-8 text-muted-foreground">
-                <Calendar className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-3 sm:mb-4 opacity-50" />
-                <p className="text-sm sm:text-base">No upcoming appointments</p>
-                <Button className="mt-4" variant="outline" size="sm" onClick={() => navigate("/book-appointment")}>
-                  Book Your First Consultation
-                </Button>
-              </div>
-            ) : (
-              <div className="space-y-3 sm:space-y-4">
-                {appointments.map((apt) => (
-                  <div
-                    key={apt.id}
-                    className="flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 rounded-lg border border-border hover:border-primary/50 transition-colors gap-3"
-                  >
-                    <div className="flex items-center gap-3 sm:gap-4">
-                      <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                        <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="font-medium text-sm sm:text-base truncate">{apt.clinician_name}</p>
-                        <p className="text-xs sm:text-sm text-muted-foreground truncate">
-                          {apt.specialization || "General Consultation"}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 pl-13 sm:pl-0">
-                      <div className="text-left sm:text-right">
-                        <p className="font-medium text-sm">
-                          {format(new Date(apt.scheduled_at), "MMM d, yyyy")}
-                        </p>
-                        <p className="text-xs sm:text-sm text-muted-foreground">
-                          {format(new Date(apt.scheduled_at), "h:mm a")}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {apt.status === "in_progress" && (
-                          <Button 
-                            size="sm" 
-                            onClick={() => navigate(`/consultation?appointment=${apt.id}`)}
-                            className="text-xs sm:text-sm"
-                          >
-                            <Video className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
-                            Join
-                          </Button>
-                        )}
-                        <Badge 
-                          variant={apt.status === "confirmed" ? "default" : apt.status === "in_progress" ? "default" : "secondary"}
-                          className="text-xs"
-                        >
-                          {apt.status === "in_progress" ? "Live" : apt.status}
-                        </Badge>
-                      </div>
-                    </div>
+          {/* Consultations Tab */}
+          <TabsContent value="consultations" className="space-y-6">
+            {/* Upcoming Appointments */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Clock className="w-5 h-5 text-primary" />
+                  Upcoming Consultations
+                </CardTitle>
+                <CardDescription>Your scheduled video consultations</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {loading ? (
+                  <div className="space-y-4">
+                    {[1, 2].map((i) => (
+                      <div key={i} className="h-20 bg-muted animate-pulse rounded-lg" />
+                    ))}
                   </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                ) : appointments.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>No upcoming consultations</p>
+                    <p className="text-sm mt-2">Start a chat to book your first consultation</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {appointments.map((apt) => (
+                      <div
+                        key={apt.id}
+                        className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-lg border border-border hover:border-primary/50 transition-colors gap-3"
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                            <Calendar className="w-6 h-6 text-primary" />
+                          </div>
+                          <div>
+                            <p className="font-medium">{apt.clinician_name}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {apt.specialization || "General Consultation"}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between sm:justify-end gap-4 pl-16 sm:pl-0">
+                          <div className="text-left sm:text-right">
+                            <p className="font-medium">
+                              {format(new Date(apt.scheduled_at), "MMM d, yyyy")}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              {format(new Date(apt.scheduled_at), "h:mm a")}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {apt.status === "in_progress" && (
+                              <Button 
+                                size="sm" 
+                                onClick={() => navigate(`/consultation?appointment=${apt.id}`)}
+                              >
+                                <Video className="w-4 h-4 mr-1" />
+                                Join
+                              </Button>
+                            )}
+                            <Badge 
+                              variant={apt.status === "confirmed" ? "default" : apt.status === "in_progress" ? "default" : "secondary"}
+                            >
+                              {apt.status === "in_progress" ? "Live" : apt.status}
+                            </Badge>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
-        {/* Recent Activity */}
-        <Card>
-          <CardHeader className="p-4 sm:p-6">
-            <CardTitle className="flex items-center gap-2 text-base sm:text-xl">
-              <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
-              Recent Activity
-            </CardTitle>
-            <CardDescription className="text-xs sm:text-sm">Your recent healthcare interactions</CardDescription>
-          </CardHeader>
-          <CardContent className="p-4 sm:p-6 pt-0">
-            <div className="text-center py-6 sm:py-8 text-muted-foreground">
-              <FileText className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-3 sm:mb-4 opacity-50" />
-              <p className="text-sm sm:text-base">No recent activity</p>
-            </div>
-          </CardContent>
-        </Card>
+            {/* Prescriptions */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-primary" />
+                  Prescriptions
+                </CardTitle>
+                <CardDescription>Your prescription history</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <PatientPrescriptionHistory />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Profile Tab */}
+          <TabsContent value="profile" className="space-y-6">
+            {/* Personal Info */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <User className="w-5 h-5 text-primary" />
+                  Personal Information
+                </CardTitle>
+                <CardDescription>Your profile details</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm text-muted-foreground">Full Name</label>
+                    <p className="font-medium">{profile?.first_name} {profile?.last_name}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm text-muted-foreground">Phone</label>
+                    <p className="font-medium">{profile?.phone || "Not provided"}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm text-muted-foreground">Email</label>
+                    <p className="font-medium">{user?.email}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm text-muted-foreground">ID Number</label>
+                    <p className="font-medium">{profile?.id_number || "Not provided"}</p>
+                  </div>
+                </div>
+                <Button 
+                  variant="outline" 
+                  className="mt-4"
+                  onClick={() => navigate("/onboarding")}
+                >
+                  <Settings className="w-4 h-4 mr-2" />
+                  Update Profile
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Invoices */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Receipt className="w-5 h-5 text-primary" />
+                  Invoices
+                </CardTitle>
+                <CardDescription>Your billing history</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {invoices.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Receipt className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>No invoices yet</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {invoices.map((invoice) => (
+                      <div
+                        key={invoice.id}
+                        className="flex items-center justify-between p-4 rounded-lg border border-border"
+                      >
+                        <div>
+                          <p className="font-medium">{invoice.service_name}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {format(new Date(invoice.consultation_date), "MMM d, yyyy")} • {invoice.clinician_name}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="text-right">
+                            <p className="font-medium">R {invoice.amount.toFixed(2)}</p>
+                            <Badge variant={invoice.status === "paid" ? "default" : "secondary"}>
+                              {invoice.status}
+                            </Badge>
+                          </div>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => window.open(`/api/bookings/invoices/${invoice.id}/pdf`, '_blank')}
+                          >
+                            PDF
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </main>
     </div>
+  );
+};
+
+// Wrap with ChatProvider
+const PatientDashboard = () => {
+  return (
+    <ChatProvider>
+      <PatientDashboardContent />
+    </ChatProvider>
   );
 };
 
