@@ -320,7 +320,7 @@ frontend:
         comment: "Centralized API calls to FastAPI backend with auth token handling"
       - working: true
         agent: "testing"
-        comment: "✅ PASSED: API service layer configured correctly. Frontend uses REACT_APP_BACKEND_URL (https://vitacare-bridge.preview.emergentagent.com) for backend communication. Authentication API calls working during form submissions."
+        comment: "✅ PASSED: API service layer configured correctly. Frontend uses REACT_APP_BACKEND_URL (https://chatclinic.preview.emergentagent.com) for backend communication. Authentication API calls working during form submissions."
 
   - task: "Password Reset UI"
     implemented: true
