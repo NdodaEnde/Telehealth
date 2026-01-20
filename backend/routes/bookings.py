@@ -135,8 +135,7 @@ class InvoiceResponse(BaseModel):
     service_description: Optional[str] = None
     amount: float
     consultation_date: datetime
-    clinician_id: str
-    clinician_name: Optional[str] = None
+    clinician_name: Optional[str] = None  # Free text display name
     status: str
     payment_reference: Optional[str] = None
     paid_at: Optional[datetime] = None
