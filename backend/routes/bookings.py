@@ -332,7 +332,6 @@ async def create_invoice(
 @router.get("/", response_model=List[BookingResponse])
 async def get_bookings(
     patient_id: Optional[str] = None,
-    clinician_id: Optional[str] = None,
     status: Optional[BookingStatus] = None,
     limit: int = Query(50, ge=1, le=100),
     user: AuthenticatedUser = Depends(get_current_user)
@@ -347,8 +346,6 @@ async def get_bookings(
     else:
         if patient_id:
             filters["patient_id"] = patient_id
-        if clinician_id:
-            filters["clinician_id"] = clinician_id
     
     if status:
         filters["status"] = status.value
@@ -365,7 +362,6 @@ async def get_bookings(
     result = []
     for booking in bookings:
         patient_profile = await get_user_profile(booking["patient_id"], user.access_token)
-        clinician_profile = await get_user_profile(booking["clinician_id"], user.access_token)
         creator_profile = await get_user_profile(booking["created_by"], user.access_token)
         
         service_details = FEE_SCHEDULE.get(ServiceType(booking["service_type"]), {})
@@ -374,10 +370,8 @@ async def get_bookings(
             id=booking["id"],
             patient_id=booking["patient_id"],
             patient_name=format_name(patient_profile),
-            clinician_id=booking["clinician_id"],
-            clinician_name=format_name(clinician_profile),
+            clinician_name=booking.get("clinician_name"),  # Free text from DB
             conversation_id=booking.get("conversation_id"),
-            appointment_id=booking.get("appointment_id"),
             scheduled_at=booking["scheduled_at"],
             duration_minutes=booking["duration_minutes"],
             service_type=booking["service_type"],
