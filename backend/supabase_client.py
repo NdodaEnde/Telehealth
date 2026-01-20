@@ -36,7 +36,14 @@ class SupabaseClient:
         limit: Optional[int] = None,
         access_token: Optional[str] = None
     ) -> List[Dict]:
-        """Select records from a table"""
+        """Select records from a table
+        
+        Filters support:
+        - Simple equality: {"field": "value"}
+        - Operators as dict: {"field": {"neq": "value"}} -> field=neq.value
+        - Null check: {"field": {"is": "null"}} -> field=is.null
+        - List (IN): {"field": ["val1", "val2"]}
+        """
         url = f"{self.rest_url}/{table}?select={columns}"
         
         if filters:
@@ -46,6 +53,8 @@ class SupabaseClient:
                 elif isinstance(value, dict):
                     for op, val in value.items():
                         url += f"&{key}={op}.{val}"
+                elif value is None:
+                    url += f"&{key}=is.null"
                 else:
                     url += f"&{key}=eq.{value}"
         
