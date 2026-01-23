@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || import.meta.env.REACT_APP_BACKEND_URL || '';
+const BACKEND_URL = import.meta.env.REACT_APP_BACKEND_URL || '';
 
 export interface PrescriptionPDFData {
   prescription_id: string;
@@ -28,17 +29,36 @@ export interface PrescriptionPDFData {
 export const usePrescriptionPDF = () => {
   const [loading, setLoading] = useState(false);
 
+  const getAuthToken = async (): Promise<string | null> => {
+    const { data: { session } } = await supabase.auth.getSession();
+    return session?.access_token || null;
+  };
+
   const generatePDF = async (data: PrescriptionPDFData): Promise<string | null> => {
     setLoading(true);
 
     try {
+      const token = await getAuthToken();
+      
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
       const response = await fetch(`${BACKEND_URL}/api/prescriptions/generate-pdf`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify(data),
       });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('PDF generation failed:', response.status, errorText);
+        throw new Error(`Failed to generate PDF: ${response.status}`);
+      }
 
       const result = await response.json();
 
