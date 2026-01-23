@@ -60,44 +60,56 @@ const PatientDashboardContent = () => {
     }
   }, [isLoading, onboardingComplete, navigate, justOnboarded]);
 
+  // Function to fetch appointments
+  const fetchAppointments = async () => {
+    if (!user) return;
+
+    try {
+      const { data: appointmentsData, error } = await supabase
+        .from("appointments")
+        .select("id, scheduled_at, consultation_type, status, clinician_id")
+        .eq("patient_id", user.id)
+        .in("status", ["pending", "confirmed", "in_progress"])
+        .order("scheduled_at", { ascending: true })
+        .limit(5);
+
+      if (!error && appointmentsData && appointmentsData.length > 0) {
+        const clinicianIds = appointmentsData.map(a => a.clinician_id);
+        
+        const [profilesResult, cliniciansResult] = await Promise.all([
+          supabase.from("profiles").select("id, first_name, last_name").in("id", clinicianIds),
+          supabase.from("clinician_profiles").select("id, specialization").in("id", clinicianIds)
+        ]);
+
+        const merged = appointmentsData.map(apt => {
+          const profileData = profilesResult.data?.find(p => p.id === apt.clinician_id);
+          const clinician = cliniciansResult.data?.find(c => c.id === apt.clinician_id);
+          return {
+            id: apt.id,
+            scheduled_at: apt.scheduled_at,
+            consultation_type: apt.consultation_type,
+            status: apt.status,
+            clinician_name: profileData ? `${profileData.first_name} ${profileData.last_name}` : "Unknown",
+            specialization: clinician?.specialization || null,
+          };
+        });
+
+        setAppointments(merged);
+      } else {
+        setAppointments([]);
+      }
+    } catch (error) {
+      console.error("Error fetching appointments:", error);
+    }
+  };
+
+  // Initial data fetch
   useEffect(() => {
     const fetchData = async () => {
       if (!user) return;
 
       try {
-        // Fetch appointments
-        const { data: appointmentsData, error } = await supabase
-          .from("appointments")
-          .select("id, scheduled_at, consultation_type, status, clinician_id")
-          .eq("patient_id", user.id)
-          .in("status", ["pending", "confirmed", "in_progress"])
-          .gte("scheduled_at", new Date().toISOString())
-          .order("scheduled_at", { ascending: true })
-          .limit(5);
-
-        if (!error && appointmentsData && appointmentsData.length > 0) {
-          const clinicianIds = appointmentsData.map(a => a.clinician_id);
-          
-          const [profilesResult, cliniciansResult] = await Promise.all([
-            supabase.from("profiles").select("id, first_name, last_name").in("id", clinicianIds),
-            supabase.from("clinician_profiles").select("id, specialization").in("id", clinicianIds)
-          ]);
-
-          const merged = appointmentsData.map(apt => {
-            const profileData = profilesResult.data?.find(p => p.id === apt.clinician_id);
-            const clinician = cliniciansResult.data?.find(c => c.id === apt.clinician_id);
-            return {
-              id: apt.id,
-              scheduled_at: apt.scheduled_at,
-              consultation_type: apt.consultation_type,
-              status: apt.status,
-              clinician_name: profileData ? `${profileData.first_name} ${profileData.last_name}` : "Unknown",
-              specialization: clinician?.specialization || null,
-            };
-          });
-
-          setAppointments(merged);
-        }
+        await fetchAppointments();
 
         // Fetch invoices
         try {
@@ -115,6 +127,37 @@ const PatientDashboardContent = () => {
     };
 
     fetchData();
+  }, [user]);
+
+  // Real-time subscription for appointment status changes
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel('patient-appointments')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'appointments',
+          filter: `patient_id=eq.${user.id}`,
+        },
+        (payload) => {
+          console.log('[PatientDashboard] Appointment updated:', payload);
+          // Update the appointment in state
+          setAppointments(prev => prev.map(apt => 
+            apt.id === payload.new.id 
+              ? { ...apt, status: payload.new.status }
+              : apt
+          ));
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user]);
 
   // Show loading while checking onboarding status
