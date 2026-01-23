@@ -232,50 +232,60 @@ const PatientDashboardContent = () => {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {appointments.map((apt) => (
-                      <div
-                        key={apt.id}
-                        className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-lg border border-border hover:border-primary/50 transition-colors gap-3"
-                      >
-                        <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                            <Calendar className="w-6 h-6 text-primary" />
+                    {appointments.map((apt) => {
+                      const scheduledTime = new Date(apt.scheduled_at);
+                      const now = new Date();
+                      const minutesUntil = (scheduledTime.getTime() - now.getTime()) / (1000 * 60);
+                      // Can join 15 minutes before scheduled time or if in_progress
+                      const canJoin = apt.status === "in_progress" || 
+                        (apt.status === "confirmed" && minutesUntil <= 15 && minutesUntil >= -60);
+                      
+                      return (
+                        <div
+                          key={apt.id}
+                          className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-lg border border-border hover:border-primary/50 transition-colors gap-3"
+                        >
+                          <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                              <Calendar className="w-6 h-6 text-primary" />
+                            </div>
+                            <div>
+                              <p className="font-medium">{apt.clinician_name}</p>
+                              <p className="text-sm text-muted-foreground">
+                                {apt.specialization || "General Consultation"}
+                              </p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="font-medium">{apt.clinician_name}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {apt.specialization || "General Consultation"}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center justify-between sm:justify-end gap-4 pl-16 sm:pl-0">
-                          <div className="text-left sm:text-right">
-                            <p className="font-medium">
-                              {format(new Date(apt.scheduled_at), "MMM d, yyyy")}
-                            </p>
-                            <p className="text-sm text-muted-foreground">
-                              {format(new Date(apt.scheduled_at), "h:mm a")}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {apt.status === "in_progress" && (
-                              <Button 
-                                size="sm" 
-                                onClick={() => navigate(`/consultation?appointment=${apt.id}`)}
+                          <div className="flex items-center justify-between sm:justify-end gap-4 pl-16 sm:pl-0">
+                            <div className="text-left sm:text-right">
+                              <p className="font-medium">
+                                {format(new Date(apt.scheduled_at), "MMM d, yyyy")}
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                {format(new Date(apt.scheduled_at), "h:mm a")}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {canJoin && (
+                                <Button 
+                                  size="sm" 
+                                  onClick={() => navigate(`/consultation?appointment=${apt.id}`)}
+                                  className={apt.status === "in_progress" ? "animate-pulse" : ""}
+                                >
+                                  <Video className="w-4 h-4 mr-1" />
+                                  {apt.status === "in_progress" ? "Join Now" : "Join"}
+                                </Button>
+                              )}
+                              <Badge 
+                                variant={apt.status === "confirmed" ? "default" : apt.status === "in_progress" ? "destructive" : "secondary"}
                               >
-                                <Video className="w-4 h-4 mr-1" />
-                                Join
-                              </Button>
-                            )}
-                            <Badge 
-                              variant={apt.status === "confirmed" ? "default" : apt.status === "in_progress" ? "default" : "secondary"}
-                            >
-                              {apt.status === "in_progress" ? "Live" : apt.status}
-                            </Badge>
+                                {apt.status === "in_progress" ? "🔴 Live" : apt.status}
+                              </Badge>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </CardContent>
