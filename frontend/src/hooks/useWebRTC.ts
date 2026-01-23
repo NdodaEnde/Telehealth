@@ -320,5 +320,6 @@ export const useWebRTC = ({
     endCall,
     toggleMute,
     toggleVideo,
+    initializeMedia,
   };
 };
