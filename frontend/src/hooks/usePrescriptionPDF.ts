@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 
-const BACKEND_URL = import.meta.env.REACT_APP_BACKEND_URL || '';
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || import.meta.env.REACT_APP_BACKEND_URL || '';
 
 export interface PrescriptionPDFData {
   prescription_id: string;
