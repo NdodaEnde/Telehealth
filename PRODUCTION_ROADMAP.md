@@ -265,37 +265,48 @@ This roadmap outlines the path from current MVP state to production-ready platfo
 
 ---
 
-## 5. Multi-Clinic Architecture (Future)
+## 5. Multi-Clinic Architecture (Built-In from Day One)
 
-For scaling to 20 clinics, we need to consider:
+### 5.1 Architecture Decision
+**Multi-tenancy is built into the database from day one**, but the UI remains single-clinic for launch.
 
-### 5.1 Data Model Changes
+| Layer | Day One | Future |
+|-------|---------|--------|
+| Database | ✅ `clinic_id` on all tables | Same |
+| RLS Policies | ✅ Filter by `clinic_id` | Same |
+| Default Clinic | ✅ "Quadcare Telehealth" auto-assigned | Same |
+| UI | Single clinic (no selector) | Clinic dropdown |
+| Reporting | Single view | Per-clinic + aggregate |
+
+### 5.2 Data Model (Already in Migration v2)
 ```sql
--- Add clinic table
+-- Clinics table with types
 CREATE TABLE clinics (
     id UUID PRIMARY KEY,
     name TEXT NOT NULL,
-    address TEXT,
-    phone TEXT,
-    created_at TIMESTAMPTZ DEFAULT now()
+    code TEXT UNIQUE NOT NULL,  -- 'QC-TH', 'QC-JHB-01'
+    clinic_type clinic_type,    -- telehealth, walk_in, hybrid
+    ...
 );
 
--- Add clinic_id to relevant tables
-ALTER TABLE user_roles ADD COLUMN clinic_id UUID REFERENCES clinics(id);
-ALTER TABLE bookings ADD COLUMN clinic_id UUID REFERENCES clinics(id);
-ALTER TABLE appointments ADD COLUMN clinic_id UUID REFERENCES clinics(id);
+-- Default clinic auto-created
+INSERT INTO clinics (id, name, code, clinic_type)
+VALUES ('00000000-...', 'Quadcare Telehealth', 'QC-TH', 'telehealth');
+
+-- clinic_id on ALL relevant tables with default
+ALTER TABLE bookings ADD COLUMN clinic_id UUID DEFAULT default_clinic_id();
 ```
 
-### 5.2 RLS for Multi-Tenancy
-- Receptionists see only their clinic's chats
-- Clinicians see only their clinic's patients
+### 5.3 RLS Policies (Already Implemented)
+- Staff see only their clinic's data
+- Patients see only their own data (any clinic)
 - Admins can see all clinics
-- Patients can book at any clinic (or specific)
+- Default clinic used if none specified
 
-### 5.3 Timeline
-- **Phase 1 (Launch):** Single clinic mode
-- **Phase 2 (April):** Add clinic selector, multi-clinic support
-- **Phase 3 (Q3):** Per-clinic reporting, dashboards
+### 5.4 Timeline to Enable Multi-Clinic UI
+- **Launch (March 1):** Hidden - all users auto-assigned to Quadcare Telehealth
+- **Phase 2 (April):** Add clinic selector in receptionist/admin UI
+- **Phase 3 (Q3):** Per-clinic dashboards, add walk-in clinics
 
 ---
 
