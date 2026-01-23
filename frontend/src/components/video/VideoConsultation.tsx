@@ -159,13 +159,10 @@ export const VideoConsultation = () => {
 
   const handleStartPreview = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: true,
-        audio: true,
-      });
-      // Stream is managed by WebRTC hook
+      await initializeMedia();
     } catch (err) {
       console.error("Failed to get media:", err);
+      toast.error("Failed to access camera/microphone. Please check permissions.");
     }
   };
 
