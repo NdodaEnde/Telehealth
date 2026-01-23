@@ -65,13 +65,14 @@ const PatientDashboardContent = () => {
     if (!user) return;
 
     try {
+      // Fetch all recent appointments (including past for testing)
       const { data: appointmentsData, error } = await supabase
         .from("appointments")
         .select("id, scheduled_at, consultation_type, status, clinician_id")
         .eq("patient_id", user.id)
         .in("status", ["pending", "confirmed", "in_progress"])
-        .order("scheduled_at", { ascending: true })
-        .limit(5);
+        .order("scheduled_at", { ascending: false })
+        .limit(10);
 
       if (!error && appointmentsData && appointmentsData.length > 0) {
         const clinicianIds = appointmentsData.map(a => a.clinician_id);
