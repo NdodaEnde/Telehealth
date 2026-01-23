@@ -52,6 +52,7 @@ export const VideoConsultation = () => {
     endCall,
     toggleMute,
     toggleVideo,
+    initializeMedia,
   } = useWebRTC({
     sessionId: sessionId || "",
     appointmentId: appointmentId || "",
