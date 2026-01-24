@@ -329,6 +329,26 @@ const ClinicianDashboard = () => {
           open={appointmentsOpen}
           onOpenChange={setAppointmentsOpen}
         />
+
+        {/* Clinical Notes Dialog */}
+        {selectedAppointment && (
+          <ClinicalNotesDialog
+            open={clinicalNotesOpen}
+            onOpenChange={(open) => {
+              setClinicalNotesOpen(open);
+              if (!open) {
+                setSelectedAppointment(null);
+              }
+            }}
+            appointmentId={selectedAppointment.id}
+            patientId={selectedAppointment.patientId}
+            patientName={selectedAppointment.patientName}
+            onComplete={() => {
+              toast.success("Clinical notes saved successfully");
+              refetch();
+            }}
+          />
+        )}
       </main>
     </div>
   );
