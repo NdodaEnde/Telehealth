@@ -1270,6 +1270,15 @@ def main():
     test_results['bookings_auth'] = test_bookings_auth()
     test_results['bookings_invoice_generation_auth'] = test_bookings_invoice_generation_auth()
     
+    # Run Daily.co Video API tests
+    print("\n" + "=" * 60)
+    print("🆕 DAILY.CO VIDEO API TESTING")
+    print("=" * 60)
+    
+    test_results['video_health'] = test_video_health()
+    test_results['video_room_auth'] = test_video_room_auth()
+    test_results['video_token_auth'] = test_video_token_auth()
+    
     # Summary
     print("\n" + "=" * 60)
     print("📊 TEST SUMMARY")
