@@ -135,7 +135,18 @@ export const DailyVideoConsultation = () => {
 
   // Join the Daily call using SDK
   const joinCall = useCallback(async () => {
-    if (!roomUrl || !token || !containerRef.current) return;
+    if (!roomUrl || !token) return;
+
+    setJoiningCall(true);
+
+    // Small delay to ensure container is rendered
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    if (!containerRef.current) {
+      setError("Video container not ready");
+      setJoiningCall(false);
+      return;
+    }
 
     try {
       // Check if there's already an existing call instance and destroy it
@@ -164,6 +175,8 @@ export const DailyVideoConsultation = () => {
       callFrame.on("joined-meeting", () => {
         console.log("Joined Daily meeting");
         toast.success("Connected to consultation");
+        setIsInCall(true);
+        setJoiningCall(false);
       });
 
       callFrame.on("left-meeting", () => {
@@ -176,6 +189,7 @@ export const DailyVideoConsultation = () => {
         toast.error("Video call error occurred");
         setError("Video call error: " + (event?.errorMsg || "Unknown error"));
         setIsInCall(false);
+        setJoiningCall(false);
       });
 
       callFrame.on("participant-joined", (event) => {
@@ -198,12 +212,11 @@ export const DailyVideoConsultation = () => {
         token: token,
       });
 
-      setIsInCall(true);
-
     } catch (err: any) {
       console.error("Failed to join Daily call:", err);
       setError("Failed to join video call: " + (err.message || "Unknown error"));
       toast.error("Failed to join video call");
+      setJoiningCall(false);
     }
   }, [roomUrl, token]);
 
