@@ -469,6 +469,26 @@ export const bookingsAPI = {
     }),
 };
 
+// ============ Video (Daily.co) API ============
+
+export const videoAPI = {
+  createRoom: (appointmentId: string) => 
+    apiRequest('/api/video/room', {
+      method: 'POST',
+      body: JSON.stringify({ appointment_id: appointmentId }),
+    }),
+  
+  createToken: (roomName: string, userName: string, isOwner: boolean = false) =>
+    apiRequest('/api/video/token', {
+      method: 'POST',
+      body: JSON.stringify({ room_name: roomName, user_name: userName, is_owner: isOwner }),
+    }),
+  
+  getRoom: (roomName: string) => apiRequest(`/api/video/room/${roomName}`),
+  
+  checkHealth: () => apiRequest('/api/video/health'),
+};
+
 // Export all APIs
 export const api = {
   user: userAPI,
@@ -480,6 +500,7 @@ export const api = {
   audit: auditAPI,
   chat: chatAPI,
   bookings: bookingsAPI,
+  video: videoAPI,
 };
 
 export default api;
