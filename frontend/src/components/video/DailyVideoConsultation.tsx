@@ -8,8 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Video, VideoOff, ArrowLeft, AlertCircle, Clock, User } from "lucide-react";
 import { toast } from "sonner";
-
-const DAILY_DOMAIN = "quadcare-sa.daily.co";
+import DailyIframe, { DailyCall } from "@daily-co/daily-js";
 
 interface AppointmentInfo {
   id: string;
@@ -36,8 +35,8 @@ export const DailyVideoConsultation = () => {
   const [isInCall, setIsInCall] = useState(false);
   const [callEnded, setCallEnded] = useState(false);
   
-  const iframeRef = useRef<HTMLIFrameElement>(null);
-  const callFrameRef = useRef<any>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const callFrameRef = useRef<DailyCall | null>(null);
 
   // Fetch appointment details
   useEffect(() => {
