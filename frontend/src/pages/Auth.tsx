@@ -161,15 +161,11 @@ const Auth = () => {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="flex justify-center mb-8">
-          <div className="flex items-center gap-2">
-            <div className="w-12 h-12 rounded-xl gradient-primary flex items-center justify-center shadow-lg">
-              <span className="text-primary-foreground font-bold text-xl">H</span>
-            </div>
-            <div className="flex flex-col">
-              <span className="font-bold text-xl text-foreground leading-tight">Quadcare</span>
-              <span className="text-sm text-muted-foreground leading-tight">Telehealth</span>
-            </div>
-          </div>
+          <img 
+            src="/quadcare-logo.png" 
+            alt="Quadcare" 
+            className="h-16 w-auto"
+          />
         </div>
 
         {/* Password Reset View */}
