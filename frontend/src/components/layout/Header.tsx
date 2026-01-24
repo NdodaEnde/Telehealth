@@ -40,13 +40,11 @@ const Header = () => {
         <div className="flex items-center justify-between h-14 sm:h-16 lg:h-20">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl gradient-primary flex items-center justify-center shadow-md">
-              <span className="text-primary-foreground font-bold text-sm sm:text-lg">H</span>
-            </div>
-            <div className="flex flex-col">
-              <span className="font-bold text-base sm:text-lg text-foreground leading-tight">Quadcare</span>
-              <span className="text-[10px] sm:text-xs text-muted-foreground leading-tight">Telehealth</span>
-            </div>
+            <img 
+              src="/quadcare-logo.png" 
+              alt="Quadcare" 
+              className="h-10 sm:h-12 w-auto"
+            />
           </Link>
 
           {/* Desktop Navigation */}
