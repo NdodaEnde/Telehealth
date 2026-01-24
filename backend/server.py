@@ -39,9 +39,9 @@ db = client[DB_NAME]
 
 # Create the main app - disable redirect_slashes to avoid 307 redirects
 app = FastAPI(
-    title="HCF Telehealth API",
-    description="Backend API for HCF Telehealth Platform - Full REST API with HealthBridge Integration",
-    version="2.1.0",
+    title="Quadcare Telehealth API",
+    description="Backend API for Quadcare Telehealth Platform",
+    version="2.2.0",
     docs_url="/api/docs",
     redoc_url="/api/redoc",
     openapi_url="/api/openapi.json",
