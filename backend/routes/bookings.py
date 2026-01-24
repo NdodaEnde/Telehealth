@@ -349,7 +349,7 @@ async def create_booking(
             "sender_role": "system",
             "sender_name": "System",
             "content": f"✅ Booking confirmed with {clinician_name} on {data.scheduled_at.strftime('%B %d, %Y at %H:%M')}",
-            "message_type": "booking_confirmation"
+            "message_type": "system"
         }
         await supabase.insert("chat_messages", system_message, user.access_token)
     
