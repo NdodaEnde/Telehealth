@@ -428,7 +428,40 @@ export const bookingsAPI = {
   
   getInvoice: (id: string) => apiRequest(`/api/bookings/invoices/${id}`),
   
-  getInvoicePDF: (id: string) => apiRequest(`/api/bookings/invoices/${id}/pdf`),
+  getInvoicePDF: async (id: string) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const headers: HeadersInit = {};
+    if (session?.access_token) {
+      headers['Authorization'] = `Bearer ${session.access_token}`;
+    }
+    
+    const response = await fetch(`${BACKEND_URL}/api/bookings/invoices/${id}/pdf`, {
+      headers,
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to download PDF');
+    }
+    
+    return response.blob();
+  },
+  
+  downloadInvoicePDF: async (id: string, filename?: string) => {
+    try {
+      const blob = await bookingsAPI.getInvoicePDF(id);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename || `invoice_${id.slice(0, 8)}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('Failed to download invoice PDF:', error);
+      throw error;
+    }
+  },
   
   updateInvoiceStatus: (id: string, status: string, paymentReference?: string) =>
     apiRequest(`/api/bookings/invoices/${id}/status?status=${status}${paymentReference ? `&payment_reference=${paymentReference}` : ''}`, {
