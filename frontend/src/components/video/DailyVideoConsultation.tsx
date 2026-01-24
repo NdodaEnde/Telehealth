@@ -28,6 +28,7 @@ export const DailyVideoConsultation = () => {
   const appointmentId = searchParams.get("appointment");
   
   const [loading, setLoading] = useState(true);
+  const [joiningCall, setJoiningCall] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [appointment, setAppointment] = useState<AppointmentInfo | null>(null);
   const [roomUrl, setRoomUrl] = useState<string | null>(null);
