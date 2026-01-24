@@ -318,15 +318,14 @@ export const DailyVideoConsultation = () => {
     );
   }
 
-  // In-call state - full screen Daily iframe
+  // In-call state - Daily SDK container
   if (isInCall) {
     return (
       <div className="fixed inset-0 bg-black">
-        <iframe
-          ref={iframeRef}
-          className="w-full h-full border-0"
-          allow="camera; microphone; display-capture; autoplay; clipboard-write"
-          title="Video Consultation"
+        <div 
+          ref={containerRef} 
+          className="w-full h-full"
+          style={{ position: "relative" }}
         />
         <Button
           variant="destructive"
