@@ -195,6 +195,9 @@ app.include_router(nurse_triage_router, prefix="/api")
 app.include_router(chat_router, prefix="/api")
 app.include_router(bookings_router, prefix="/api")
 
+# Phase 3: Daily.co Video Integration
+app.include_router(video_router, prefix="/api")
+
 
 # ============ Middleware ============
 
