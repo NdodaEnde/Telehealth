@@ -176,7 +176,6 @@ export const DailyVideoConsultation = () => {
         console.log("Joined Daily meeting");
         toast.success("Connected to consultation");
         setIsInCall(true);
-        setJoiningCall(false);
       });
 
       callFrame.on("left-meeting", () => {
@@ -206,7 +205,7 @@ export const DailyVideoConsultation = () => {
         }
       });
 
-      // Join the call with token
+      // Join the call with token - Daily will show its prejoin UI
       await callFrame.join({
         url: roomUrl,
         token: token,
