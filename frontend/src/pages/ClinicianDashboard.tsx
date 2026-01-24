@@ -30,12 +30,68 @@ import { supabase } from "@/integrations/supabase/client";
 
 const ClinicianDashboard = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { profile, role, signOut } = useAuth();
   const { queue, stats, loading, refetch } = usePatientQueue();
   const [availabilityOpen, setAvailabilityOpen] = useState(false);
   const [appointmentsOpen, setAppointmentsOpen] = useState(false);
   const [showPrescriptions, setShowPrescriptions] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  
+  // Clinical notes dialog state
+  const [clinicalNotesOpen, setClinicalNotesOpen] = useState(false);
+  const [selectedAppointment, setSelectedAppointment] = useState<{
+    id: string;
+    patientId: string;
+    patientName: string;
+  } | null>(null);
+
+  // Check for notes parameter from consultation end
+  useEffect(() => {
+    const notesAppointmentId = searchParams.get("notes");
+    if (notesAppointmentId) {
+      // Fetch appointment details and open clinical notes
+      const fetchAppointmentForNotes = async () => {
+        try {
+          const { data: apt, error } = await supabase
+            .from("appointments")
+            .select("id, patient_id")
+            .eq("id", notesAppointmentId)
+            .single();
+          
+          if (error || !apt) {
+            toast.error("Could not find appointment");
+            return;
+          }
+
+          // Fetch patient name
+          const { data: patientProfile } = await supabase
+            .from("profiles")
+            .select("first_name, last_name")
+            .eq("id", apt.patient_id)
+            .single();
+
+          const patientName = patientProfile 
+            ? `${patientProfile.first_name} ${patientProfile.last_name}`.trim()
+            : "Patient";
+
+          setSelectedAppointment({
+            id: apt.id,
+            patientId: apt.patient_id,
+            patientName,
+          });
+          setClinicalNotesOpen(true);
+
+          // Clear the URL parameter
+          setSearchParams({});
+        } catch (err) {
+          console.error("Error fetching appointment for notes:", err);
+        }
+      };
+
+      fetchAppointmentForNotes();
+    }
+  }, [searchParams, setSearchParams]);
 
   const handleStartConsultation = () => {
     const inProgress = queue.find(apt => apt.status === "in_progress");
