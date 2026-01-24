@@ -323,7 +323,8 @@ async def create_booking(
         "billing_type": data.billing_type.value,
         "status": BookingStatus.CONFIRMED.value,
         "notes": data.notes,
-        "created_by": user.id
+        "created_by": user.id,
+        "clinic_id": "00000000-0000-0000-0000-000000000001"  # Default clinic
     }
     
     result = await supabase.insert("bookings", booking_data, user.access_token)
