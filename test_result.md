@@ -323,6 +323,9 @@ backend:
       - working: true
         agent: "main"
         comment: "Daily.co integration complete. POST /api/video/room creates rooms, POST /api/video/token generates meeting tokens. GET /api/video/health shows API connected to quadcare-sa.daily.co domain."
+      - working: true
+        agent: "testing"
+        comment: "✅ PASSED: Daily.co Video API endpoints tested successfully. GET /api/video/health returns status 'ok' with domain 'quadcare-sa.daily.co' confirming Daily.co connectivity. POST /api/video/room correctly requires authentication (401 without token). POST /api/video/token correctly requires authentication (401 without token). All Daily.co video endpoints working as expected."
 
 frontend:
   - task: "API Service Layer"
