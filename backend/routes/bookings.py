@@ -302,11 +302,13 @@ async def create_booking(
         "duration_minutes": data.duration_minutes,
         "consultation_type": "video",
         "status": "confirmed",
-        "notes": data.notes
+        "notes": data.notes,
+        "clinic_id": "00000000-0000-0000-0000-000000000001"  # Default clinic
     }
     
     appointment_result = await supabase.insert("appointments", appointment_data, user.access_token)
     appointment_id = appointment_result.get("id") if appointment_result else None
+    logger.info(f"Created appointment: {appointment_id} for booking")
     
     # Create booking
     booking_data = {
