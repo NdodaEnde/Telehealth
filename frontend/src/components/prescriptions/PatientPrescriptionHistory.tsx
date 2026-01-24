@@ -295,14 +295,28 @@ export const PatientPrescriptionHistory = () => {
                               </p>
                             </div>
                           </div>
-                          <div className="text-right">
-                            <Badge variant={statusConfig.variant} className="flex items-center gap-1">
-                              <StatusIcon className="w-3 h-3" />
-                              {statusConfig.label}
-                            </Badge>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {format(new Date(prescription.prescribed_at), "MMM d, yyyy")}
-                            </p>
+                          <div className="flex items-start gap-2">
+                            <div className="text-right">
+                              <Badge variant={statusConfig.variant} className="flex items-center gap-1">
+                                <StatusIcon className="w-3 h-3" />
+                                {statusConfig.label}
+                              </Badge>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {format(new Date(prescription.prescribed_at), "MMM d, yyyy")}
+                              </p>
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDownloadPDF(prescription.id, prescription.medication_name)}
+                              disabled={downloadingId === prescription.id}
+                            >
+                              {downloadingId === prescription.id ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Download className="w-4 h-4" />
+                              )}
+                            </Button>
                           </div>
                         </div>
                       </div>
