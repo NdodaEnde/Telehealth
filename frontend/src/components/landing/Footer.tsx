@@ -44,13 +44,11 @@ const Footer = () => {
           {/* Logo & Contact */}
           <div className="col-span-2">
             <Link to="/" className="flex items-center gap-2 mb-6">
-              <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
-                <span className="text-primary-foreground font-bold text-lg">H</span>
-              </div>
-              <div className="flex flex-col">
-                <span className="font-bold text-lg text-primary-foreground leading-tight">Quadcare</span>
-                <span className="text-xs text-primary-foreground/60 leading-tight">Telehealth</span>
-              </div>
+              <img 
+                src="/quadcare-logo.png" 
+                alt="Quadcare" 
+                className="h-12 w-auto brightness-0 invert"
+              />
             </Link>
             <p className="text-primary-foreground/60 text-sm mb-6 max-w-xs">
               Digitizing healthcare for South Africa. Compliant, convenient, connected.
@@ -58,11 +56,11 @@ const Footer = () => {
             <div className="space-y-3">
               <a href="tel:0800423227" className="flex items-center gap-3 text-sm text-primary-foreground/80 hover:text-primary transition-colors">
                 <Phone className="w-4 h-4" />
-                0800 QUADCARE (0800 423 227)
+                0800 QUADCARE (0800 782 322)
               </a>
-              <a href="mailto:support@hcf.quadcare.co.za" className="flex items-center gap-3 text-sm text-primary-foreground/80 hover:text-primary transition-colors">
+              <a href="mailto:support@quadcare.co.za" className="flex items-center gap-3 text-sm text-primary-foreground/80 hover:text-primary transition-colors">
                 <Mail className="w-4 h-4" />
-                support@hcf.quadcare.co.za
+                support@quadcare.co.za
               </a>
               <div className="flex items-start gap-3 text-sm text-primary-foreground/60">
                 <MapPin className="w-4 h-4 flex-shrink-0 mt-0.5" />
