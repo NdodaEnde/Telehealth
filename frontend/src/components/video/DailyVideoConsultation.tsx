@@ -321,7 +321,7 @@ export const DailyVideoConsultation = () => {
               <Button 
                 variant="outline" 
                 className="w-full"
-                onClick={() => navigate(`/clinical-notes?appointment=${appointmentId}`)}
+                onClick={() => navigate(`/clinician?notes=${appointmentId}`)}
               >
                 Complete Clinical Notes
               </Button>
