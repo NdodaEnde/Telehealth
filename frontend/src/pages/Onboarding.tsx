@@ -259,7 +259,7 @@ const OnboardingPage = () => {
               <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl gradient-primary flex items-center justify-center">
                 <span className="text-primary-foreground font-bold text-sm sm:text-lg">H</span>
               </div>
-              <span className="font-bold text-base sm:text-lg hidden xs:block">HCF Telehealth</span>
+              <span className="font-bold text-base sm:text-lg hidden xs:block">Quadcare Telehealth</span>
             </div>
           </div>
         </header>
@@ -399,7 +399,7 @@ const OnboardingPage = () => {
               <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl gradient-primary flex items-center justify-center">
                 <span className="text-primary-foreground font-bold text-sm sm:text-lg">H</span>
               </div>
-              <span className="font-bold text-base sm:text-lg hidden xs:block">HCF Telehealth</span>
+              <span className="font-bold text-base sm:text-lg hidden xs:block">Quadcare Telehealth</span>
             </div>
             <Button variant="ghost" size="sm" onClick={() => setStep("check")}>
               <ArrowLeft className="w-4 h-4 mr-2" />
@@ -512,7 +512,7 @@ const OnboardingPage = () => {
               <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl gradient-primary flex items-center justify-center">
                 <span className="text-primary-foreground font-bold text-sm sm:text-lg">H</span>
               </div>
-              <span className="font-bold text-base sm:text-lg hidden xs:block">HCF Telehealth</span>
+              <span className="font-bold text-base sm:text-lg hidden xs:block">Quadcare Telehealth</span>
             </div>
             <Button variant="ghost" size="sm" onClick={() => setStep("check")}>
               <ArrowLeft className="w-4 h-4 mr-2" />

@@ -95,7 +95,7 @@ const HeroSection = () => {
             <div className="relative rounded-2xl sm:rounded-3xl overflow-hidden shadow-xl sm:shadow-2xl">
               <img
                 src={heroImage}
-                alt="HCF Telehealth Platform"
+                alt="Quadcare Telehealth Platform"
                 className="w-full h-auto object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-primary/20 to-transparent" />

@@ -48,7 +48,7 @@ const Footer = () => {
                 <span className="text-primary-foreground font-bold text-lg">H</span>
               </div>
               <div className="flex flex-col">
-                <span className="font-bold text-lg text-primary-foreground leading-tight">HCF</span>
+                <span className="font-bold text-lg text-primary-foreground leading-tight">Quadcare</span>
                 <span className="text-xs text-primary-foreground/60 leading-tight">Telehealth</span>
               </div>
             </Link>
@@ -58,7 +58,7 @@ const Footer = () => {
             <div className="space-y-3">
               <a href="tel:0800423227" className="flex items-center gap-3 text-sm text-primary-foreground/80 hover:text-primary transition-colors">
                 <Phone className="w-4 h-4" />
-                0800 HCF CARE (0800 423 227)
+                0800 QUADCARE (0800 423 227)
               </a>
               <a href="mailto:support@hcf.quadcare.co.za" className="flex items-center gap-3 text-sm text-primary-foreground/80 hover:text-primary transition-colors">
                 <Mail className="w-4 h-4" />
@@ -128,7 +128,7 @@ const Footer = () => {
         {/* Bottom Bar */}
         <div className="pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-sm text-primary-foreground/40">
-            © 2026 HCF Telehealth by Quadcare. All rights reserved.
+            © 2026 Quadcare Telehealth by Quadcare. All rights reserved.
           </p>
           <div className="flex items-center gap-4">
             {socialLinks.map((social) => (

@@ -58,7 +58,7 @@ const WorkflowSection = () => {
           </div>
           <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-6">
             How{" "}
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary to-[hsl(180,45%,45%)]">HCF Telehealth</span>{" "}
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary to-[hsl(180,45%,45%)]">Quadcare Telehealth</span>{" "}
             Works
           </h2>
           <p className="text-lg text-muted-foreground">

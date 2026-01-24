@@ -46,7 +46,7 @@ const AdminDashboard = () => {
               <span className="text-primary-foreground font-bold text-sm sm:text-lg">H</span>
             </div>
             <div className="hidden sm:block">
-              <span className="font-bold text-lg">HCF Telehealth</span>
+              <span className="font-bold text-lg">Quadcare Telehealth</span>
             </div>
           </div>
           <div className="flex items-center gap-2 sm:gap-4">

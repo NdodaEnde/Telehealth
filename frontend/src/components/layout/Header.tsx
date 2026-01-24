@@ -44,7 +44,7 @@ const Header = () => {
               <span className="text-primary-foreground font-bold text-sm sm:text-lg">H</span>
             </div>
             <div className="flex flex-col">
-              <span className="font-bold text-base sm:text-lg text-foreground leading-tight">HCF</span>
+              <span className="font-bold text-base sm:text-lg text-foreground leading-tight">Quadcare</span>
               <span className="text-[10px] sm:text-xs text-muted-foreground leading-tight">Telehealth</span>
             </div>
           </Link>
@@ -66,7 +66,7 @@ const Header = () => {
           <div className="hidden lg:flex items-center gap-3">
             <Button variant="ghost" size="sm" className="gap-2">
               <Phone className="w-4 h-4" />
-              <span className="hidden xl:inline">0800 HCF CARE</span>
+              <span className="hidden xl:inline">0800 QUADCARE</span>
             </Button>
             
             {user ? (
@@ -124,12 +124,12 @@ const Header = () => {
               
               {/* Mobile Phone CTA */}
               <a
-                href="tel:0800HCFCARE"
+                href="tel:0800QUADCARE"
                 className="px-4 py-3 text-sm font-medium text-muted-foreground hover:text-primary hover:bg-accent rounded-lg transition-colors flex items-center gap-2"
                 onClick={() => setIsMenuOpen(false)}
               >
                 <Phone className="w-4 h-4" />
-                0800 HCF CARE
+                0800 QUADCARE
               </a>
 
               <div className="flex flex-col gap-2 mt-4 px-4 pt-4 border-t border-border">

@@ -32,7 +32,7 @@ const CTASection = () => {
                 className="text-primary-foreground hover:bg-primary-foreground/10"
               >
                 <Phone className="w-5 h-5" />
-                0800 HCF CARE
+                0800 QUADCARE
               </Button>
             </div>
 

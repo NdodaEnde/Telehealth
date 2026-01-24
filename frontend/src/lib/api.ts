@@ -1,5 +1,5 @@
 /**
- * HCF Telehealth API Service
+ * Quadcare Telehealth API Service
  * Centralized API calls to the FastAPI backend
  */
 

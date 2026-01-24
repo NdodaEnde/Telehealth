@@ -146,7 +146,7 @@ const Auth = () => {
     } else {
       toast({
         title: "Account created!",
-        description: "Welcome to HCF Telehealth. Redirecting to your dashboard...",
+        description: "Welcome to Quadcare Telehealth. Redirecting to your dashboard...",
       });
     }
   };
@@ -166,7 +166,7 @@ const Auth = () => {
               <span className="text-primary-foreground font-bold text-xl">H</span>
             </div>
             <div className="flex flex-col">
-              <span className="font-bold text-xl text-foreground leading-tight">HCF</span>
+              <span className="font-bold text-xl text-foreground leading-tight">Quadcare</span>
               <span className="text-sm text-muted-foreground leading-tight">Telehealth</span>
             </div>
           </div>
@@ -184,7 +184,7 @@ const Auth = () => {
             <CardDescription>
               {isLogin
                 ? "Sign in to access your healthcare portal"
-                : "Join HCF Telehealth for quality healthcare"}
+                : "Join Quadcare Telehealth for quality healthcare"}
             </CardDescription>
           </CardHeader>
           <CardContent>
