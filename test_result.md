@@ -307,10 +307,22 @@ backend:
         comment: "✅ PASSED: GET /api/bookings/fee-schedule returns correct Quadcare fee schedule with 7 items and exact prices - Teleconsultation: R260, Follow-up (0-3 days): R0, Follow-up (4-7 days): R300, Script 1 month: R160, Script 3 months: R300, Script 6 months: R400, Medical Forms: R400. POST /api/bookings and GET /api/bookings correctly require authentication (401 without token). All booking endpoints working as expected."
       - working: "NA"
         agent: "main"
-        comment: "SIMPLIFIED: Removed clinician_id requirement. Now uses optional free-text clinician_name for display only (e.g., 'Sr. Nkosi'). Clinician assignment happens in HealthBridge externally. Invoice generation is now POST-CONSULTATION via /api/bookings/invoices/generate endpoint. Booking fields: patient_id, scheduled_at, service_type, billing_type, clinician_name (optional), notes (optional). SQL migration: supabase_booking_schema_update.sql"
+        comment: "SIMPLIFIED: Removed clinician_id requirement. Now uses optional free-text clinician_name for display only (e.g., 'Sr. Nkosi'). Clinician assignment happens in HealthBridge externally. Invoice generation is now POST-CONSULTATION via /api/bookings/invoices/generate endpoint. Booking fields: patient_id, scheduled_at, service_type, billing_type, clinician_name (optional), notes (optional). SQL migration: supabase_migration_v2_multi_tenant.sql"
       - working: true
         agent: "testing"
         comment: "✅ PASSED: SIMPLIFIED BOOKINGS API TESTING COMPLETE. GET /api/bookings/fee-schedule returns correct 7 service types with exact Quadcare prices (Teleconsultation R260, Follow-ups R0/R300, Scripts R160/R300/R400, Medical Forms R400). POST /api/bookings/ correctly requires authentication and accepts simplified fields: patient_id, scheduled_at, service_type, billing_type, clinician_name (optional free text), notes (optional), conversation_id (optional). NO clinician_id required as specified. GET /api/bookings/ correctly requires authentication. POST /api/bookings/invoices/generate (new post-consultation endpoint) correctly requires authentication. All endpoints working as expected with simplified booking flow."
+
+  - task: "Daily.co Video Consultation API"
+    implemented: true
+    working: true
+    file: "backend/routes/video.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Daily.co integration complete. POST /api/video/room creates rooms, POST /api/video/token generates meeting tokens. GET /api/video/health shows API connected to quadcare-sa.daily.co domain."
 
 frontend:
   - task: "API Service Layer"
