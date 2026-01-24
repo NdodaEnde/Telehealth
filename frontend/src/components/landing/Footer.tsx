@@ -126,7 +126,7 @@ const Footer = () => {
         {/* Bottom Bar */}
         <div className="pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-sm text-primary-foreground/40">
-            © 2026 Quadcare Telehealth by Quadcare. All rights reserved.
+            © 2026 Quadcare Telehealth. All rights reserved.
           </p>
           <div className="flex items-center gap-4">
             {socialLinks.map((social) => (
