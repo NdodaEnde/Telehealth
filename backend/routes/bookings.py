@@ -424,7 +424,8 @@ async def create_invoice(
         "amount": service_details.get("price", 0),
         "consultation_date": consultation_date.isoformat(),
         "clinician_id": clinician_id,
-        "status": InvoiceStatus.PENDING.value
+        "status": InvoiceStatus.PENDING.value,
+        "clinic_id": "00000000-0000-0000-0000-000000000001"  # Default clinic
     }
     
     await supabase.insert("invoices", invoice_data, access_token)
