@@ -122,39 +122,102 @@ export const DailyVideoConsultation = () => {
     fetchAppointment();
   }, [appointmentId, user, profile, role]);
 
-  // Join the Daily call
-  const joinCall = useCallback(async () => {
-    if (!roomUrl || !token) return;
+  // Cleanup Daily call frame on unmount
+  useEffect(() => {
+    return () => {
+      if (callFrameRef.current) {
+        callFrameRef.current.destroy();
+        callFrameRef.current = null;
+      }
+    };
+  }, []);
 
-    setIsInCall(true);
-    
-    // The iframe will load Daily's prebuilt UI with our token
-    const fullUrl = `${roomUrl}?t=${token}`;
-    
-    if (iframeRef.current) {
-      iframeRef.current.src = fullUrl;
+  // Join the Daily call using SDK
+  const joinCall = useCallback(async () => {
+    if (!roomUrl || !token || !containerRef.current) return;
+
+    try {
+      // Check if there's already an existing call instance and destroy it
+      const existingCall = DailyIframe.getCallInstance();
+      if (existingCall) {
+        await existingCall.destroy();
+      }
+
+      // Create Daily call frame with proper SDK method
+      const callFrame = DailyIframe.createFrame(containerRef.current, {
+        iframeStyle: {
+          position: "absolute",
+          top: "0",
+          left: "0",
+          width: "100%",
+          height: "100%",
+          border: "0",
+        },
+        showLeaveButton: true,
+        showFullscreenButton: true,
+      });
+
+      callFrameRef.current = callFrame;
+
+      // Set up event listeners
+      callFrame.on("joined-meeting", () => {
+        console.log("Joined Daily meeting");
+        toast.success("Connected to consultation");
+      });
+
+      callFrame.on("left-meeting", () => {
+        console.log("Left Daily meeting");
+        handleCallEnded();
+      });
+
+      callFrame.on("error", (event) => {
+        console.error("Daily error:", event);
+        toast.error("Video call error occurred");
+        setError("Video call error: " + (event?.errorMsg || "Unknown error"));
+        setIsInCall(false);
+      });
+
+      callFrame.on("participant-joined", (event) => {
+        console.log("Participant joined:", event?.participant?.user_name);
+        if (event?.participant?.user_name) {
+          toast.info(`${event.participant.user_name} joined the call`);
+        }
+      });
+
+      callFrame.on("participant-left", (event) => {
+        console.log("Participant left:", event?.participant?.user_name);
+        if (event?.participant?.user_name && !event?.participant?.local) {
+          toast.info(`${event.participant.user_name} left the call`);
+        }
+      });
+
+      // Join the call with token
+      await callFrame.join({
+        url: roomUrl,
+        token: token,
+      });
+
+      setIsInCall(true);
+
+    } catch (err: any) {
+      console.error("Failed to join Daily call:", err);
+      setError("Failed to join video call: " + (err.message || "Unknown error"));
+      toast.error("Failed to join video call");
     }
   }, [roomUrl, token]);
 
-  // Handle messages from Daily iframe
-  useEffect(() => {
-    const handleMessage = (event: MessageEvent) => {
-      // Only handle messages from Daily
-      if (!event.origin.includes("daily.co")) return;
-      
-      const { action } = event.data || {};
-      
-      if (action === "left-meeting") {
-        handleCallEnded();
-      }
-    };
-
-    window.addEventListener("message", handleMessage);
-    return () => window.removeEventListener("message", handleMessage);
-  }, []);
-
   // Handle call ended
   const handleCallEnded = async () => {
+    // Destroy the call frame
+    if (callFrameRef.current) {
+      try {
+        await callFrameRef.current.destroy();
+      } catch (e) {
+        console.error("Error destroying call frame:", e);
+      }
+      callFrameRef.current = null;
+    }
+
     setIsInCall(false);
     setCallEnded(true);
 
@@ -168,10 +231,13 @@ export const DailyVideoConsultation = () => {
   };
 
   // Leave call
-  const leaveCall = () => {
-    if (iframeRef.current) {
-      // Send postMessage to Daily to leave
-      iframeRef.current.contentWindow?.postMessage({ action: "leave-meeting" }, "*");
+  const leaveCall = async () => {
+    if (callFrameRef.current) {
+      try {
+        await callFrameRef.current.leave();
+      } catch (e) {
+        console.error("Error leaving call:", e);
+      }
     }
     handleCallEnded();
   };
