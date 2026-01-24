@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -25,6 +25,8 @@ import { usePatientQueue } from "@/hooks/usePatientQueue";
 import { AvailabilityDialog } from "@/components/availability/AvailabilityDialog";
 import { AppointmentManagerDialog } from "@/components/appointments/AppointmentManagerDialog";
 import { PrescriptionList } from "@/components/prescriptions/PrescriptionList";
+import { ClinicalNotesDialog } from "@/components/clinical/ClinicalNotesDialog";
+import { supabase } from "@/integrations/supabase/client";
 
 const ClinicianDashboard = () => {
   const navigate = useNavigate();
