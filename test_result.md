@@ -530,7 +530,8 @@ metadata:
   run_ui: true
 
 test_plan:
-  current_focus: []
+  current_focus:
+    - "Daily.co Video Consultation UI"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
@@ -552,3 +553,5 @@ agent_communication:
     message: "✅ FRONTEND UI TESTING COMPLETE: Comprehensive testing of HCF Telehealth platform frontend completed. WORKING: Landing page with HCF branding and booking CTAs, Authentication flow with login/signup forms and role selection, Password reset functionality with proper security messaging, Mobile responsiveness across all tested pages, API service layer configured correctly, Protected routes with proper access control, Form validation working. AUTHENTICATION REQUIRED: Most dashboard features (Patient Dashboard tabs, Chat Space, Receptionist Dashboard, Admin Analytics, etc.) require authentication and cannot be fully tested without credentials. All routes properly protected. UI components and navigation structure confirmed working. Backend integration functional."
   - agent: "testing"
     message: "✅ SIMPLIFIED BOOKINGS API TESTING COMPLETE: Tested the simplified bookings API endpoints as requested. GET /api/bookings/fee-schedule returns correct 7 service types with exact Quadcare prices without authentication (public endpoint). POST /api/bookings correctly requires authentication and accepts simplified fields: patient_id (required), scheduled_at (required), service_type (required), billing_type (required), clinician_name (optional free text like 'Sr. Nkosi'), notes (optional), conversation_id (optional). NO clinician_id required as specified in review request. GET /api/bookings correctly requires authentication. POST /api/bookings/invoices/generate (new post-consultation endpoint) correctly requires authentication. All endpoints working as expected with simplified booking flow. All 20/20 backend tests passed."
+  - agent: "main"
+    message: "DAILY.CO VIDEO FIX APPLIED: Fixed the 406 blank screen issue with Daily.co video consultations. Root cause was using raw iframe embedding instead of the proper Daily.co JavaScript SDK. Changes: 1) Replaced iframe with DailyIframe.createFrame() from @daily-co/daily-js, 2) Added proper event handlers (joined-meeting, left-meeting, error, participant-joined/left), 3) Added joiningCall loading state. Backend /api/video/health confirms Daily.co connected to quadcare-sa.daily.co domain. Ready for user testing."
