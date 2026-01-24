@@ -243,9 +243,24 @@ export const PatientPrescriptionHistory = () => {
                           </div>
                         )}
 
-                        <div className="flex items-center gap-2 mt-3 text-sm text-muted-foreground">
-                          <User className="w-4 h-4" />
-                          {prescription.clinician_name}
+                        <div className="flex items-center justify-between gap-2 mt-3 text-sm text-muted-foreground">
+                          <div className="flex items-center gap-2">
+                            <User className="w-4 h-4" />
+                            {prescription.clinician_name}
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDownloadPDF(prescription.id, prescription.medication_name)}
+                            disabled={downloadingId === prescription.id}
+                          >
+                            {downloadingId === prescription.id ? (
+                              <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                            ) : (
+                              <Download className="w-4 h-4 mr-1" />
+                            )}
+                            PDF
+                          </Button>
                         </div>
                       </div>
                     );
