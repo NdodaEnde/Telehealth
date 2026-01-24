@@ -1304,6 +1304,10 @@ def main():
         'chat_stats_auth', 'chat_conversations_auth', 'bookings_fee_schedule', 'bookings_auth', 'bookings_invoice_generation_auth'
     ]
     
+    video_tests = [
+        'video_health', 'video_room_auth', 'video_token_auth'
+    ]
+    
     print("EXISTING APIs:")
     for test_name in existing_tests:
         if test_name in test_results:
