@@ -493,6 +493,21 @@ frontend:
         agent: "main"
         comment: "UPDATED: Simplified booking form. Removed clinician dropdown (was causing 404/Unknown issues). Now has optional free-text clinician_name field for display (e.g., 'Sr. Nkosi'). Invoice generation note added - will be generated post-consultation."
 
+  - task: "Daily.co Video Consultation UI"
+    implemented: true
+    working: "NA"
+    file: "frontend/src/components/video/DailyVideoConsultation.tsx"
+    stuck_count: 1
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: false
+        agent: "user"
+        comment: "User reported blank screen with 406 error when joining video calls. Both patient and clinician sides affected."
+      - working: "NA"
+        agent: "main"
+        comment: "FIX APPLIED: Replaced raw iframe implementation with proper Daily.co JavaScript SDK (DailyIframe.createFrame()). The issue was that Daily's Prebuilt UI requires the SDK for proper embedding. Now using @daily-co/daily-js package (already installed v0.85.0) with proper event handlers for joined-meeting, left-meeting, error, participant-joined/left events."
+
   - task: "Patient Dashboard Restructure"
     implemented: true
     working: "NA"
