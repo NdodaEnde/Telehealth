@@ -211,6 +211,10 @@ export const DailyVideoConsultation = () => {
         token: token,
       });
 
+      // Hide loading overlay once Daily's UI is loaded
+      // Daily shows its own prejoin UI where user clicks "Join"
+      setJoiningCall(false);
+
     } catch (err: any) {
       console.error("Failed to join Daily call:", err);
       setError("Failed to join video call: " + (err.message || "Unknown error"));
