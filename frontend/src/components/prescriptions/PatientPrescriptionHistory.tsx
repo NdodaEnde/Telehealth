@@ -51,6 +51,45 @@ export const PatientPrescriptionHistory = () => {
   const { user } = useAuth();
   const [prescriptions, setPrescriptions] = useState<PatientPrescription[]>([]);
   const [loading, setLoading] = useState(true);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+
+  // Function to download prescription PDF
+  const handleDownloadPDF = async (prescriptionId: string, medicationName: string) => {
+    setDownloadingId(prescriptionId);
+    try {
+      const response = await prescriptionsAPI.getPDF(prescriptionId);
+      
+      if (response.success && response.pdf_base64) {
+        // Convert base64 to blob and download
+        const byteCharacters = atob(response.pdf_base64);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: 'application/pdf' });
+        
+        // Create download link
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `prescription_${medicationName.replace(/\s+/g, '_')}_${prescriptionId.slice(0, 8)}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+        
+        toast.success("Prescription downloaded successfully");
+      } else {
+        throw new Error(response.error || "Failed to generate PDF");
+      }
+    } catch (error: any) {
+      console.error("Error downloading prescription:", error);
+      toast.error(error.message || "Failed to download prescription");
+    } finally {
+      setDownloadingId(null);
+    }
+  };
 
   useEffect(() => {
     const fetchPrescriptions = async () => {
