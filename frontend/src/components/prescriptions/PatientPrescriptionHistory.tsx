@@ -1,11 +1,14 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Pill, Calendar, Clock, RefreshCw, User, CheckCircle, XCircle, AlertCircle } from "lucide-react";
+import { Pill, Calendar, Clock, RefreshCw, User, CheckCircle, XCircle, AlertCircle, Download, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
+import { prescriptionsAPI } from "@/lib/api";
+import { toast } from "sonner";
 
 interface PatientPrescription {
   id: string;
