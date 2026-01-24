@@ -429,7 +429,13 @@ const PatientDashboardContent = () => {
                           <Button 
                             variant="outline" 
                             size="sm"
-                            onClick={() => window.open(`/api/bookings/invoices/${invoice.id}/pdf`, '_blank')}
+                            onClick={async () => {
+                              try {
+                                await bookingsAPI.downloadInvoicePDF(invoice.id, `invoice_${invoice.id.slice(0, 8)}.pdf`);
+                              } catch (error) {
+                                console.error('Failed to download invoice:', error);
+                              }
+                            }}
                           >
                             PDF
                           </Button>
