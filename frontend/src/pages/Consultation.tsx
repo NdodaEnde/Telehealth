@@ -1,7 +1,7 @@
-import { VideoConsultation } from "@/components/video/VideoConsultation";
+import { DailyVideoConsultation } from "@/components/video/DailyVideoConsultation";
 
 const Consultation = () => {
-  return <VideoConsultation />;
+  return <DailyVideoConsultation />;
 };
 
 export default Consultation;
