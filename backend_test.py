@@ -1102,6 +1102,131 @@ def test_bookings_invoice_generation_auth():
         print(f"❌ FAILED: Unexpected error - {str(e)}")
         return False
 
+
+# ============ DAILY.CO VIDEO API TESTS ============
+
+def test_video_health():
+    """Test the Daily.co video health endpoint (no auth required)"""
+    print("\n=== Testing Daily.co Video Health API ===")
+    
+    try:
+        response = requests.get(f"{BASE_URL}/video/health", timeout=10)
+        print(f"Status Code: {response.status_code}")
+        
+        if response.status_code == 200:
+            data = response.json()
+            print(f"Response: {json.dumps(data, indent=2)}")
+            
+            # Validate response structure
+            if 'status' not in data:
+                print("❌ FAILED: Missing 'status' field in response")
+                return False
+            
+            if data.get('status') != 'ok':
+                print(f"❌ FAILED: Expected status 'ok', got '{data.get('status')}'")
+                # Check if it's an error status with message
+                if data.get('status') == 'error':
+                    print(f"   Error message: {data.get('message', 'No message')}")
+                return False
+            
+            # Check for domain field
+            if 'domain' not in data:
+                print("❌ FAILED: Missing 'domain' field in response")
+                return False
+            
+            domain = data.get('domain')
+            expected_domain = "quadcare-sa.daily.co"
+            if domain != expected_domain:
+                print(f"❌ FAILED: Expected domain '{expected_domain}', got '{domain}'")
+                return False
+            
+            print("✅ PASSED: Daily.co video health API working correctly")
+            print(f"   - Status: {data.get('status')}")
+            print(f"   - Domain: {data.get('domain')}")
+            print(f"   - Message: {data.get('message', 'N/A')}")
+            return True
+        else:
+            print(f"❌ FAILED: Expected status 200, got {response.status_code}")
+            print(f"Response: {response.text}")
+            return False
+            
+    except requests.exceptions.RequestException as e:
+        print(f"❌ FAILED: Request error - {str(e)}")
+        return False
+    except Exception as e:
+        print(f"❌ FAILED: Unexpected error - {str(e)}")
+        return False
+
+
+def test_video_room_auth():
+    """Test the Daily.co room creation endpoint (requires auth)"""
+    print("\n=== Testing Daily.co Video Room Creation API (No Auth) ===")
+    
+    test_data = {
+        "appointment_id": "test-appointment-id"
+    }
+    
+    try:
+        response = requests.post(
+            f"{BASE_URL}/video/room",
+            json=test_data,
+            headers={'Content-Type': 'application/json'},
+            timeout=10
+        )
+        
+        print(f"Status Code: {response.status_code}")
+        
+        if response.status_code == 401:
+            print("✅ PASSED: Video room creation correctly requires authentication")
+            return True
+        else:
+            print(f"❌ FAILED: Expected status 401, got {response.status_code}")
+            print(f"Response: {response.text}")
+            return False
+            
+    except requests.exceptions.RequestException as e:
+        print(f"❌ FAILED: Request error - {str(e)}")
+        return False
+    except Exception as e:
+        print(f"❌ FAILED: Unexpected error - {str(e)}")
+        return False
+
+
+def test_video_token_auth():
+    """Test the Daily.co token creation endpoint (requires auth)"""
+    print("\n=== Testing Daily.co Video Token Creation API (No Auth) ===")
+    
+    test_data = {
+        "room_name": "test-room",
+        "user_name": "Test User",
+        "is_owner": False
+    }
+    
+    try:
+        response = requests.post(
+            f"{BASE_URL}/video/token",
+            json=test_data,
+            headers={'Content-Type': 'application/json'},
+            timeout=10
+        )
+        
+        print(f"Status Code: {response.status_code}")
+        
+        if response.status_code == 401:
+            print("✅ PASSED: Video token creation correctly requires authentication")
+            return True
+        else:
+            print(f"❌ FAILED: Expected status 401, got {response.status_code}")
+            print(f"Response: {response.text}")
+            return False
+            
+    except requests.exceptions.RequestException as e:
+        print(f"❌ FAILED: Request error - {str(e)}")
+        return False
+    except Exception as e:
+        print(f"❌ FAILED: Unexpected error - {str(e)}")
+        return False
+
 def main():
     """Run all backend API tests"""
     print("🚀 Starting HCF Telehealth Backend API Tests - Phase 2 Chat & Bookings Focus")
