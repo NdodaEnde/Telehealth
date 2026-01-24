@@ -263,7 +263,7 @@ export const DailyVideoConsultation = () => {
   // Navigate to appropriate dashboard
   const goToDashboard = () => {
     if (role === "patient") {
-      navigate("/dashboard");
+      navigate("/patient");
     } else if (role === "nurse" || role === "doctor") {
       navigate("/clinician");
     } else {
