@@ -332,8 +332,8 @@ export const DailyVideoConsultation = () => {
     );
   }
 
-  // In-call state - Daily SDK container
-  if (isInCall) {
+  // In-call state OR joining state - Daily SDK container
+  if (isInCall || joiningCall) {
     return (
       <div className="fixed inset-0 bg-black">
         <div 
@@ -341,6 +341,14 @@ export const DailyVideoConsultation = () => {
           className="w-full h-full"
           style={{ position: "relative" }}
         />
+        {joiningCall && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-40">
+            <div className="text-center text-white">
+              <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4" />
+              <p>Connecting to consultation...</p>
+            </div>
+          </div>
+        )}
         <Button
           variant="destructive"
           size="sm"
