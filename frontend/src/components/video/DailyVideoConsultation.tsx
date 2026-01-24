@@ -253,6 +253,7 @@ export const DailyVideoConsultation = () => {
         console.error("Error leaving call:", e);
       }
     }
+    setJoiningCall(false);
     handleCallEnded();
   };
 
