@@ -52,6 +52,32 @@ const PatientDashboardContent = () => {
   const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("chat");
+  
+  // Invoice dialog state
+  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
+  const [downloadingInvoiceId, setDownloadingInvoiceId] = useState<string | null>(null);
+
+  // Function to view invoice details
+  const handleViewInvoice = (invoice: Invoice) => {
+    setSelectedInvoice(invoice);
+    setInvoiceDialogOpen(true);
+  };
+
+  // Function to download invoice PDF
+  const handleDownloadInvoice = async (invoiceId: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setDownloadingInvoiceId(invoiceId);
+    try {
+      await bookingsAPI.downloadInvoicePDF(invoiceId, `invoice_${invoiceId.slice(0, 8)}.pdf`);
+      toast.success("Invoice downloaded successfully");
+    } catch (error) {
+      console.error('Failed to download invoice:', error);
+      toast.error("Failed to download invoice");
+    } finally {
+      setDownloadingInvoiceId(null);
+    }
+  };
 
   // Check if user just completed onboarding
   const justOnboarded = location.state?.justOnboarded;
