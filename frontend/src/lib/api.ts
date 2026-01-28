@@ -513,6 +513,27 @@ export const adminAnalyticsAPI = {
     return apiRequest(`/api/admin/analytics/cancellation-reasons?${params}`);
   },
   
+  getConversionFunnel: (period: string = 'month', startDate?: string, endDate?: string) => {
+    const params = new URLSearchParams({ period });
+    if (startDate) params.set('start_date', startDate);
+    if (endDate) params.set('end_date', endDate);
+    return apiRequest(`/api/admin/analytics/conversion-funnel?${params}`);
+  },
+  
+  getNoShowRates: (period: string = 'month', startDate?: string, endDate?: string) => {
+    const params = new URLSearchParams({ period });
+    if (startDate) params.set('start_date', startDate);
+    if (endDate) params.set('end_date', endDate);
+    return apiRequest(`/api/admin/analytics/no-show-rates?${params}`);
+  },
+  
+  getReceptionistWorkload: (period: string = 'month', startDate?: string, endDate?: string) => {
+    const params = new URLSearchParams({ period });
+    if (startDate) params.set('start_date', startDate);
+    if (endDate) params.set('end_date', endDate);
+    return apiRequest(`/api/admin/analytics/receptionist-workload?${params}`);
+  },
+  
   exportCSV: async (period: string = 'month', startDate?: string, endDate?: string) => {
     const token = await getAuthToken();
     const params = new URLSearchParams({ period });
