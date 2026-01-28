@@ -407,7 +407,7 @@ export const bookingsAPI = {
     if (params?.clinician_id) searchParams.set('clinician_id', params.clinician_id);
     if (params?.status) searchParams.set('status', params.status);
     const query = searchParams.toString() ? `?${searchParams}` : '';
-    return apiRequest(`/api/bookings${query}`);
+    return apiRequest(`/api/bookings/${query}`);
   },
   
   get: (id: string) => apiRequest(`/api/bookings/${id}`),
