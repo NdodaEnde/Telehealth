@@ -270,7 +270,7 @@ export const PatientPrescriptionHistory = () => {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleDownloadPDF(prescription.id, prescription.medication_name)}
+                            onClick={(e) => handleDownloadPDF(prescription.id, prescription.medication_name, e)}
                             disabled={downloadingId === prescription.id}
                           >
                             {downloadingId === prescription.id ? (
