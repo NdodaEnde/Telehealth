@@ -134,18 +134,20 @@ async def get_analytics_summary(
     start, end = parse_date_range(period, start_date, end_date)
     
     try:
-        # Fetch all appointments in the date range
-        # Using service role for admin access
-        from supabase_client import get_service_client
-        service_client = get_service_client()
+        # Fetch all appointments in the date range using our supabase client
+        # The supabase client uses service key by default, bypassing RLS
+        appointments = await supabase.select(
+            "appointments",
+            "*",
+            access_token=user.access_token
+        )
         
-        result = service_client.table("appointments").select("*").gte(
-            "scheduled_at", start.isoformat()
-        ).lte(
-            "scheduled_at", end.isoformat()
-        ).execute()
-        
-        appointments = result.data if result.data else []
+        # Filter appointments by date range
+        appointments = [
+            a for a in appointments 
+            if a.get("scheduled_at") and 
+               start.isoformat() <= a["scheduled_at"] <= end.isoformat()
+        ]
         
         # Calculate booking stats
         total = len(appointments)
