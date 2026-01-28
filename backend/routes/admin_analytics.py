@@ -478,3 +478,289 @@ async def get_cancellation_stats(
     except Exception as e:
         logger.error(f"Error analyzing cancellations: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/conversion-funnel")
+async def get_conversion_funnel(
+    period: str = Query("month"),
+    start_date: Optional[str] = Query(None),
+    end_date: Optional[str] = Query(None),
+    user: AuthenticatedUser = Depends(get_current_user)
+):
+    """Get booking conversion funnel metrics"""
+    await verify_admin(user)
+    
+    start, end = parse_date_range(period, start_date, end_date)
+    
+    try:
+        # Get all conversations in the period
+        conversations = await supabase.select(
+            "chat_conversations",
+            "*",
+            access_token=user.access_token
+        )
+        
+        # Filter by date range
+        conversations_in_range = [
+            c for c in conversations 
+            if c.get("created_at") and 
+               start.isoformat() <= c["created_at"] <= end.isoformat()
+        ]
+        
+        # Get all appointments in the period
+        appointments = await supabase.select(
+            "appointments",
+            "*",
+            access_token=user.access_token
+        )
+        
+        appointments_in_range = [
+            a for a in appointments 
+            if a.get("scheduled_at") and 
+               start.isoformat() <= a["scheduled_at"] <= end.isoformat()
+        ]
+        
+        # Calculate funnel stages
+        total_chats = len(conversations_in_range)
+        chats_with_booking = len([c for c in conversations_in_range if c.get("booking_id")])
+        
+        # Appointments by status
+        confirmed = len([a for a in appointments_in_range if a.get("status") in ["confirmed", "in_progress"]])
+        completed = len([a for a in appointments_in_range if a.get("status") == "completed"])
+        cancelled = len([a for a in appointments_in_range if a.get("status") == "cancelled"])
+        
+        # Calculate conversion rates
+        chat_to_booking_rate = round((chats_with_booking / total_chats * 100) if total_chats > 0 else 0, 1)
+        booking_to_completed_rate = round((completed / chats_with_booking * 100) if chats_with_booking > 0 else 0, 1)
+        overall_conversion_rate = round((completed / total_chats * 100) if total_chats > 0 else 0, 1)
+        
+        return {
+            "period": {
+                "start": start.strftime("%Y-%m-%d"),
+                "end": end.strftime("%Y-%m-%d")
+            },
+            "funnel": {
+                "chats_initiated": total_chats,
+                "bookings_created": chats_with_booking,
+                "consultations_confirmed": confirmed,
+                "consultations_completed": completed,
+                "consultations_cancelled": cancelled
+            },
+            "conversion_rates": {
+                "chat_to_booking": chat_to_booking_rate,
+                "booking_to_completed": booking_to_completed_rate,
+                "overall": overall_conversion_rate
+            },
+            "abandonment": {
+                "chats_without_booking": total_chats - chats_with_booking,
+                "abandonment_rate": round(((total_chats - chats_with_booking) / total_chats * 100) if total_chats > 0 else 0, 1)
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Error calculating conversion funnel: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/no-show-rates")
+async def get_no_show_rates(
+    period: str = Query("month"),
+    start_date: Optional[str] = Query(None),
+    end_date: Optional[str] = Query(None),
+    user: AuthenticatedUser = Depends(get_current_user)
+):
+    """Get no-show rate analysis"""
+    await verify_admin(user)
+    
+    start, end = parse_date_range(period, start_date, end_date)
+    now = datetime.now(SAST)
+    
+    try:
+        appointments = await supabase.select(
+            "appointments",
+            "*",
+            access_token=user.access_token
+        )
+        
+        # Filter by date range - only past appointments
+        past_appointments = [
+            a for a in appointments 
+            if a.get("scheduled_at") and 
+               start.isoformat() <= a["scheduled_at"] <= end.isoformat() and
+               datetime.fromisoformat(a["scheduled_at"].replace("Z", "+00:00")) < now
+        ]
+        
+        # No-shows: past appointments that are still "confirmed" or "pending" (never started)
+        no_shows = [
+            a for a in past_appointments 
+            if a.get("status") in ["confirmed", "pending"]
+        ]
+        
+        completed = [a for a in past_appointments if a.get("status") == "completed"]
+        cancelled = [a for a in past_appointments if a.get("status") == "cancelled"]
+        
+        total_past = len(past_appointments)
+        no_show_count = len(no_shows)
+        
+        no_show_rate = round((no_show_count / total_past * 100) if total_past > 0 else 0, 1)
+        
+        # Analyze no-shows by day of week
+        no_show_by_day = {i: 0 for i in range(7)}
+        for apt in no_shows:
+            try:
+                apt_time = datetime.fromisoformat(apt.get("scheduled_at", "").replace("Z", "+00:00"))
+                no_show_by_day[apt_time.weekday()] += 1
+            except:
+                pass
+        
+        day_names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+        
+        return {
+            "period": {
+                "start": start.strftime("%Y-%m-%d"),
+                "end": end.strftime("%Y-%m-%d")
+            },
+            "summary": {
+                "total_past_appointments": total_past,
+                "completed": len(completed),
+                "cancelled": len(cancelled),
+                "no_shows": no_show_count,
+                "no_show_rate": no_show_rate
+            },
+            "by_day_of_week": [
+                {"day": day_names[i], "no_shows": no_show_by_day[i]}
+                for i in range(7)
+            ],
+            "no_show_details": [
+                {
+                    "patient_name": apt.get("patient_name", "Unknown"),
+                    "scheduled_at": apt.get("scheduled_at"),
+                    "service_type": apt.get("service_type"),
+                    "clinician_name": apt.get("clinician_name")
+                }
+                for apt in no_shows[:20]  # Limit to 20 most recent
+            ]
+        }
+        
+    except Exception as e:
+        logger.error(f"Error calculating no-show rates: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/receptionist-workload")
+async def get_receptionist_workload(
+    period: str = Query("month"),
+    start_date: Optional[str] = Query(None),
+    end_date: Optional[str] = Query(None),
+    user: AuthenticatedUser = Depends(get_current_user)
+):
+    """Get receptionist workload distribution"""
+    await verify_admin(user)
+    
+    start, end = parse_date_range(period, start_date, end_date)
+    
+    try:
+        # Get conversations with receptionist info
+        conversations = await supabase.select(
+            "chat_conversations",
+            "*",
+            access_token=user.access_token
+        )
+        
+        conversations_in_range = [
+            c for c in conversations 
+            if c.get("created_at") and 
+               start.isoformat() <= c["created_at"] <= end.isoformat()
+        ]
+        
+        # Get bookings
+        bookings = await supabase.select(
+            "bookings",
+            "*",
+            access_token=user.access_token
+        )
+        
+        bookings_in_range = [
+            b for b in bookings 
+            if b.get("created_at") and 
+               start.isoformat() <= b["created_at"] <= end.isoformat()
+        ]
+        
+        # Get receptionist profiles
+        receptionist_roles = await supabase.select(
+            "user_roles",
+            "*",
+            {"role": "receptionist"},
+            access_token=user.access_token
+        )
+        
+        receptionist_ids = [r["user_id"] for r in receptionist_roles]
+        
+        # Get profiles for receptionists
+        profiles = await supabase.select(
+            "profiles",
+            "id, first_name, last_name",
+            access_token=user.access_token
+        )
+        
+        profile_map = {p["id"]: f"{p.get('first_name', '')} {p.get('last_name', '')}".strip() or "Unknown" for p in profiles}
+        
+        # Calculate workload per receptionist
+        workload = {}
+        
+        for conv in conversations_in_range:
+            rec_id = conv.get("receptionist_id")
+            if rec_id:
+                if rec_id not in workload:
+                    workload[rec_id] = {
+                        "name": profile_map.get(rec_id, "Unknown"),
+                        "chats_handled": 0,
+                        "bookings_created": 0,
+                        "chats_with_booking": 0
+                    }
+                workload[rec_id]["chats_handled"] += 1
+                if conv.get("booking_id"):
+                    workload[rec_id]["chats_with_booking"] += 1
+        
+        # Count bookings per receptionist (from created_by if available)
+        for booking in bookings_in_range:
+            created_by = booking.get("created_by")
+            if created_by and created_by in workload:
+                workload[created_by]["bookings_created"] += 1
+        
+        # Calculate conversion rates per receptionist
+        receptionist_stats = []
+        for rec_id, data in workload.items():
+            conversion_rate = round((data["chats_with_booking"] / data["chats_handled"] * 100) if data["chats_handled"] > 0 else 0, 1)
+            receptionist_stats.append({
+                "receptionist_id": rec_id,
+                "receptionist_name": data["name"],
+                "chats_handled": data["chats_handled"],
+                "bookings_created": data["chats_with_booking"],
+                "conversion_rate": conversion_rate
+            })
+        
+        # Sort by chats handled
+        receptionist_stats.sort(key=lambda x: -x["chats_handled"])
+        
+        # Calculate totals
+        total_chats = sum(r["chats_handled"] for r in receptionist_stats)
+        total_bookings = sum(r["bookings_created"] for r in receptionist_stats)
+        
+        return {
+            "period": {
+                "start": start.strftime("%Y-%m-%d"),
+                "end": end.strftime("%Y-%m-%d")
+            },
+            "summary": {
+                "total_receptionists_active": len(receptionist_stats),
+                "total_chats_handled": total_chats,
+                "total_bookings_created": total_bookings,
+                "average_chats_per_receptionist": round(total_chats / len(receptionist_stats), 1) if receptionist_stats else 0
+            },
+            "by_receptionist": receptionist_stats
+        }
+        
+    except Exception as e:
+        logger.error(f"Error calculating receptionist workload: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
