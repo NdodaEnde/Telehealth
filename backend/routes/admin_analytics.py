@@ -435,28 +435,23 @@ async def get_cancellation_stats(
     start, end = parse_date_range(period, start_date, end_date)
     
     try:
-        from supabase_client import get_service_client
-        service_client = get_service_client()
+        # Get all appointments
+        all_appointments = await supabase.select(
+            "appointments",
+            "*",
+            access_token=user.access_token
+        )
         
-        # Get cancelled appointments
-        result = service_client.table("appointments").select("*").eq(
-            "status", "cancelled"
-        ).gte(
-            "scheduled_at", start.isoformat()
-        ).lte(
-            "scheduled_at", end.isoformat()
-        ).execute()
+        # Filter by date range
+        appointments_in_range = [
+            a for a in all_appointments 
+            if a.get("scheduled_at") and 
+               start.isoformat() <= a["scheduled_at"] <= end.isoformat()
+        ]
         
-        cancelled = result.data if result.data else []
-        
-        # Get total appointments for rate calculation
-        total_result = service_client.table("appointments").select("id").gte(
-            "scheduled_at", start.isoformat()
-        ).lte(
-            "scheduled_at", end.isoformat()
-        ).execute()
-        
-        total = len(total_result.data) if total_result.data else 0
+        # Get cancelled ones
+        cancelled = [a for a in appointments_in_range if a.get("status") == "cancelled"]
+        total = len(appointments_in_range)
         
         # Analyze cancellation reasons (from notes field)
         reason_counts = {}
