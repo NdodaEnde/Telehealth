@@ -281,6 +281,26 @@ const ReceptionistDashboardContent = () => {
             <span className="font-bold text-lg hidden sm:block">Quadcare Reception</span>
           </div>
           
+          {/* View Toggle */}
+          <div className="flex items-center gap-2 bg-muted rounded-lg p-1">
+            <Button 
+              variant={mainView === 'chat' ? 'default' : 'ghost'} 
+              size="sm"
+              onClick={() => setMainView('chat')}
+            >
+              <MessageCircle className="w-4 h-4 mr-2" />
+              Chats
+            </Button>
+            <Button 
+              variant={mainView === 'bookings' ? 'default' : 'ghost'} 
+              size="sm"
+              onClick={() => setMainView('bookings')}
+            >
+              <Calendar className="w-4 h-4 mr-2" />
+              Bookings
+            </Button>
+          </div>
+          
           {/* Stats */}
           <div className="hidden md:flex items-center gap-4">
             <Badge variant="secondary" className="gap-1">
@@ -316,6 +336,7 @@ const ReceptionistDashboardContent = () => {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-4">
+        {mainView === 'chat' ? (
         <div className="flex gap-4 h-[calc(100vh-120px)]">
           {/* Chat Queue Panel */}
           <Card className="w-80 shrink-0 flex flex-col">
