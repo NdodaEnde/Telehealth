@@ -130,12 +130,26 @@ const PatientDashboardContent = () => {
     fetchData();
   }, [user]);
 
-  // Real-time subscription for appointment status changes
+  // Real-time subscription for appointment changes (both new and updates)
   useEffect(() => {
     if (!user) return;
 
     const channel = supabase
       .channel('patient-appointments')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'appointments',
+          filter: `patient_id=eq.${user.id}`,
+        },
+        (payload) => {
+          console.log('[PatientDashboard] New appointment created:', payload);
+          // Refetch appointments to get full data with clinician info
+          fetchAppointments();
+        }
+      )
       .on(
         'postgres_changes',
         {
