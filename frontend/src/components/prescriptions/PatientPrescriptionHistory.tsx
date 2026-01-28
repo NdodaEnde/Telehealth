@@ -300,7 +300,8 @@ export const PatientPrescriptionHistory = () => {
                     return (
                       <div
                         key={prescription.id}
-                        className="p-4 rounded-lg border border-border"
+                        className="p-4 rounded-lg border border-border cursor-pointer hover:border-primary/50 hover:shadow-sm transition-all"
+                        onClick={() => handleViewPrescription(prescription)}
                       >
                         <div className="flex items-start justify-between">
                           <div className="flex items-center gap-3">
@@ -321,13 +322,13 @@ export const PatientPrescriptionHistory = () => {
                                 {statusConfig.label}
                               </Badge>
                               <p className="text-xs text-muted-foreground mt-1">
-                                {format(new Date(prescription.prescribed_at), "MMM d, yyyy")}
+                                {formatSAST(prescription.prescribed_at, "MMM d, yyyy")}
                               </p>
                             </div>
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => handleDownloadPDF(prescription.id, prescription.medication_name)}
+                              onClick={(e) => handleDownloadPDF(prescription.id, prescription.medication_name, e)}
                               disabled={downloadingId === prescription.id}
                             >
                               {downloadingId === prescription.id ? (
