@@ -199,6 +199,9 @@ app.include_router(bookings_router, prefix="/api")
 # Phase 3: Daily.co Video Integration
 app.include_router(video_router, prefix="/api")
 
+# Phase 4: Admin Analytics Dashboard
+app.include_router(admin_analytics_router, prefix="/api")
+
 
 # ============ Middleware ============
 
