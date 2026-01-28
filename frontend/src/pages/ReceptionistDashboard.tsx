@@ -72,6 +72,48 @@ const ReceptionistDashboardContent = () => {
     notes: "",
   });
   const [isCreatingBooking, setIsCreatingBooking] = useState(false);
+  
+  // Cancel booking state
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [isCancellingBooking, setIsCancellingBooking] = useState(false);
+  const [currentBookingDetails, setCurrentBookingDetails] = useState<any>(null);
+
+  // Handle cancel booking
+  const handleCancelBooking = async () => {
+    if (!currentConversation?.booking_id) return;
+    
+    setIsCancellingBooking(true);
+    try {
+      await bookingsAPI.cancel(currentConversation.booking_id);
+      toast({ title: "Booking cancelled", description: "The patient has been notified in chat" });
+      setShowCancelDialog(false);
+      setCurrentBookingDetails(null);
+      loadData();
+    } catch (error: any) {
+      toast({ title: "Error cancelling booking", description: error.message, variant: "destructive" });
+    } finally {
+      setIsCancellingBooking(false);
+    }
+  };
+
+  // Fetch booking details when conversation changes
+  useEffect(() => {
+    const fetchBookingDetails = async () => {
+      if (currentConversation?.booking_id) {
+        try {
+          const bookings = await bookingsAPI.getAll();
+          const booking = bookings.find((b: any) => b.id === currentConversation.booking_id);
+          setCurrentBookingDetails(booking || null);
+        } catch (error) {
+          console.error("Error fetching booking:", error);
+          setCurrentBookingDetails(null);
+        }
+      } else {
+        setCurrentBookingDetails(null);
+      }
+    };
+    fetchBookingDetails();
+  }, [currentConversation?.booking_id]);
 
   // Load data
   const loadData = useCallback(async () => {
