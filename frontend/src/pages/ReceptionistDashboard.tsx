@@ -107,7 +107,7 @@ const ReceptionistDashboardContent = () => {
   const loadBookings = useCallback(async () => {
     setBookingsLoading(true);
     try {
-      const bookings = await bookingsAPI.getAll();
+      const bookings = await bookingsAPI.list();
       // Sort by scheduled date, upcoming first
       const sorted = (bookings || []).sort((a: any, b: any) => 
         new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime()
