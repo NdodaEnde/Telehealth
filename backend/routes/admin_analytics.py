@@ -936,14 +936,3 @@ async def get_timestamp_trends(
     except Exception as e:
         logger.error(f"Error calculating timestamp trends: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
-                "total_chats_handled": total_chats,
-                "total_bookings_created": total_bookings,
-                "average_chats_per_receptionist": round(total_chats / len(receptionist_stats), 1) if receptionist_stats else 0
-            },
-            "by_receptionist": receptionist_stats
-        }
-        
-    except Exception as e:
-        logger.error(f"Error calculating receptionist workload: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
