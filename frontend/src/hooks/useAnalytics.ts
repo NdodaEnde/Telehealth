@@ -64,7 +64,16 @@ export const useAnalytics = (days: number = 30) => {
     setError(null);
 
     try {
-      const response = await fetch(`${BACKEND_URL}/api/analytics/dashboard?days=${days}`);
+      // Get auth token
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      
+      const response = await fetch(`${BACKEND_URL}/api/analytics/dashboard?days=${days}`, {
+        headers: token ? {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        } : {}
+      });
       
       if (!response.ok) {
         throw new Error('Failed to fetch analytics');
