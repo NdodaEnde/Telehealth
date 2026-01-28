@@ -12,6 +12,7 @@ import {
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
+import { formatSAST } from "@/lib/timezone";
 import { PatientPrescriptionHistory } from "@/components/prescriptions/PatientPrescriptionHistory";
 import { PatientChatSpace } from "@/components/chat/PatientChatSpace";
 import { bookingsAPI } from "@/lib/api";
