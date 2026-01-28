@@ -520,6 +520,74 @@ const ReceptionistDashboardContent = () => {
                           </DialogFooter>
                         </DialogContent>
                       </Dialog>
+
+                      {/* Cancel Booking Button - Only show when a booking exists */}
+                      {currentBookingDetails && (
+                        <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+                          <DialogTrigger asChild>
+                            <Button variant="destructive" size="sm">
+                              <XCircle className="w-4 h-4 mr-2" />
+                              Cancel Booking
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-md">
+                            <DialogHeader>
+                              <DialogTitle className="flex items-center gap-2 text-destructive">
+                                <AlertTriangle className="w-5 h-5" />
+                                Cancel Booking
+                              </DialogTitle>
+                              <DialogDescription>
+                                Are you sure you want to cancel this booking? This action cannot be undone.
+                              </DialogDescription>
+                            </DialogHeader>
+                            <div className="py-4">
+                              <div className="p-4 bg-muted rounded-lg space-y-2">
+                                <div className="flex justify-between">
+                                  <span className="text-sm text-muted-foreground">Patient</span>
+                                  <span className="font-medium">{currentConversation.patient_name}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-sm text-muted-foreground">Scheduled</span>
+                                  <span className="font-medium">
+                                    {currentBookingDetails.scheduled_at 
+                                      ? formatSAST(currentBookingDetails.scheduled_at, "MMM d, yyyy 'at' HH:mm")
+                                      : "N/A"}
+                                  </span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-sm text-muted-foreground">Service</span>
+                                  <span className="font-medium">{currentBookingDetails.service_type}</span>
+                                </div>
+                                {currentBookingDetails.clinician_name && (
+                                  <div className="flex justify-between">
+                                    <span className="text-sm text-muted-foreground">Clinician</span>
+                                    <span className="font-medium">{currentBookingDetails.clinician_name}</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                            <DialogFooter>
+                              <Button variant="outline" onClick={() => setShowCancelDialog(false)}>
+                                Keep Booking
+                              </Button>
+                              <Button 
+                                variant="destructive"
+                                onClick={handleCancelBooking}
+                                disabled={isCancellingBooking}
+                              >
+                                {isCancellingBooking ? (
+                                  <>
+                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                    Cancelling...
+                                  </>
+                                ) : (
+                                  "Yes, Cancel Booking"
+                                )}
+                              </Button>
+                            </DialogFooter>
+                          </DialogContent>
+                        </Dialog>
+                      )}
                     </div>
                   </div>
                 </CardHeader>
