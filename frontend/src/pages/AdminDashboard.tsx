@@ -528,6 +528,170 @@ const AdminDashboard = () => {
                     )}
                   </CardContent>
                 </Card>
+
+                {/* Conversion Funnel */}
+                {funnelData && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <TrendingUp className="w-5 h-5 text-primary" />
+                        Conversion Funnel
+                      </CardTitle>
+                      <CardDescription>Patient journey from chat to completed consultation</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        {/* Funnel Visualization */}
+                        <div className="space-y-2">
+                          {[
+                            { label: "Chats Initiated", value: funnelData.funnel.chats_initiated, color: "bg-blue-500" },
+                            { label: "Bookings Created", value: funnelData.funnel.bookings_created, color: "bg-indigo-500" },
+                            { label: "Consultations Confirmed", value: funnelData.funnel.consultations_confirmed, color: "bg-purple-500" },
+                            { label: "Consultations Completed", value: funnelData.funnel.consultations_completed, color: "bg-green-500" },
+                          ].map((stage, idx) => {
+                            const maxValue = funnelData.funnel.chats_initiated || 1;
+                            const width = Math.max((stage.value / maxValue) * 100, 5);
+                            return (
+                              <div key={stage.label} className="flex items-center gap-3">
+                                <div className="w-40 text-sm text-right">{stage.label}</div>
+                                <div className="flex-1 bg-muted rounded-full h-8 overflow-hidden">
+                                  <div 
+                                    className={`${stage.color} h-full flex items-center justify-end pr-3 transition-all`}
+                                    style={{ width: `${width}%` }}
+                                  >
+                                    <span className="text-white text-sm font-medium">{stage.value}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        
+                        {/* Conversion Rates */}
+                        <div className="grid grid-cols-3 gap-4 pt-4 border-t">
+                          <div className="text-center">
+                            <p className="text-2xl font-bold text-primary">{funnelData.conversion_rates.chat_to_booking}%</p>
+                            <p className="text-xs text-muted-foreground">Chat → Booking</p>
+                          </div>
+                          <div className="text-center">
+                            <p className="text-2xl font-bold text-green-600">{funnelData.conversion_rates.booking_to_completed}%</p>
+                            <p className="text-xs text-muted-foreground">Booking → Completed</p>
+                          </div>
+                          <div className="text-center">
+                            <p className="text-2xl font-bold text-purple-600">{funnelData.conversion_rates.overall}%</p>
+                            <p className="text-xs text-muted-foreground">Overall Conversion</p>
+                          </div>
+                        </div>
+                        
+                        {/* Abandonment */}
+                        <div className="p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-orange-700 dark:text-orange-300">
+                              Chats without booking (Abandonment)
+                            </span>
+                            <span className="font-semibold text-orange-700 dark:text-orange-300">
+                              {funnelData.abandonment.chats_without_booking} ({funnelData.abandonment.abandonment_rate}%)
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* No-Show Rates & Receptionist Workload */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* No-Show Rates */}
+                  {noShowData && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <XCircle className="w-5 h-5 text-red-500" />
+                          No-Show Analysis
+                        </CardTitle>
+                        <CardDescription>Appointments missed without cancellation</CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="p-4 bg-muted rounded-lg text-center">
+                            <p className="text-3xl font-bold text-red-600">{noShowData.summary.no_shows}</p>
+                            <p className="text-sm text-muted-foreground">No-Shows</p>
+                          </div>
+                          <div className="p-4 bg-muted rounded-lg text-center">
+                            <p className="text-3xl font-bold text-red-600">{noShowData.summary.no_show_rate}%</p>
+                            <p className="text-sm text-muted-foreground">No-Show Rate</p>
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <p className="text-sm font-medium">No-Shows by Day</p>
+                          {noShowData.by_day_of_week?.map((day: any) => (
+                            <div key={day.day} className="flex items-center gap-2">
+                              <span className="w-20 text-xs text-muted-foreground">{day.day}</span>
+                              <div className="flex-1 bg-muted rounded-full h-2">
+                                <div 
+                                  className="bg-red-500 rounded-full h-2" 
+                                  style={{ 
+                                    width: `${noShowData.summary.no_shows > 0 
+                                      ? (day.no_shows / noShowData.summary.no_shows) * 100 
+                                      : 0}%` 
+                                  }}
+                                />
+                              </div>
+                              <span className="w-8 text-xs text-right">{day.no_shows}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Receptionist Workload */}
+                  {workloadData && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <Users className="w-5 h-5 text-primary" />
+                          Receptionist Workload
+                        </CardTitle>
+                        <CardDescription>Chat and booking distribution</CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="p-3 bg-primary/5 rounded-lg text-center">
+                            <p className="text-2xl font-bold">{workloadData.summary.total_chats_handled}</p>
+                            <p className="text-xs text-muted-foreground">Total Chats</p>
+                          </div>
+                          <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg text-center">
+                            <p className="text-2xl font-bold text-green-600">{workloadData.summary.total_bookings_created}</p>
+                            <p className="text-xs text-muted-foreground">Bookings Created</p>
+                          </div>
+                        </div>
+                        
+                        {workloadData.by_receptionist?.length > 0 ? (
+                          <div className="space-y-3">
+                            <p className="text-sm font-medium">By Receptionist</p>
+                            {workloadData.by_receptionist.map((rec: any) => (
+                              <div key={rec.receptionist_id} className="flex items-center justify-between p-2 rounded-lg hover:bg-muted">
+                                <div>
+                                  <p className="font-medium text-sm">{rec.receptionist_name}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {rec.chats_handled} chats • {rec.bookings_created} bookings
+                                  </p>
+                                </div>
+                                <Badge variant={rec.conversion_rate >= 50 ? "default" : "secondary"}>
+                                  {rec.conversion_rate}% conversion
+                                </Badge>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-muted-foreground text-center py-4">No receptionist data available</p>
+                        )}
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
               </>
             ) : (
               <div className="text-center py-12 text-muted-foreground">
