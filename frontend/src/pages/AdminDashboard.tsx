@@ -42,6 +42,50 @@ const AdminDashboard = () => {
   const { profile, signOut } = useAuth();
   const [dateRange, setDateRange] = useState<number>(30);
   const { data, loading, error, refetch } = useAnalytics(dateRange);
+  
+  // Reports tab state
+  const [reportPeriod, setReportPeriod] = useState<string>("month");
+  const [reportData, setReportData] = useState<any>(null);
+  const [peakData, setPeakData] = useState<any>(null);
+  const [cancellationData, setCancellationData] = useState<any>(null);
+  const [reportLoading, setReportLoading] = useState(false);
+  const [exportLoading, setExportLoading] = useState(false);
+
+  // Fetch report data when period changes
+  useEffect(() => {
+    const fetchReportData = async () => {
+      setReportLoading(true);
+      try {
+        const [summary, peaks, cancellations] = await Promise.all([
+          adminAnalyticsAPI.getSummary(reportPeriod),
+          adminAnalyticsAPI.getPeakTimes(reportPeriod),
+          adminAnalyticsAPI.getCancellationStats(reportPeriod),
+        ]);
+        setReportData(summary);
+        setPeakData(peaks);
+        setCancellationData(cancellations);
+      } catch (err) {
+        console.error("Failed to fetch report data:", err);
+      } finally {
+        setReportLoading(false);
+      }
+    };
+    
+    fetchReportData();
+  }, [reportPeriod]);
+
+  const handleExportCSV = async () => {
+    setExportLoading(true);
+    try {
+      await adminAnalyticsAPI.exportCSV(reportPeriod);
+      toast.success("Report exported successfully");
+    } catch (err) {
+      console.error("Export failed:", err);
+      toast.error("Failed to export report");
+    } finally {
+      setExportLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
