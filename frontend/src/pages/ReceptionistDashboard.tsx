@@ -59,6 +59,11 @@ const ReceptionistDashboardContent = () => {
   const [stats, setStats] = useState({ unassigned_count: 0, my_chats_count: 0, total_active: 0 });
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  
+  // Main view toggle: 'chat' or 'bookings'
+  const [mainView, setMainView] = useState<'chat' | 'bookings'>('chat');
+  const [allBookings, setAllBookings] = useState<any[]>([]);
+  const [bookingsLoading, setBookingsLoading] = useState(false);
 
   // Booking dialog state
   const [showBookingDialog, setShowBookingDialog] = useState(false);
@@ -77,6 +82,7 @@ const ReceptionistDashboardContent = () => {
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [isCancellingBooking, setIsCancellingBooking] = useState(false);
   const [currentBookingDetails, setCurrentBookingDetails] = useState<any>(null);
+  const [selectedBookingToCancel, setSelectedBookingToCancel] = useState<any>(null);
 
   // Handle cancel booking
   const handleCancelBooking = async () => {
