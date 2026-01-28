@@ -255,6 +255,279 @@ const AdminDashboard = () => {
             )}
           </TabsContent>
 
+          {/* Reports Tab */}
+          <TabsContent value="reports" className="space-y-6">
+            {/* Report Controls */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-xl font-semibold">Booking Reports</h2>
+                <p className="text-sm text-muted-foreground">Detailed analytics and export options</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <Select value={reportPeriod} onValueChange={setReportPeriod}>
+                  <SelectTrigger className="w-[150px]">
+                    <SelectValue placeholder="Select period" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="today">Today</SelectItem>
+                    <SelectItem value="week">Last 7 days</SelectItem>
+                    <SelectItem value="month">Last 30 days</SelectItem>
+                    <SelectItem value="quarter">Last 90 days</SelectItem>
+                    <SelectItem value="year">Last year</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button 
+                  variant="outline" 
+                  onClick={handleExportCSV}
+                  disabled={exportLoading}
+                >
+                  {exportLoading ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Download className="w-4 h-4 mr-2" />
+                  )}
+                  Export CSV
+                </Button>
+              </div>
+            </div>
+
+            {reportLoading ? (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {[1, 2, 3, 4].map(i => (
+                  <Skeleton key={i} className="h-32" />
+                ))}
+              </div>
+            ) : reportData ? (
+              <>
+                {/* Summary Cards */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardDescription>Total Bookings</CardDescription>
+                      <CardTitle className="text-3xl">{reportData.booking_stats.total_bookings}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-xs text-muted-foreground">
+                        {reportData.booking_stats.period_start} - {reportData.booking_stats.period_end}
+                      </p>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardDescription className="flex items-center gap-1">
+                        <CheckCircle className="w-3 h-3 text-green-500" />
+                        Completed
+                      </CardDescription>
+                      <CardTitle className="text-3xl text-green-600">{reportData.booking_stats.completed}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-xs text-muted-foreground">
+                        {reportData.booking_stats.total_bookings > 0 
+                          ? Math.round((reportData.booking_stats.completed / reportData.booking_stats.total_bookings) * 100)
+                          : 0}% completion rate
+                      </p>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardDescription className="flex items-center gap-1">
+                        <XCircle className="w-3 h-3 text-red-500" />
+                        Cancelled
+                      </CardDescription>
+                      <CardTitle className="text-3xl text-red-600">{reportData.booking_stats.cancelled}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-xs text-muted-foreground">
+                        {cancellationData?.cancellation_rate || 0}% cancellation rate
+                      </p>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardDescription className="flex items-center gap-1">
+                        <Clock className="w-3 h-3 text-yellow-500" />
+                        Pending
+                      </CardDescription>
+                      <CardTitle className="text-3xl text-yellow-600">
+                        {reportData.booking_stats.pending + reportData.booking_stats.confirmed}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-xs text-muted-foreground">
+                        Awaiting consultation
+                      </p>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Peak Times & Service Breakdown */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Peak Times */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <TrendingUp className="w-5 h-5 text-primary" />
+                        Peak Times Analysis
+                      </CardTitle>
+                      <CardDescription>When are consultations most requested?</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {peakData?.insights ? (
+                        <>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                              <p className="text-xs text-muted-foreground">Busiest Day</p>
+                              <p className="font-semibold text-green-700 dark:text-green-300">
+                                {peakData.insights.peak_day.day}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {peakData.insights.peak_day.bookings} bookings
+                              </p>
+                            </div>
+                            <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                              <p className="text-xs text-muted-foreground">Peak Hour</p>
+                              <p className="font-semibold text-blue-700 dark:text-blue-300">
+                                {peakData.insights.peak_hour.time}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {peakData.insights.peak_hour.bookings} bookings
+                              </p>
+                            </div>
+                            <div className="p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
+                              <p className="text-xs text-muted-foreground">Quietest Day</p>
+                              <p className="font-semibold text-orange-700 dark:text-orange-300">
+                                {peakData.insights.offpeak_day.day}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {peakData.insights.offpeak_day.bookings} bookings
+                              </p>
+                            </div>
+                            <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+                              <p className="text-xs text-muted-foreground">Off-Peak Hour</p>
+                              <p className="font-semibold text-purple-700 dark:text-purple-300">
+                                {peakData.insights.offpeak_hour.time}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {peakData.insights.offpeak_hour.bookings} bookings
+                              </p>
+                            </div>
+                          </div>
+                          
+                          {/* Day of Week Distribution */}
+                          <div className="space-y-2">
+                            <p className="text-sm font-medium">Bookings by Day of Week</p>
+                            {peakData.by_day_of_week?.map((day: any) => (
+                              <div key={day.day} className="flex items-center gap-2">
+                                <span className="w-20 text-xs text-muted-foreground">{day.day}</span>
+                                <div className="flex-1 bg-muted rounded-full h-2">
+                                  <div 
+                                    className="bg-primary rounded-full h-2" 
+                                    style={{ 
+                                      width: `${peakData.insights.peak_day.bookings > 0 
+                                        ? (day.count / peakData.insights.peak_day.bookings) * 100 
+                                        : 0}%` 
+                                    }}
+                                  />
+                                </div>
+                                <span className="w-8 text-xs text-right">{day.count}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </>
+                      ) : (
+                        <p className="text-muted-foreground text-center py-4">No data available</p>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* Service Type Breakdown */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <FileText className="w-5 h-5 text-primary" />
+                        Service Type Breakdown
+                      </CardTitle>
+                      <CardDescription>Distribution of consultation types</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      {reportData.service_breakdown?.length > 0 ? (
+                        reportData.service_breakdown.map((service: any) => (
+                          <div key={service.service_type} className="space-y-1">
+                            <div className="flex items-center justify-between text-sm">
+                              <span>{service.service_type}</span>
+                              <span className="font-medium">{service.count} ({service.percentage}%)</span>
+                            </div>
+                            <div className="bg-muted rounded-full h-2">
+                              <div 
+                                className="bg-primary rounded-full h-2 transition-all" 
+                                style={{ width: `${service.percentage}%` }}
+                              />
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-muted-foreground text-center py-4">No data available</p>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Top Clinicians */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Users className="w-5 h-5 text-primary" />
+                      Clinician Performance
+                    </CardTitle>
+                    <CardDescription>Top clinicians by appointment volume</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {reportData.top_clinicians?.length > 0 ? (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b">
+                              <th className="text-left py-2 font-medium">Clinician</th>
+                              <th className="text-center py-2 font-medium">Total</th>
+                              <th className="text-center py-2 font-medium">Completed</th>
+                              <th className="text-center py-2 font-medium">Cancelled</th>
+                              <th className="text-right py-2 font-medium">Rate</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {reportData.top_clinicians.map((clinician: any) => (
+                              <tr key={clinician.clinician_name} className="border-b last:border-0">
+                                <td className="py-2">{clinician.clinician_name}</td>
+                                <td className="text-center py-2">{clinician.total_appointments}</td>
+                                <td className="text-center py-2 text-green-600">{clinician.completed}</td>
+                                <td className="text-center py-2 text-red-600">{clinician.cancelled}</td>
+                                <td className="text-right py-2">
+                                  {clinician.total_appointments > 0 
+                                    ? Math.round((clinician.completed / clinician.total_appointments) * 100)
+                                    : 0}%
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <p className="text-muted-foreground text-center py-4">No data available</p>
+                    )}
+                  </CardContent>
+                </Card>
+              </>
+            ) : (
+              <div className="text-center py-12 text-muted-foreground">
+                <FileText className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                <p>No report data available</p>
+              </div>
+            )}
+          </TabsContent>
+
           {/* Management Tab */}
           <TabsContent value="management" className="space-y-6">
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
