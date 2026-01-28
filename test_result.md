@@ -327,6 +327,18 @@ backend:
         agent: "testing"
         comment: "✅ PASSED: Daily.co Video API endpoints tested successfully. GET /api/video/health returns status 'ok' with domain 'quadcare-sa.daily.co' confirming Daily.co connectivity. POST /api/video/room correctly requires authentication (401 without token). POST /api/video/token correctly requires authentication (401 without token). All Daily.co video endpoints working as expected."
 
+  - task: "Admin Analytics API"
+    implemented: true
+    working: "NA"
+    file: "backend/routes/admin_analytics.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "NEW: Admin-only analytics dashboard API. GET /api/admin/analytics/summary (booking stats, daily trends, hourly distribution, service breakdown, clinician performance), GET /api/admin/analytics/peak-times (peak/off-peak analysis by day and hour), GET /api/admin/analytics/cancellation-reasons (cancellation stats), GET /api/admin/analytics/export/csv (CSV export). All endpoints require admin role."
+
 frontend:
   - task: "API Service Layer"
     implemented: true
