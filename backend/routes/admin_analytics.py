@@ -754,6 +754,180 @@ async def get_receptionist_workload(
             },
             "summary": {
                 "total_receptionists_active": len(receptionist_stats),
+
+
+
+@router.get("/timestamp-trends")
+async def get_timestamp_trends(
+    period: str = Query("month"),
+    start_date: Optional[str] = Query(None),
+    end_date: Optional[str] = Query(None),
+    user: AuthenticatedUser = Depends(get_current_user)
+):
+    """Get detailed timestamp trends for bookings - hourly, daily, and heatmap data"""
+    await verify_admin(user)
+    
+    start, end = parse_date_range(period, start_date, end_date)
+    
+    try:
+        appointments = await supabase.select(
+            "appointments",
+            "*",
+            access_token=user.access_token
+        )
+        
+        # Filter by date range
+        appointments_in_range = [
+            a for a in appointments 
+            if a.get("scheduled_at") and 
+               start.isoformat() <= a["scheduled_at"] <= end.isoformat()
+        ]
+        
+        # Initialize data structures
+        hourly_distribution = {h: 0 for h in range(24)}
+        daily_distribution = {i: 0 for i in range(7)}  # 0=Monday, 6=Sunday
+        
+        # Heatmap: day of week (rows) x hour (columns)
+        heatmap = {day: {hour: 0 for hour in range(24)} for day in range(7)}
+        
+        # Daily trend (date -> count)
+        daily_trend = {}
+        
+        for apt in appointments_in_range:
+            try:
+                apt_time = datetime.fromisoformat(apt.get("scheduled_at", "").replace("Z", "+00:00"))
+                apt_sast = to_sast(apt_time)
+                
+                hour = apt_sast.hour
+                day_of_week = apt_sast.weekday()
+                date_str = apt_sast.strftime("%Y-%m-%d")
+                
+                hourly_distribution[hour] += 1
+                daily_distribution[day_of_week] += 1
+                heatmap[day_of_week][hour] += 1
+                
+                if date_str not in daily_trend:
+                    daily_trend[date_str] = {"total": 0, "completed": 0, "cancelled": 0}
+                daily_trend[date_str]["total"] += 1
+                if apt.get("status") == "completed":
+                    daily_trend[date_str]["completed"] += 1
+                if apt.get("status") == "cancelled":
+                    daily_trend[date_str]["cancelled"] += 1
+                    
+            except Exception as e:
+                logger.warning(f"Error parsing appointment time: {e}")
+                continue
+        
+        day_names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+        
+        # Find peak patterns
+        peak_hour = max(hourly_distribution.items(), key=lambda x: x[1])
+        peak_day = max(daily_distribution.items(), key=lambda x: x[1])
+        
+        # Find peak hour per day
+        peak_hours_by_day = {}
+        for day in range(7):
+            day_hours = heatmap[day]
+            if any(day_hours.values()):
+                peak_h = max(day_hours.items(), key=lambda x: x[1])
+                peak_hours_by_day[day_names[day]] = {
+                    "hour": f"{peak_h[0]:02d}:00",
+                    "count": peak_h[1]
+                }
+        
+        # Format hourly distribution for chart
+        hourly_chart_data = [
+            {
+                "hour": f"{h:02d}:00",
+                "hour_numeric": h,
+                "count": hourly_distribution[h],
+                "is_peak": h == peak_hour[0]
+            }
+            for h in range(24)
+        ]
+        
+        # Format daily distribution
+        daily_chart_data = [
+            {
+                "day": day_names[d],
+                "day_short": day_names[d][:3],
+                "count": daily_distribution[d],
+                "is_peak": d == peak_day[0]
+            }
+            for d in range(7)
+        ]
+        
+        # Format heatmap data (for visualization)
+        heatmap_data = []
+        for day in range(7):
+            for hour in range(24):
+                count = heatmap[day][hour]
+                if count > 0:  # Only include non-zero entries for efficiency
+                    heatmap_data.append({
+                        "day": day_names[day],
+                        "day_index": day,
+                        "hour": f"{hour:02d}:00",
+                        "hour_index": hour,
+                        "count": count
+                    })
+        
+        # Format daily trend for time series chart
+        daily_trend_data = [
+            {
+                "date": date,
+                "total": data["total"],
+                "completed": data["completed"],
+                "cancelled": data["cancelled"]
+            }
+            for date, data in sorted(daily_trend.items())
+        ]
+        
+        # Calculate max values for scaling
+        max_hourly = max(hourly_distribution.values()) if hourly_distribution else 0
+        max_daily = max(daily_distribution.values()) if daily_distribution else 0
+        max_heatmap = max(heatmap[d][h] for d in range(7) for h in range(24)) if heatmap else 0
+        
+        return {
+            "period": {
+                "start": start.strftime("%Y-%m-%d"),
+                "end": end.strftime("%Y-%m-%d")
+            },
+            "summary": {
+                "total_appointments": len(appointments_in_range),
+                "peak_hour": {
+                    "time": f"{peak_hour[0]:02d}:00",
+                    "count": peak_hour[1]
+                },
+                "peak_day": {
+                    "day": day_names[peak_day[0]],
+                    "count": peak_day[1]
+                },
+                "busiest_time_slot": {
+                    "description": f"{day_names[peak_day[0]]}s at {peak_hour[0]:02d}:00",
+                    "typical_load": max_heatmap
+                }
+            },
+            "hourly_distribution": hourly_chart_data,
+            "daily_distribution": daily_chart_data,
+            "heatmap": {
+                "data": heatmap_data,
+                "max_value": max_heatmap,
+                "days": day_names,
+                "hours": [f"{h:02d}:00" for h in range(24)]
+            },
+            "daily_trend": daily_trend_data,
+            "peak_hours_by_day": peak_hours_by_day,
+            "scaling": {
+                "max_hourly": max_hourly,
+                "max_daily": max_daily,
+                "max_heatmap": max_heatmap
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Error calculating timestamp trends: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
                 "total_chats_handled": total_chats,
                 "total_bookings_created": total_bookings,
                 "average_chats_per_receptionist": round(total_chats / len(receptionist_stats), 1) if receptionist_stats else 0
