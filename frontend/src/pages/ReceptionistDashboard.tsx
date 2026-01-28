@@ -633,7 +633,7 @@ const ReceptionistDashboardContent = () => {
                               </Button>
                               <Button 
                                 variant="destructive"
-                                onClick={handleCancelBooking}
+                                onClick={confirmCancelBooking}
                                 disabled={isCancellingBooking}
                               >
                                 {isCancellingBooking ? (
