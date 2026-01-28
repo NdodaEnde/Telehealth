@@ -399,7 +399,7 @@ const ReceptionistDashboardContent = () => {
                       {/* Create Booking Button */}
                       <Dialog open={showBookingDialog} onOpenChange={setShowBookingDialog}>
                         <DialogTrigger asChild>
-                          <Button disabled={currentConversation.status === 'booked'}>
+                          <Button disabled={currentConversation.status === 'booked' || !!currentBookingDetails}>
                             <Calendar className="w-4 h-4 mr-2" />
                             Create Booking
                           </Button>
