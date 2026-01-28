@@ -5,9 +5,16 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { 
   Calendar, Clock, FileText, Video, User, LogOut, 
-  MessageCircle, Receipt, Menu, X, Settings 
+  MessageCircle, Receipt, Menu, X, Settings, Download, Loader2
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -16,6 +23,7 @@ import { formatSAST } from "@/lib/timezone";
 import { PatientPrescriptionHistory } from "@/components/prescriptions/PatientPrescriptionHistory";
 import { PatientChatSpace } from "@/components/chat/PatientChatSpace";
 import { bookingsAPI } from "@/lib/api";
+import { toast } from "sonner";
 
 interface Appointment {
   id: string;
