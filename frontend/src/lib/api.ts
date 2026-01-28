@@ -489,6 +489,58 @@ export const videoAPI = {
   checkHealth: () => apiRequest('/api/video/health'),
 };
 
+// ============ Admin Analytics API ============
+
+export const adminAnalyticsAPI = {
+  getSummary: (period: string = 'month', startDate?: string, endDate?: string) => {
+    const params = new URLSearchParams({ period });
+    if (startDate) params.set('start_date', startDate);
+    if (endDate) params.set('end_date', endDate);
+    return apiRequest(`/api/admin/analytics/summary?${params}`);
+  },
+  
+  getPeakTimes: (period: string = 'month', startDate?: string, endDate?: string) => {
+    const params = new URLSearchParams({ period });
+    if (startDate) params.set('start_date', startDate);
+    if (endDate) params.set('end_date', endDate);
+    return apiRequest(`/api/admin/analytics/peak-times?${params}`);
+  },
+  
+  getCancellationStats: (period: string = 'month', startDate?: string, endDate?: string) => {
+    const params = new URLSearchParams({ period });
+    if (startDate) params.set('start_date', startDate);
+    if (endDate) params.set('end_date', endDate);
+    return apiRequest(`/api/admin/analytics/cancellation-reasons?${params}`);
+  },
+  
+  exportCSV: async (period: string = 'month', startDate?: string, endDate?: string) => {
+    const token = await getAuthToken();
+    const params = new URLSearchParams({ period });
+    if (startDate) params.set('start_date', startDate);
+    if (endDate) params.set('end_date', endDate);
+    
+    const response = await fetch(`${BACKEND_URL}/api/admin/analytics/export/csv?${params}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to export CSV');
+    }
+    
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `quadcare_analytics_${period}_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+  },
+};
+
 // Export all APIs
 export const api = {
   user: userAPI,
@@ -501,6 +553,7 @@ export const api = {
   chat: chatAPI,
   bookings: bookingsAPI,
   video: videoAPI,
+  adminAnalytics: adminAnalyticsAPI,
 };
 
 export default api;
