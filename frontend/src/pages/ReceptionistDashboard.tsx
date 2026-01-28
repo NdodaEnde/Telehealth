@@ -121,6 +121,58 @@ const ReceptionistDashboardContent = () => {
     fetchBookingDetails();
   }, [currentConversation?.booking_id]);
 
+  // Load all bookings
+  const loadBookings = useCallback(async () => {
+    setBookingsLoading(true);
+    try {
+      const bookings = await bookingsAPI.getAll();
+      // Sort by scheduled date, upcoming first
+      const sorted = (bookings || []).sort((a: any, b: any) => 
+        new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime()
+      );
+      setAllBookings(sorted);
+    } catch (error) {
+      console.error("Error loading bookings:", error);
+    } finally {
+      setBookingsLoading(false);
+    }
+  }, []);
+
+  // Load bookings when switching to bookings view
+  useEffect(() => {
+    if (mainView === 'bookings') {
+      loadBookings();
+    }
+  }, [mainView, loadBookings]);
+
+  // Handle cancel from bookings list
+  const handleCancelFromList = async (booking: any) => {
+    setSelectedBookingToCancel(booking);
+    setShowCancelDialog(true);
+  };
+
+  const confirmCancelBooking = async () => {
+    const bookingToCancel = selectedBookingToCancel || (currentConversation?.booking_id ? { id: currentConversation.booking_id } : null);
+    if (!bookingToCancel?.id) return;
+    
+    setIsCancellingBooking(true);
+    try {
+      await bookingsAPI.cancel(bookingToCancel.id);
+      toast({ title: "Booking cancelled", description: "The booking has been cancelled successfully" });
+      setShowCancelDialog(false);
+      setSelectedBookingToCancel(null);
+      setCurrentBookingDetails(null);
+      loadData();
+      if (mainView === 'bookings') {
+        loadBookings();
+      }
+    } catch (error: any) {
+      toast({ title: "Error cancelling booking", description: error.message, variant: "destructive" });
+    } finally {
+      setIsCancellingBooking(false);
+    }
+  };
+
   // Load data
   const loadData = useCallback(async () => {
     setRefreshing(true);
