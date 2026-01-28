@@ -159,16 +159,20 @@ const AdminDashboard = () => {
         </div>
 
         <Tabs defaultValue="analytics" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2 sm:w-auto sm:inline-grid sm:grid-cols-3 gap-1">
+          <TabsList className="grid w-full grid-cols-2 sm:w-auto sm:inline-grid sm:grid-cols-4 gap-1">
             <TabsTrigger value="analytics" className="gap-2 text-xs sm:text-sm">
               <BarChart3 className="w-4 h-4" />
               <span className="hidden xs:inline">Analytics</span>
+            </TabsTrigger>
+            <TabsTrigger value="reports" className="gap-2 text-xs sm:text-sm">
+              <FileText className="w-4 h-4" />
+              <span className="hidden xs:inline">Reports</span>
             </TabsTrigger>
             <TabsTrigger value="management" className="gap-2 text-xs sm:text-sm">
               <Users className="w-4 h-4" />
               <span className="hidden xs:inline">Management</span>
             </TabsTrigger>
-            <TabsTrigger value="settings" className="gap-2 text-xs sm:text-sm col-span-2 sm:col-span-1">
+            <TabsTrigger value="settings" className="gap-2 text-xs sm:text-sm">
               <Settings className="w-4 h-4" />
               <span className="hidden xs:inline">Settings</span>
             </TabsTrigger>
