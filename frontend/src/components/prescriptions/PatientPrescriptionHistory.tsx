@@ -210,7 +210,8 @@ export const PatientPrescriptionHistory = () => {
                     return (
                       <div
                         key={prescription.id}
-                        className="p-4 rounded-lg border border-primary/30 bg-primary/5"
+                        className="p-4 rounded-lg border border-primary/30 bg-primary/5 cursor-pointer hover:border-primary hover:shadow-md transition-all"
+                        onClick={() => handleViewPrescription(prescription)}
                       >
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex items-center gap-3">
