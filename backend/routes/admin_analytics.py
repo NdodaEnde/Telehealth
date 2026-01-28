@@ -79,8 +79,8 @@ async def verify_admin(user: AuthenticatedUser):
     result = await supabase.select(
         "user_roles",
         "role",
-        {"user_id": f"eq.{user.id}"},
-        user.access_token
+        {"user_id": user.id},
+        access_token=user.access_token
     )
     
     if not result or result[0].get("role") != "admin":
