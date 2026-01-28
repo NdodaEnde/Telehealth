@@ -487,6 +487,195 @@ const AdminDashboard = () => {
                   </Card>
                 </div>
 
+                {/* Timestamp Trends - Detailed Analysis */}
+                {timestampTrends && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Clock className="w-5 h-5 text-primary" />
+                        Consultation Time Trends
+                      </CardTitle>
+                      <CardDescription>
+                        When do students book consultations? Busiest time: {timestampTrends.summary?.busiest_time_slot?.description}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                      {/* Summary Cards */}
+                      <div className="grid grid-cols-3 gap-4">
+                        <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-center">
+                          <p className="text-2xl font-bold text-blue-600">{timestampTrends.summary?.peak_hour?.time}</p>
+                          <p className="text-xs text-muted-foreground">Peak Hour</p>
+                          <p className="text-sm text-blue-600">{timestampTrends.summary?.peak_hour?.count} bookings</p>
+                        </div>
+                        <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg text-center">
+                          <p className="text-2xl font-bold text-green-600">{timestampTrends.summary?.peak_day?.day}</p>
+                          <p className="text-xs text-muted-foreground">Busiest Day</p>
+                          <p className="text-sm text-green-600">{timestampTrends.summary?.peak_day?.count} bookings</p>
+                        </div>
+                        <div className="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg text-center">
+                          <p className="text-2xl font-bold text-purple-600">{timestampTrends.summary?.total_appointments}</p>
+                          <p className="text-xs text-muted-foreground">Total Consultations</p>
+                          <p className="text-sm text-purple-600">in selected period</p>
+                        </div>
+                      </div>
+
+                      {/* Hourly Distribution Chart */}
+                      <div>
+                        <h4 className="text-sm font-medium mb-3">Hourly Distribution (SAST)</h4>
+                        <div className="flex items-end gap-1 h-32">
+                          {timestampTrends.hourly_distribution?.map((hour: any) => {
+                            const height = timestampTrends.scaling?.max_hourly > 0 
+                              ? (hour.count / timestampTrends.scaling.max_hourly) * 100 
+                              : 0;
+                            return (
+                              <div key={hour.hour} className="flex-1 flex flex-col items-center group">
+                                <div 
+                                  className={`w-full rounded-t transition-all ${
+                                    hour.is_peak ? 'bg-primary' : 'bg-primary/40'
+                                  } hover:bg-primary/80`}
+                                  style={{ height: `${Math.max(height, 2)}%` }}
+                                  title={`${hour.hour}: ${hour.count} bookings`}
+                                />
+                                <span className="text-[10px] text-muted-foreground mt-1 hidden sm:block">
+                                  {hour.hour_numeric % 3 === 0 ? hour.hour.slice(0, 2) : ''}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                          <span>00:00</span>
+                          <span>06:00</span>
+                          <span>12:00</span>
+                          <span>18:00</span>
+                          <span>23:00</span>
+                        </div>
+                      </div>
+
+                      {/* Day of Week Distribution */}
+                      <div>
+                        <h4 className="text-sm font-medium mb-3">Day of Week Distribution</h4>
+                        <div className="grid grid-cols-7 gap-2">
+                          {timestampTrends.daily_distribution?.map((day: any) => {
+                            const intensity = timestampTrends.scaling?.max_daily > 0 
+                              ? (day.count / timestampTrends.scaling.max_daily) 
+                              : 0;
+                            return (
+                              <div key={day.day} className="text-center">
+                                <div 
+                                  className={`h-16 rounded-lg flex items-center justify-center text-sm font-medium ${
+                                    day.is_peak 
+                                      ? 'bg-primary text-primary-foreground' 
+                                      : 'bg-primary/20'
+                                  }`}
+                                  style={{ 
+                                    opacity: Math.max(intensity, 0.2)
+                                  }}
+                                >
+                                  {day.count}
+                                </div>
+                                <span className="text-xs text-muted-foreground mt-1">{day.day_short}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Heatmap - Day x Hour */}
+                      <div>
+                        <h4 className="text-sm font-medium mb-3">Weekly Heatmap (Day × Hour)</h4>
+                        <div className="overflow-x-auto">
+                          <div className="min-w-[600px]">
+                            {/* Hour headers */}
+                            <div className="flex mb-1">
+                              <div className="w-16" />
+                              {[0, 3, 6, 9, 12, 15, 18, 21].map(h => (
+                                <div key={h} className="flex-1 text-center text-xs text-muted-foreground">
+                                  {`${h}:00`}
+                                </div>
+                              ))}
+                            </div>
+                            {/* Heatmap rows */}
+                            {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map((day, dayIndex) => (
+                              <div key={day} className="flex items-center mb-1">
+                                <div className="w-16 text-xs text-muted-foreground pr-2 text-right">{day.slice(0, 3)}</div>
+                                <div className="flex-1 flex gap-[1px]">
+                                  {Array.from({ length: 24 }, (_, hour) => {
+                                    const cellData = timestampTrends.heatmap?.data?.find(
+                                      (d: any) => d.day_index === dayIndex && d.hour_index === hour
+                                    );
+                                    const count = cellData?.count || 0;
+                                    const intensity = timestampTrends.scaling?.max_heatmap > 0 
+                                      ? count / timestampTrends.scaling.max_heatmap 
+                                      : 0;
+                                    return (
+                                      <div
+                                        key={hour}
+                                        className="flex-1 h-6 rounded-sm transition-colors cursor-pointer hover:ring-1 hover:ring-primary"
+                                        style={{
+                                          backgroundColor: count > 0 
+                                            ? `rgba(59, 130, 246, ${Math.max(intensity, 0.1)})` 
+                                            : 'rgba(0,0,0,0.05)'
+                                        }}
+                                        title={`${day} ${hour}:00 - ${count} bookings`}
+                                      />
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            ))}
+                            {/* Legend */}
+                            <div className="flex items-center justify-end gap-2 mt-2">
+                              <span className="text-xs text-muted-foreground">Less</span>
+                              <div className="flex gap-[1px]">
+                                {[0.1, 0.3, 0.5, 0.7, 1].map((opacity, i) => (
+                                  <div 
+                                    key={i}
+                                    className="w-4 h-4 rounded-sm"
+                                    style={{ backgroundColor: `rgba(59, 130, 246, ${opacity})` }}
+                                  />
+                                ))}
+                              </div>
+                              <span className="text-xs text-muted-foreground">More</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Daily Trend Line */}
+                      {timestampTrends.daily_trend?.length > 0 && (
+                        <div>
+                          <h4 className="text-sm font-medium mb-3">Daily Booking Trend</h4>
+                          <div className="space-y-1 max-h-48 overflow-y-auto">
+                            {timestampTrends.daily_trend.map((day: any) => (
+                              <div key={day.date} className="flex items-center gap-2 text-sm">
+                                <span className="w-24 text-muted-foreground">{day.date}</span>
+                                <div className="flex-1 flex items-center gap-1">
+                                  <div 
+                                    className="bg-primary h-4 rounded"
+                                    style={{ 
+                                      width: `${Math.max(
+                                        (day.total / Math.max(...timestampTrends.daily_trend.map((d: any) => d.total || 1))) * 100, 
+                                        5
+                                      )}%` 
+                                    }}
+                                  />
+                                </div>
+                                <span className="w-20 text-right">
+                                  <span className="font-medium">{day.total}</span>
+                                  {day.completed > 0 && (
+                                    <span className="text-green-600 text-xs ml-1">({day.completed}✓)</span>
+                                  )}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+
                 {/* Top Clinicians */}
                 <Card>
                   <CardHeader>
