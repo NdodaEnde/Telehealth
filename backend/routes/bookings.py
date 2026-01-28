@@ -6,7 +6,7 @@ from fastapi import APIRouter, HTTPException, Depends, Query
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
 from typing import List, Optional
-from datetime import datetime, date
+from datetime import datetime, date, timezone, timedelta
 from auth import get_current_user, AuthenticatedUser
 from supabase_client import supabase
 from pdf_generator import generate_invoice_pdf
@@ -17,6 +17,16 @@ from enum import Enum
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/bookings", tags=["Bookings"])
+
+# South African Standard Time (SAST) is UTC+2
+SAST = timezone(timedelta(hours=2))
+
+def to_sast(dt: datetime) -> datetime:
+    """Convert datetime to South African Standard Time (UTC+2)"""
+    if dt.tzinfo is None:
+        # Assume UTC if no timezone
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(SAST)
 
 # ============ Enums ============
 
