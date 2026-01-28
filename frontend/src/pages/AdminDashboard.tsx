@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,7 +14,12 @@ import {
   Settings,
   Building2,
   FileText,
-  TrendingUp
+  TrendingUp,
+  Download,
+  XCircle,
+  CheckCircle,
+  Clock,
+  Loader2
 } from "lucide-react";
 import { useAnalytics } from "@/hooks/useAnalytics";
 import { AnalyticsOverviewCards } from "@/components/analytics/AnalyticsOverviewCards";
@@ -23,6 +28,8 @@ import { ConsultationTypesChart } from "@/components/analytics/ConsultationTypes
 import { StatusDistributionChart } from "@/components/analytics/StatusDistributionChart";
 import { ClinicianPerformanceTable } from "@/components/analytics/ClinicianPerformanceTable";
 import { PatientGrowthChart } from "@/components/analytics/PatientGrowthChart";
+import { adminAnalyticsAPI } from "@/lib/api";
+import { toast } from "sonner";
 import {
   Select,
   SelectContent,
