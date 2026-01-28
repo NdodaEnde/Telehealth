@@ -431,7 +431,7 @@ const PatientDashboardContent = () => {
                         <div>
                           <p className="font-medium">{invoice.service_name}</p>
                           <p className="text-sm text-muted-foreground">
-                            {format(new Date(invoice.consultation_date), "MMM d, yyyy")} • {invoice.clinician_name}
+                            {formatSAST(invoice.consultation_date, "MMM d, yyyy")} • {invoice.clinician_name}
                           </p>
                         </div>
                         <div className="flex items-center gap-3">
