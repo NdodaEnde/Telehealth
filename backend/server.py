@@ -24,6 +24,7 @@ from routes.nurse_triage import router as nurse_triage_router
 from routes.chat import router as chat_router
 from routes.bookings import router as bookings_router
 from routes.video import router as video_router
+from routes.admin_analytics import router as admin_analytics_router
 
 # Analytics (existing)
 from analytics_service import get_full_analytics_dashboard, get_analytics_overview
