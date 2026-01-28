@@ -348,6 +348,95 @@ export const PatientPrescriptionHistory = () => {
           </div>
         )}
       </CardContent>
+
+      {/* Prescription View Dialog */}
+      <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Pill className="w-5 h-5 text-primary" />
+              Prescription Details
+            </DialogTitle>
+            <DialogDescription>
+              {selectedPrescription && formatSAST(selectedPrescription.prescribed_at, "MMMM d, yyyy 'at' h:mm a")}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedPrescription && (
+            <div className="space-y-4">
+              {/* Medication Info */}
+              <div className="p-4 bg-primary/5 rounded-lg border border-primary/20">
+                <h3 className="font-semibold text-lg">{selectedPrescription.medication_name}</h3>
+                <p className="text-muted-foreground">{selectedPrescription.dosage}</p>
+              </div>
+
+              {/* Details Grid */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Frequency</p>
+                  <p className="font-medium">{selectedPrescription.frequency}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Duration</p>
+                  <p className="font-medium">{selectedPrescription.duration}</p>
+                </div>
+                {selectedPrescription.quantity && (
+                  <div>
+                    <p className="text-sm text-muted-foreground">Quantity</p>
+                    <p className="font-medium">{selectedPrescription.quantity}</p>
+                  </div>
+                )}
+                <div>
+                  <p className="text-sm text-muted-foreground">Refills</p>
+                  <p className="font-medium">{selectedPrescription.refills}</p>
+                </div>
+              </div>
+
+              {/* Instructions */}
+              {selectedPrescription.instructions && (
+                <div className="p-3 bg-muted rounded-lg">
+                  <p className="text-sm font-medium mb-1">Instructions</p>
+                  <p className="text-sm text-muted-foreground">{selectedPrescription.instructions}</p>
+                </div>
+              )}
+
+              {/* Prescriber */}
+              <div className="flex items-center gap-2 text-sm text-muted-foreground pt-2 border-t">
+                <User className="w-4 h-4" />
+                <span>Prescribed by {selectedPrescription.clinician_name}</span>
+              </div>
+
+              {/* Status Badge */}
+              <div className="flex items-center justify-between">
+                {(() => {
+                  const statusConfig = STATUS_CONFIG[selectedPrescription.status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.active;
+                  const StatusIcon = statusConfig.icon;
+                  return (
+                    <Badge variant={statusConfig.variant} className="flex items-center gap-1">
+                      <StatusIcon className="w-3 h-3" />
+                      {statusConfig.label}
+                    </Badge>
+                  );
+                })()}
+                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={(e) => handleDownloadPDF(selectedPrescription.id, selectedPrescription.medication_name, e)}
+                  disabled={downloadingId === selectedPrescription.id}
+                >
+                  {downloadingId === selectedPrescription.id ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Download className="w-4 h-4 mr-2" />
+                  )}
+                  Download PDF
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 };
