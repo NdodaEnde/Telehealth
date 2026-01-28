@@ -460,7 +460,8 @@ const PatientDashboardContent = () => {
                     {invoices.map((invoice) => (
                       <div
                         key={invoice.id}
-                        className="flex items-center justify-between p-4 rounded-lg border border-border"
+                        className="flex items-center justify-between p-4 rounded-lg border border-border cursor-pointer hover:border-primary/50 hover:shadow-sm transition-all"
+                        onClick={() => handleViewInvoice(invoice)}
                       >
                         <div>
                           <p className="font-medium">{invoice.service_name}</p>
@@ -478,15 +479,14 @@ const PatientDashboardContent = () => {
                           <Button 
                             variant="outline" 
                             size="sm"
-                            onClick={async () => {
-                              try {
-                                await bookingsAPI.downloadInvoicePDF(invoice.id, `invoice_${invoice.id.slice(0, 8)}.pdf`);
-                              } catch (error) {
-                                console.error('Failed to download invoice:', error);
-                              }
-                            }}
+                            onClick={(e) => handleDownloadInvoice(invoice.id, e)}
+                            disabled={downloadingInvoiceId === invoice.id}
                           >
-                            PDF
+                            {downloadingInvoiceId === invoice.id ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Download className="w-4 h-4" />
+                            )}
                           </Button>
                         </div>
                       </div>
@@ -495,6 +495,84 @@ const PatientDashboardContent = () => {
                 )}
               </CardContent>
             </Card>
+
+            {/* Invoice View Dialog */}
+            <Dialog open={invoiceDialogOpen} onOpenChange={setInvoiceDialogOpen}>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <Receipt className="w-5 h-5 text-primary" />
+                    Invoice Details
+                  </DialogTitle>
+                  <DialogDescription>
+                    Invoice #{selectedInvoice?.id.slice(0, 8).toUpperCase()}
+                  </DialogDescription>
+                </DialogHeader>
+                
+                {selectedInvoice && (
+                  <div className="space-y-4">
+                    {/* Service Info */}
+                    <div className="p-4 bg-primary/5 rounded-lg border border-primary/20">
+                      <h3 className="font-semibold text-lg">{selectedInvoice.service_name}</h3>
+                      <p className="text-muted-foreground">Consultation Service</p>
+                    </div>
+
+                    {/* Details Grid */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Date</p>
+                        <p className="font-medium">{formatSAST(selectedInvoice.consultation_date, "MMMM d, yyyy")}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Clinician</p>
+                        <p className="font-medium">{selectedInvoice.clinician_name}</p>
+                      </div>
+                    </div>
+
+                    {/* Amount */}
+                    <div className="p-4 bg-muted rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Amount Due</span>
+                        <span className="text-2xl font-bold">R {selectedInvoice.amount.toFixed(2)}</span>
+                      </div>
+                    </div>
+
+                    {/* Status and Download */}
+                    <div className="flex items-center justify-between pt-2 border-t">
+                      <Badge 
+                        variant={selectedInvoice.status === "paid" ? "default" : "secondary"}
+                        className="text-sm"
+                      >
+                        {selectedInvoice.status === "paid" ? "✓ Paid" : selectedInvoice.status}
+                      </Badge>
+                      
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => handleDownloadInvoice(selectedInvoice.id, e)}
+                        disabled={downloadingInvoiceId === selectedInvoice.id}
+                      >
+                        {downloadingInvoiceId === selectedInvoice.id ? (
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        ) : (
+                          <Download className="w-4 h-4 mr-2" />
+                        )}
+                        Download PDF
+                      </Button>
+                    </div>
+
+                    {/* Payment Info for unpaid */}
+                    {selectedInvoice.status !== "paid" && (
+                      <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                        <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                          Please contact our reception to arrange payment.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </DialogContent>
+            </Dialog>
           </TabsContent>
         </Tabs>
       </main>
