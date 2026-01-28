@@ -669,14 +669,20 @@ async def cancel_booking(
             user.access_token
         )
         
-        # Add system message
+        # Get cancellation timestamp in SAST
+        from datetime import timezone, timedelta
+        SAST = timezone(timedelta(hours=2))
+        now_sast = datetime.now(SAST)
+        timestamp = now_sast.strftime("%B %d, %Y at %H:%M")
+        
+        # Add system message with timestamp
         system_message = {
             "id": str(uuid.uuid4()),
             "conversation_id": booking["conversation_id"],
             "sender_id": user.id,
             "sender_role": "system",
             "sender_name": "System",
-            "content": "❌ Booking has been cancelled",
+            "content": f"❌ Booking cancelled on {timestamp} (SAST)",
             "message_type": "system"
         }
         await supabase.insert("chat_messages", system_message, user.access_token)
