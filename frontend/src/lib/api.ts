@@ -534,6 +534,13 @@ export const adminAnalyticsAPI = {
     return apiRequest(`/api/admin/analytics/receptionist-workload?${params}`);
   },
   
+  getTimestampTrends: (period: string = 'month', startDate?: string, endDate?: string) => {
+    const params = new URLSearchParams({ period });
+    if (startDate) params.set('start_date', startDate);
+    if (endDate) params.set('end_date', endDate);
+    return apiRequest(`/api/admin/analytics/timestamp-trends?${params}`);
+  },
+  
   exportCSV: async (period: string = 'month', startDate?: string, endDate?: string) => {
     const token = await getAuthToken();
     const params = new URLSearchParams({ period });
