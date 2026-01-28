@@ -671,6 +671,171 @@ const ReceptionistDashboardContent = () => {
             )}
           </Card>
         </div>
+        ) : (
+        /* Bookings View */
+        <div className="h-[calc(100vh-120px)]">
+          <Card className="h-full flex flex-col">
+            <CardHeader className="pb-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Calendar className="w-5 h-5 text-primary" />
+                    All Bookings
+                  </CardTitle>
+                  <CardDescription>Manage upcoming and past consultations</CardDescription>
+                </div>
+                <Button variant="outline" size="sm" onClick={loadBookings} disabled={bookingsLoading}>
+                  {bookingsLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Refresh"}
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="flex-1 overflow-y-auto">
+              {bookingsLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                </div>
+              ) : allBookings.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                  <Calendar className="w-16 h-16 mb-4 opacity-50" />
+                  <p className="text-lg font-medium">No bookings yet</p>
+                  <p className="text-sm">Bookings will appear here when created</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {allBookings.map((booking) => {
+                    const isPast = new Date(booking.scheduled_at) < new Date();
+                    const isCancelled = booking.status === 'cancelled';
+                    const isCompleted = booking.status === 'completed';
+                    
+                    return (
+                      <div
+                        key={booking.id}
+                        className={`p-4 rounded-lg border ${
+                          isCancelled 
+                            ? 'border-red-200 bg-red-50 dark:bg-red-900/10' 
+                            : isCompleted
+                              ? 'border-green-200 bg-green-50 dark:bg-green-900/10'
+                              : isPast 
+                                ? 'border-muted bg-muted/50' 
+                                : 'border-primary/30 bg-primary/5'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <p className="font-semibold">{booking.patient_name || 'Patient'}</p>
+                              <Badge 
+                                variant={
+                                  isCancelled ? 'destructive' 
+                                  : isCompleted ? 'default'
+                                  : booking.status === 'confirmed' ? 'default'
+                                  : 'secondary'
+                                }
+                              >
+                                {booking.status}
+                              </Badge>
+                            </div>
+                            <p className="text-sm text-muted-foreground">
+                              {formatSAST(booking.scheduled_at, "EEEE, MMMM d, yyyy 'at' HH:mm")} (SAST)
+                            </p>
+                            <div className="flex items-center gap-4 text-sm">
+                              <span className="text-muted-foreground">
+                                Service: <span className="text-foreground">{booking.service_type}</span>
+                              </span>
+                              {booking.clinician_name && (
+                                <span className="text-muted-foreground">
+                                  Clinician: <span className="text-foreground">{booking.clinician_name}</span>
+                                </span>
+                              )}
+                              <span className="text-muted-foreground">
+                                Type: <span className="text-foreground capitalize">{booking.billing_type?.replace('_', ' ')}</span>
+                              </span>
+                            </div>
+                          </div>
+                          
+                          {/* Actions */}
+                          {!isCancelled && !isCompleted && (
+                            <Button 
+                              variant="destructive" 
+                              size="sm"
+                              onClick={() => handleCancelFromList(booking)}
+                            >
+                              <XCircle className="w-4 h-4 mr-1" />
+                              Cancel
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+          
+          {/* Cancel Booking Dialog for Bookings View */}
+          <Dialog open={showCancelDialog && !!selectedBookingToCancel} onOpenChange={(open) => {
+            if (!open) {
+              setShowCancelDialog(false);
+              setSelectedBookingToCancel(null);
+            }
+          }}>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2 text-destructive">
+                  <AlertTriangle className="w-5 h-5" />
+                  Cancel Booking
+                </DialogTitle>
+                <DialogDescription>
+                  Are you sure you want to cancel this booking? A cancellation message will be sent in the patient's chat.
+                </DialogDescription>
+              </DialogHeader>
+              {selectedBookingToCancel && (
+                <div className="py-4">
+                  <div className="p-4 bg-muted rounded-lg space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-sm text-muted-foreground">Patient</span>
+                      <span className="font-medium">{selectedBookingToCancel.patient_name}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-muted-foreground">Scheduled</span>
+                      <span className="font-medium">
+                        {formatSAST(selectedBookingToCancel.scheduled_at, "MMM d, yyyy 'at' HH:mm")}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-muted-foreground">Service</span>
+                      <span className="font-medium">{selectedBookingToCancel.service_type}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+              <DialogFooter>
+                <Button variant="outline" onClick={() => {
+                  setShowCancelDialog(false);
+                  setSelectedBookingToCancel(null);
+                }}>
+                  Keep Booking
+                </Button>
+                <Button 
+                  variant="destructive"
+                  onClick={confirmCancelBooking}
+                  disabled={isCancellingBooking}
+                >
+                  {isCancellingBooking ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Cancelling...
+                    </>
+                  ) : (
+                    "Yes, Cancel Booking"
+                  )}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
+        )}
       </main>
     </div>
   );
