@@ -318,10 +318,10 @@ const PatientDashboardContent = () => {
                           <div className="flex items-center justify-between sm:justify-end gap-4 pl-16 sm:pl-0">
                             <div className="text-left sm:text-right">
                               <p className="font-medium">
-                                {format(new Date(apt.scheduled_at), "MMM d, yyyy")}
+                                {formatSAST(apt.scheduled_at, "MMM d, yyyy")}
                               </p>
                               <p className="text-sm text-muted-foreground">
-                                {format(new Date(apt.scheduled_at), "h:mm a")}
+                                {formatSAST(apt.scheduled_at, "h:mm a")}
                               </p>
                             </div>
                             <div className="flex items-center gap-2">
