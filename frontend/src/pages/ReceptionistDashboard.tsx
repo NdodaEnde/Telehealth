@@ -9,10 +9,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { 
   MessageCircle, Users, Calendar, LogOut, Menu, X, 
-  Inbox, CheckCircle, Clock, Loader2, UserPlus, Plus
+  Inbox, CheckCircle, Clock, Loader2, UserPlus, Plus, XCircle, AlertTriangle
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
@@ -21,6 +21,7 @@ import { ChatMessageList } from "@/components/chat/ChatMessageList";
 import { ChatInput } from "@/components/chat/ChatInput";
 import { chatAPI, bookingsAPI } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
+import { formatSAST } from "@/lib/timezone";
 
 interface FeeScheduleItem {
   service_type: string;
