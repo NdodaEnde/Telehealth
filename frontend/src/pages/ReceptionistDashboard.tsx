@@ -753,8 +753,8 @@ const ReceptionistDashboardContent = () => {
                             </div>
                           </div>
                           
-                          {/* Actions */}
-                          {!isCancelled && !isCompleted && (
+                          {/* Actions - Only show for upcoming, non-cancelled, non-completed bookings */}
+                          {!isCancelled && !isCompleted && !isPast && (
                             <Button 
                               variant="destructive" 
                               size="sm"
