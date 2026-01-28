@@ -354,14 +354,15 @@ async def create_booking(
             user.access_token
         )
         
-        # Add system message to conversation
+        # Add system message to conversation with SAST time
+        scheduled_sast = to_sast(data.scheduled_at)
         system_message = {
             "id": str(uuid.uuid4()),
             "conversation_id": data.conversation_id,
             "sender_id": user.id,
             "sender_role": "system",
             "sender_name": "System",
-            "content": f"✅ Booking confirmed with {clinician_name} on {data.scheduled_at.strftime('%B %d, %Y at %H:%M')}",
+            "content": f"✅ Booking confirmed with {clinician_name} on {scheduled_sast.strftime('%B %d, %Y at %H:%M')} (SAST)",
             "message_type": "system"
         }
         await supabase.insert("chat_messages", system_message, user.access_token)
