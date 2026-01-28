@@ -89,7 +89,7 @@ const ReceptionistDashboardContent = () => {
     const fetchBookingDetails = async () => {
       if (currentConversation?.booking_id) {
         try {
-          const bookings = await bookingsAPI.getAll();
+          const bookings = await bookingsAPI.list();
           const booking = bookings.find((b: any) => b.id === currentConversation.booking_id);
           setCurrentBookingDetails(booking || null);
         } catch (error) {
