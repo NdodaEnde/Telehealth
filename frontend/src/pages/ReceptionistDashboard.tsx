@@ -84,24 +84,6 @@ const ReceptionistDashboardContent = () => {
   const [currentBookingDetails, setCurrentBookingDetails] = useState<any>(null);
   const [selectedBookingToCancel, setSelectedBookingToCancel] = useState<any>(null);
 
-  // Handle cancel booking
-  const handleCancelBooking = async () => {
-    if (!currentConversation?.booking_id) return;
-    
-    setIsCancellingBooking(true);
-    try {
-      await bookingsAPI.cancel(currentConversation.booking_id);
-      toast({ title: "Booking cancelled", description: "The patient has been notified in chat" });
-      setShowCancelDialog(false);
-      setCurrentBookingDetails(null);
-      loadData();
-    } catch (error: any) {
-      toast({ title: "Error cancelling booking", description: error.message, variant: "destructive" });
-    } finally {
-      setIsCancellingBooking(false);
-    }
-  };
-
   // Fetch booking details when conversation changes
   useEffect(() => {
     const fetchBookingDetails = async () => {
