@@ -3,10 +3,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Pill, Calendar, Clock, RefreshCw, User, CheckCircle, XCircle, AlertCircle, Download, Loader2 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Pill, Calendar, Clock, RefreshCw, User, CheckCircle, XCircle, AlertCircle, Download, Loader2, Eye } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
+import { formatSAST } from "@/lib/timezone";
 import { prescriptionsAPI } from "@/lib/api";
 import { toast } from "sonner";
 
@@ -52,9 +60,19 @@ export const PatientPrescriptionHistory = () => {
   const [prescriptions, setPrescriptions] = useState<PatientPrescription[]>([]);
   const [loading, setLoading] = useState(true);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [selectedPrescription, setSelectedPrescription] = useState<PatientPrescription | null>(null);
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+
+  // Function to view prescription details
+  const handleViewPrescription = (prescription: PatientPrescription) => {
+    setSelectedPrescription(prescription);
+    setViewDialogOpen(true);
+  };
 
   // Function to download prescription PDF
-  const handleDownloadPDF = async (prescriptionId: string, medicationName: string) => {
+  const handleDownloadPDF = async (prescriptionId: string, medicationName: string, e?: React.MouseEvent) => {
+    // Prevent card click when clicking download button
+    e?.stopPropagation();
     setDownloadingId(prescriptionId);
     try {
       const response = await prescriptionsAPI.getPDF(prescriptionId);
