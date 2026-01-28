@@ -48,6 +48,9 @@ const AdminDashboard = () => {
   const [reportData, setReportData] = useState<any>(null);
   const [peakData, setPeakData] = useState<any>(null);
   const [cancellationData, setCancellationData] = useState<any>(null);
+  const [funnelData, setFunnelData] = useState<any>(null);
+  const [noShowData, setNoShowData] = useState<any>(null);
+  const [workloadData, setWorkloadData] = useState<any>(null);
   const [reportLoading, setReportLoading] = useState(false);
   const [exportLoading, setExportLoading] = useState(false);
 
@@ -56,14 +59,20 @@ const AdminDashboard = () => {
     const fetchReportData = async () => {
       setReportLoading(true);
       try {
-        const [summary, peaks, cancellations] = await Promise.all([
+        const [summary, peaks, cancellations, funnel, noShows, workload] = await Promise.all([
           adminAnalyticsAPI.getSummary(reportPeriod),
           adminAnalyticsAPI.getPeakTimes(reportPeriod),
           adminAnalyticsAPI.getCancellationStats(reportPeriod),
+          adminAnalyticsAPI.getConversionFunnel(reportPeriod),
+          adminAnalyticsAPI.getNoShowRates(reportPeriod),
+          adminAnalyticsAPI.getReceptionistWorkload(reportPeriod),
         ]);
         setReportData(summary);
         setPeakData(peaks);
         setCancellationData(cancellations);
+        setFunnelData(funnel);
+        setNoShowData(noShows);
+        setWorkloadData(workload);
       } catch (err) {
         console.error("Failed to fetch report data:", err);
       } finally {
