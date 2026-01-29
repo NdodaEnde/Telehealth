@@ -353,7 +353,7 @@ frontend:
         comment: "Centralized API calls to FastAPI backend with auth token handling"
       - working: true
         agent: "testing"
-        comment: "✅ PASSED: API service layer configured correctly. Frontend uses REACT_APP_BACKEND_URL (https://medbook-app-14.preview.emergentagent.com) for backend communication. Authentication API calls working during form submissions."
+        comment: "✅ PASSED: API service layer configured correctly. Frontend uses REACT_APP_BACKEND_URL (https://quadbook.preview.emergentagent.com) for backend communication. Authentication API calls working during form submissions."
 
   - task: "Password Reset UI"
     implemented: true
