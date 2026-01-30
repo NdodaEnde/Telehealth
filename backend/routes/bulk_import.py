@@ -453,20 +453,9 @@ async def import_students(
         row_data = dict(zip(mapped_headers, row))
         
         email = str(row_data.get('email', '')).strip().lower() if row_data.get('email') else ''
-        status = str(row_data.get('status', '')).strip().lower() if row_data.get('status') else ''
+        # Note: status column is Campus Africa status (New/Existing student), not used for import decisions
         
-        # Skip existing users
-        if 'existing' in status:
-            results['skipped'] += 1
-            results['details'].append({
-                'row': row_idx,
-                'email': email,
-                'status': 'skipped',
-                'reason': 'Marked as existing user'
-            })
-            continue
-        
-        # Validate email
+        # Validate email - only skip if email is invalid
         if not email or not validate_email(email):
             results['errors'] += 1
             results['details'].append({
