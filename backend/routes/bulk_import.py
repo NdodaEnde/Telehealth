@@ -294,21 +294,18 @@ async def preview_import(
         validation_errors = []
         import_action = 'import'
         
-        # Check status column
-        if 'existing' in status:
-            import_action = 'skip'
-            validation_errors.append("Marked as existing user")
-        elif not email:
+        # Only skip if email is missing/invalid or already in our database
+        if not email:
             import_action = 'error'
             validation_errors.append("Missing email")
         elif not validate_email(email):
             import_action = 'error'
             validation_errors.append("Invalid email format")
         elif email in existing_emails:
-            import_action = 'skip'
-            validation_errors.append("Email already in system")
+            import_action = 'duplicate'
+            validation_errors.append("Email already in Quadcare")
         else:
-            # Validate ID number if present
+            # Validate ID number if present (warning only, still imports)
             if id_number:
                 id_validation = validate_sa_id(id_number)
                 if not id_validation['valid']:
@@ -326,7 +323,7 @@ async def preview_import(
             'date_of_birth': parse_date(row_data.get('date_of_birth')),
             'gender': str(row_data.get('gender', '')).lower() if row_data.get('gender') else '',
             'employer': row_data.get('employer', ''),
-            'status': status,
+            'status': status,  # This is Campus Africa status (New/Existing student), not import status
             'import_action': import_action,
             'validation_errors': validation_errors
         })
@@ -341,7 +338,7 @@ async def preview_import(
         "headers_found": mapped_headers,
         "summary": {
             "to_import": total_new_count,
-            "to_skip": total_existing_count,
+            "duplicates": total_duplicate_count,
             "errors": total_error_count
         }
     }
