@@ -538,7 +538,6 @@ async def import_students(
             # Create/update profile
             profile_data = {
                 'id': new_user_id,
-                'email': email,
                 'first_name': first_name,
                 'last_name': last_name,
                 'phone': phone,
