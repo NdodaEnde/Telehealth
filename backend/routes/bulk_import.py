@@ -582,6 +582,16 @@ async def import_students(
             'reason': 'Successfully created'
         })
     
+    except Exception as e:
+        logger.error(f"Bulk import error at row processing: {e}")
+        # Return partial results if we got interrupted
+        results['details'].append({
+            'row': 'N/A',
+            'email': 'N/A',
+            'status': 'error',
+            'reason': f'Import interrupted: {str(e)}'
+        })
+    
     workbook.close()
     
     logger.info(f"Bulk import completed: {results['imported']} imported, {results['skipped']} skipped, {results['duplicates']} duplicates, {results['errors']} errors")
