@@ -1003,6 +1003,290 @@ const AdminDashboard = () => {
                 </CardHeader>
               </Card>
 
+              {/* Bulk Import Card */}
+              <Dialog open={showImportDialog} onOpenChange={(open) => {
+                setShowImportDialog(open);
+                if (!open) resetImport();
+              }}>
+                <DialogTrigger asChild>
+                  <Card className="hover:shadow-lg transition-shadow cursor-pointer border-green-500/20 hover:border-green-500 bg-green-50/50 dark:bg-green-900/10">
+                    <CardHeader className="flex flex-row items-center gap-4 pb-2">
+                      <div className="p-3 rounded-xl bg-green-500/10">
+                        <Upload className="w-6 h-6 text-green-600" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-lg">Bulk Import</CardTitle>
+                        <CardDescription>Import students from Excel</CardDescription>
+                      </div>
+                    </CardHeader>
+                  </Card>
+                </DialogTrigger>
+                <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                      <FileSpreadsheet className="w-5 h-5" />
+                      Campus Africa Student Import
+                    </DialogTitle>
+                    <DialogDescription>
+                      Upload an Excel file to bulk register students. Supports password-protected files.
+                    </DialogDescription>
+                  </DialogHeader>
+                  
+                  {/* Step 1: Upload */}
+                  {importStep === 'upload' && (
+                    <div className="space-y-4 py-4">
+                      <div className="border-2 border-dashed rounded-lg p-8 text-center">
+                        <FileSpreadsheet className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                        <Label htmlFor="excel-upload" className="cursor-pointer">
+                          <span className="text-primary hover:underline">Choose Excel file</span>
+                          <span className="text-muted-foreground"> or drag and drop</span>
+                        </Label>
+                        <Input
+                          id="excel-upload"
+                          type="file"
+                          accept=".xlsx,.xls"
+                          onChange={handleFileSelect}
+                          className="hidden"
+                        />
+                        {importFile && (
+                          <p className="mt-4 text-sm text-green-600 flex items-center justify-center gap-2">
+                            <CheckCircle2 className="w-4 h-4" />
+                            {importFile.name} ({(importFile.size / 1024).toFixed(1)} KB)
+                          </p>
+                        )}
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="password">File Password (if protected)</Label>
+                        <Input
+                          id="password"
+                          type="password"
+                          placeholder="Leave empty if not password protected"
+                          value={importPassword}
+                          onChange={(e) => setImportPassword(e.target.value)}
+                        />
+                      </div>
+                      
+                      <div className="bg-muted/50 rounded-lg p-4 text-sm space-y-2">
+                        <p className="font-medium">Expected Columns:</p>
+                        <p className="text-muted-foreground">
+                          Quadcare Account Number, Title, First Name, Last Name, I.D Number, DOB, Gender, Cell, Email, Employer, Occupation, Status
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-2">
+                          • Rows with Status="ExistingUser" will be skipped<br/>
+                          • Duplicate emails will be skipped<br/>
+                          • Students can use "Forgot Password" to set their login password
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Step 2: Preview */}
+                  {importStep === 'preview' && importPreview && (
+                    <div className="space-y-4 py-4">
+                      <div className="grid grid-cols-3 gap-4">
+                        <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg text-center">
+                          <p className="text-2xl font-bold text-green-600">{importPreview.summary.to_import}</p>
+                          <p className="text-sm text-muted-foreground">To Import</p>
+                        </div>
+                        <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg text-center">
+                          <p className="text-2xl font-bold text-yellow-600">{importPreview.summary.to_skip}</p>
+                          <p className="text-sm text-muted-foreground">To Skip</p>
+                        </div>
+                        <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg text-center">
+                          <p className="text-2xl font-bold text-red-600">{importPreview.summary.errors}</p>
+                          <p className="text-sm text-muted-foreground">Errors</p>
+                        </div>
+                      </div>
+                      
+                      <p className="text-sm text-muted-foreground">
+                        Preview of first 10 rows from {importPreview.total_rows} total rows:
+                      </p>
+                      
+                      <div className="border rounded-lg overflow-x-auto max-h-[300px]">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="w-12">#</TableHead>
+                              <TableHead>Name</TableHead>
+                              <TableHead>Email</TableHead>
+                              <TableHead>Phone</TableHead>
+                              <TableHead>Status</TableHead>
+                              <TableHead>Action</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {importPreview.preview_rows.map((row: any) => (
+                              <TableRow key={row.row_number}>
+                                <TableCell className="font-mono text-xs">{row.row_number}</TableCell>
+                                <TableCell>{row.first_name} {row.last_name}</TableCell>
+                                <TableCell className="text-xs">{row.email}</TableCell>
+                                <TableCell className="text-xs">{row.phone}</TableCell>
+                                <TableCell>
+                                  <Badge variant={row.status?.includes('existing') ? 'secondary' : 'outline'}>
+                                    {row.status || 'New'}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  {row.import_action === 'import' ? (
+                                    <Badge variant="default" className="bg-green-600">
+                                      <CheckCircle2 className="w-3 h-3 mr-1" />
+                                      Import
+                                    </Badge>
+                                  ) : row.import_action === 'skip' ? (
+                                    <Badge variant="secondary">
+                                      Skip
+                                    </Badge>
+                                  ) : (
+                                    <Badge variant="destructive">
+                                      <AlertCircle className="w-3 h-3 mr-1" />
+                                      Error
+                                    </Badge>
+                                  )}
+                                  {row.validation_errors?.length > 0 && (
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                      {row.validation_errors.join(', ')}
+                                    </p>
+                                  )}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Step 3: Importing */}
+                  {importStep === 'importing' && (
+                    <div className="space-y-4 py-8 text-center">
+                      <Loader2 className="w-12 h-12 mx-auto animate-spin text-primary" />
+                      <p className="text-lg font-medium">Importing students...</p>
+                      <p className="text-sm text-muted-foreground">
+                        This may take a few minutes for large files. Please don't close this dialog.
+                      </p>
+                      <Progress value={undefined} className="w-full" />
+                    </div>
+                  )}
+                  
+                  {/* Step 4: Complete */}
+                  {importStep === 'complete' && importResult && (
+                    <div className="space-y-4 py-4">
+                      <div className="text-center py-4">
+                        <CheckCircle2 className="w-16 h-16 mx-auto text-green-500 mb-4" />
+                        <p className="text-xl font-bold">Import Complete!</p>
+                      </div>
+                      
+                      <div className="grid grid-cols-4 gap-4">
+                        <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg text-center">
+                          <p className="text-2xl font-bold text-green-600">{importResult.summary.imported}</p>
+                          <p className="text-sm text-muted-foreground">Imported</p>
+                        </div>
+                        <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg text-center">
+                          <p className="text-2xl font-bold text-yellow-600">{importResult.summary.skipped}</p>
+                          <p className="text-sm text-muted-foreground">Skipped</p>
+                        </div>
+                        <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-center">
+                          <p className="text-2xl font-bold text-blue-600">{importResult.summary.duplicates}</p>
+                          <p className="text-sm text-muted-foreground">Duplicates</p>
+                        </div>
+                        <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg text-center">
+                          <p className="text-2xl font-bold text-red-600">{importResult.summary.errors}</p>
+                          <p className="text-sm text-muted-foreground">Errors</p>
+                        </div>
+                      </div>
+                      
+                      {importResult.details?.length > 0 && (
+                        <div className="border rounded-lg overflow-x-auto max-h-[200px]">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead className="w-12">#</TableHead>
+                                <TableHead>Email</TableHead>
+                                <TableHead>Status</TableHead>
+                                <TableHead>Details</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {importResult.details.slice(0, 20).map((item: any, idx: number) => (
+                                <TableRow key={idx}>
+                                  <TableCell className="font-mono text-xs">{item.row}</TableCell>
+                                  <TableCell className="text-xs">{item.email}</TableCell>
+                                  <TableCell>
+                                    <Badge 
+                                      variant={
+                                        item.status === 'imported' ? 'default' : 
+                                        item.status === 'skipped' ? 'secondary' :
+                                        item.status === 'duplicate' ? 'outline' : 'destructive'
+                                      }
+                                      className={item.status === 'imported' ? 'bg-green-600' : ''}
+                                    >
+                                      {item.status}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell className="text-xs text-muted-foreground">{item.reason}</TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      )}
+                      
+                      <p className="text-sm text-muted-foreground text-center">
+                        Students can now log in using "Forgot Password" to set their password.
+                      </p>
+                    </div>
+                  )}
+                  
+                  <DialogFooter>
+                    {importStep === 'upload' && (
+                      <Button onClick={handlePreview} disabled={!importFile || importLoading}>
+                        {importLoading ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Processing...
+                          </>
+                        ) : (
+                          <>
+                            Preview File
+                          </>
+                        )}
+                      </Button>
+                    )}
+                    
+                    {importStep === 'preview' && (
+                      <>
+                        <Button variant="outline" onClick={() => setImportStep('upload')}>
+                          Back
+                        </Button>
+                        <Button onClick={handleImport} disabled={importLoading || importPreview?.summary?.to_import === 0}>
+                          {importLoading ? (
+                            <>
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              Importing...
+                            </>
+                          ) : (
+                            <>
+                              <UserPlus className="w-4 h-4 mr-2" />
+                              Import {importPreview?.summary?.to_import} Students
+                            </>
+                          )}
+                        </Button>
+                      </>
+                    )}
+                    
+                    {importStep === 'complete' && (
+                      <Button onClick={() => {
+                        setShowImportDialog(false);
+                        resetImport();
+                      }}>
+                        Done
+                      </Button>
+                    )}
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+
               <Card className="hover:shadow-lg transition-shadow cursor-pointer border-primary/20 hover:border-primary">
                 <CardHeader className="flex flex-row items-center gap-4 pb-2">
                   <div className="p-3 rounded-xl bg-success/10">
@@ -1023,18 +1307,6 @@ const AdminDashboard = () => {
                   <div>
                     <CardTitle className="text-lg">Appointments</CardTitle>
                     <CardDescription>View all bookings</CardDescription>
-                  </div>
-                </CardHeader>
-              </Card>
-
-              <Card className="hover:shadow-lg transition-shadow cursor-pointer border-primary/20 hover:border-primary">
-                <CardHeader className="flex flex-row items-center gap-4 pb-2">
-                  <div className="p-3 rounded-xl bg-secondary/20">
-                    <FileText className="w-6 h-6 text-secondary-foreground" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-lg">Reports</CardTitle>
-                    <CardDescription>Generate reports</CardDescription>
                   </div>
                 </CardHeader>
               </Card>
