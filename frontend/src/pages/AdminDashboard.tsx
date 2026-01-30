@@ -80,6 +80,15 @@ const AdminDashboard = () => {
   const [reportLoading, setReportLoading] = useState(false);
   const [exportLoading, setExportLoading] = useState(false);
 
+  // Bulk Import state
+  const [showImportDialog, setShowImportDialog] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importPassword, setImportPassword] = useState("");
+  const [importPreview, setImportPreview] = useState<any>(null);
+  const [importLoading, setImportLoading] = useState(false);
+  const [importResult, setImportResult] = useState<any>(null);
+  const [importStep, setImportStep] = useState<'upload' | 'preview' | 'importing' | 'complete'>('upload');
+
   // Fetch report data when period changes
   useEffect(() => {
     const fetchReportData = async () => {
