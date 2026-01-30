@@ -133,6 +133,67 @@ const AdminDashboard = () => {
     }
   };
 
+  // Bulk Import handlers
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImportFile(file);
+      setImportPreview(null);
+      setImportResult(null);
+      setImportStep('upload');
+    }
+  };
+
+  const handlePreview = async () => {
+    if (!importFile) return;
+    
+    setImportLoading(true);
+    try {
+      const preview = await bulkImportAPI.preview(importFile, importPassword || undefined);
+      setImportPreview(preview);
+      setImportStep('preview');
+      toast.success(`File parsed successfully. ${preview.total_rows} rows found.`);
+    } catch (err: any) {
+      console.error("Preview failed:", err);
+      if (err.message?.includes('password protected')) {
+        toast.error("File is password protected. Please enter the password.");
+      } else if (err.message?.includes('Invalid password')) {
+        toast.error("Invalid password. Please try again.");
+      } else {
+        toast.error(err.message || "Failed to preview file");
+      }
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
+  const handleImport = async () => {
+    if (!importFile) return;
+    
+    setImportLoading(true);
+    setImportStep('importing');
+    try {
+      const result = await bulkImportAPI.importStudents(importFile, importPassword || undefined);
+      setImportResult(result);
+      setImportStep('complete');
+      toast.success(`Import complete! ${result.summary.imported} students imported.`);
+    } catch (err: any) {
+      console.error("Import failed:", err);
+      toast.error(err.message || "Import failed");
+      setImportStep('preview');
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
+  const resetImport = () => {
+    setImportFile(null);
+    setImportPassword("");
+    setImportPreview(null);
+    setImportResult(null);
+    setImportStep('upload');
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
