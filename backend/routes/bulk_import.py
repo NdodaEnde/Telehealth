@@ -292,7 +292,7 @@ async def preview_import(
         status = str(row_data.get('status', '')).strip().lower() if row_data.get('status') else ''
         id_number = str(row_data.get('id_number', '')).strip() if row_data.get('id_number') else ''
         
-        # Determine import status
+        # Determine import status for this preview row
         validation_errors = []
         import_action = 'import'
         
@@ -300,22 +300,16 @@ async def preview_import(
         if 'existing' in status:
             import_action = 'skip'
             validation_errors.append("Marked as existing user")
-            existing_count += 1
         elif not email:
             import_action = 'error'
             validation_errors.append("Missing email")
-            error_count += 1
         elif not validate_email(email):
             import_action = 'error'
             validation_errors.append("Invalid email format")
-            error_count += 1
         elif email in existing_emails:
             import_action = 'skip'
             validation_errors.append("Email already in system")
-            existing_count += 1
         else:
-            new_count += 1
-            
             # Validate ID number if present
             if id_number:
                 id_validation = validate_sa_id(id_number)
@@ -348,9 +342,9 @@ async def preview_import(
         "preview_rows": preview_rows,
         "headers_found": mapped_headers,
         "summary": {
-            "to_import": new_count,
-            "to_skip": existing_count,
-            "errors": error_count
+            "to_import": total_new_count,
+            "to_skip": total_existing_count,
+            "errors": total_error_count
         }
     }
 
