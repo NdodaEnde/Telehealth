@@ -264,20 +264,18 @@ async def preview_import(
     # First pass: Count ALL rows for summary
     total_rows = len(rows) - 1  # Exclude header
     total_new_count = 0
-    total_existing_count = 0
+    total_duplicate_count = 0
     total_error_count = 0
     
     for row in rows[1:]:  # All data rows
         row_data = dict(zip(mapped_headers, row))
         email = str(row_data.get('email', '')).strip().lower() if row_data.get('email') else ''
-        status = str(row_data.get('status', '')).strip().lower() if row_data.get('status') else ''
         
-        if 'existing' in status:
-            total_existing_count += 1
-        elif not email or not validate_email(email):
+        # Only skip if email is missing/invalid OR already in our database
+        if not email or not validate_email(email):
             total_error_count += 1
         elif email in existing_emails:
-            total_existing_count += 1
+            total_duplicate_count += 1
         else:
             total_new_count += 1
     
