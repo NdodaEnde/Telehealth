@@ -569,6 +569,60 @@ export const adminAnalyticsAPI = {
   },
 };
 
+// ============ Bulk Import API ============
+
+export const bulkImportAPI = {
+  preview: async (file: File, password?: string) => {
+    const token = await getAuthToken();
+    const formData = new FormData();
+    formData.append('file', file);
+    if (password) {
+      formData.append('password', password);
+    }
+    
+    const response = await fetch(`${BACKEND_URL}/api/admin/bulk-import/preview`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      body: formData,
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new APIError(errorData.detail || 'Preview failed', response.status);
+    }
+    
+    return response.json();
+  },
+  
+  importStudents: async (file: File, password?: string) => {
+    const token = await getAuthToken();
+    const formData = new FormData();
+    formData.append('file', file);
+    if (password) {
+      formData.append('password', password);
+    }
+    
+    const response = await fetch(`${BACKEND_URL}/api/admin/bulk-import/students`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      body: formData,
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new APIError(errorData.detail || 'Import failed', response.status);
+    }
+    
+    return response.json();
+  },
+  
+  getTemplate: () => apiRequest('/api/admin/bulk-import/template'),
+};
+
 // Export all APIs
 export const api = {
   user: userAPI,
