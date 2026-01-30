@@ -261,12 +261,28 @@ async def preview_import(
     existing_users = await supabase.select('profiles', 'email', {})
     existing_emails = {u['email'].lower() for u in existing_users if u.get('email')}
     
-    # Parse preview rows (first 10 data rows)
-    preview_rows = []
+    # First pass: Count ALL rows for summary
     total_rows = len(rows) - 1  # Exclude header
-    new_count = 0
-    existing_count = 0
-    error_count = 0
+    total_new_count = 0
+    total_existing_count = 0
+    total_error_count = 0
+    
+    for row in rows[1:]:  # All data rows
+        row_data = dict(zip(mapped_headers, row))
+        email = str(row_data.get('email', '')).strip().lower() if row_data.get('email') else ''
+        status = str(row_data.get('status', '')).strip().lower() if row_data.get('status') else ''
+        
+        if 'existing' in status:
+            total_existing_count += 1
+        elif not email or not validate_email(email):
+            total_error_count += 1
+        elif email in existing_emails:
+            total_existing_count += 1
+        else:
+            total_new_count += 1
+    
+    # Second pass: Build preview rows (first 10 data rows)
+    preview_rows = []
     
     for row_idx, row in enumerate(rows[1:11], start=2):  # First 10 data rows
         row_data = dict(zip(mapped_headers, row))
