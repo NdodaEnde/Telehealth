@@ -203,6 +203,9 @@ app.include_router(video_router, prefix="/api")
 # Phase 4: Admin Analytics Dashboard
 app.include_router(admin_analytics_router, prefix="/api")
 
+# Phase 5: Bulk Import for Corporate Clients
+app.include_router(bulk_import_router, prefix="/api")
+
 
 # ============ Middleware ============
 
