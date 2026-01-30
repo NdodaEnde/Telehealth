@@ -1134,9 +1134,9 @@ const AdminDashboard = () => {
                                       <CheckCircle2 className="w-3 h-3 mr-1" />
                                       Import
                                     </Badge>
-                                  ) : row.import_action === 'skip' ? (
-                                    <Badge variant="secondary">
-                                      Skip
+                                  ) : row.import_action === 'duplicate' ? (
+                                    <Badge variant="secondary" className="bg-blue-100 text-blue-700">
+                                      Duplicate
                                     </Badge>
                                   ) : (
                                     <Badge variant="destructive">
