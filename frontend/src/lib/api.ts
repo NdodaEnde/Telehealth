@@ -636,6 +636,7 @@ export const api = {
   bookings: bookingsAPI,
   video: videoAPI,
   adminAnalytics: adminAnalyticsAPI,
+  bulkImport: bulkImportAPI,
 };
 
 export default api;
