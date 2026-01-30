@@ -456,28 +456,29 @@ async def import_students(
         'details': []
     }
     
-    for row_idx, row in enumerate(rows[1:], start=2):
-        row_data = dict(zip(mapped_headers, row))
-        
-        email = str(row_data.get('email', '')).strip().lower() if row_data.get('email') else ''
-        # Note: status column is Campus Africa status (New/Existing student), not used for import decisions
-        
-        # Validate email - only skip if email is invalid
-        if not email or not validate_email(email):
-            results['errors'] += 1
-            results['details'].append({
-                'row': row_idx,
-                'email': email or 'N/A',
-                'status': 'error',
-                'reason': 'Invalid or missing email'
-            })
-            continue
-        
-        # Check for duplicates
-        if email in existing_emails:
-            results['duplicates'] += 1
-            results['details'].append({
-                'row': row_idx,
+    try:
+        for row_idx, row in enumerate(rows[1:], start=2):
+            row_data = dict(zip(mapped_headers, row))
+            
+            email = str(row_data.get('email', '')).strip().lower() if row_data.get('email') else ''
+            # Note: status column is Campus Africa status (New/Existing student), not used for import decisions
+            
+            # Validate email - only skip if email is invalid
+            if not email or not validate_email(email):
+                results['errors'] += 1
+                results['details'].append({
+                    'row': row_idx,
+                    'email': email or 'N/A',
+                    'status': 'error',
+                    'reason': 'Invalid or missing email'
+                })
+                continue
+            
+            # Check for duplicates
+            if email in existing_emails:
+                results['duplicates'] += 1
+                results['details'].append({
+                    'row': row_idx,
                 'email': email,
                 'status': 'duplicate',
                 'reason': 'Email already exists'
