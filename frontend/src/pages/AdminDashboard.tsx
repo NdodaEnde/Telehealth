@@ -1073,8 +1073,9 @@ const AdminDashboard = () => {
                           Quadcare Account Number, Title, First Name, Last Name, I.D Number, DOB, Gender, Cell, Email, Employer, Occupation, Status
                         </p>
                         <p className="text-xs text-muted-foreground mt-2">
-                          • Rows with Status="ExistingUser" will be skipped<br/>
-                          • Duplicate emails will be skipped<br/>
+                          • All students (New and Existing at Campus Africa) will be imported<br/>
+                          • Rows with invalid/missing email will be skipped<br/>
+                          • Duplicate emails (already in Quadcare) will be skipped<br/>
                           • Students can use "Forgot Password" to set their login password
                         </p>
                       </div>
@@ -1089,13 +1090,13 @@ const AdminDashboard = () => {
                           <p className="text-2xl font-bold text-green-600">{importPreview.summary.to_import}</p>
                           <p className="text-sm text-muted-foreground">To Import</p>
                         </div>
-                        <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg text-center">
-                          <p className="text-2xl font-bold text-yellow-600">{importPreview.summary.to_skip}</p>
-                          <p className="text-sm text-muted-foreground">To Skip</p>
+                        <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-center">
+                          <p className="text-2xl font-bold text-blue-600">{importPreview.summary.duplicates || 0}</p>
+                          <p className="text-sm text-muted-foreground">Already in Quadcare</p>
                         </div>
                         <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg text-center">
                           <p className="text-2xl font-bold text-red-600">{importPreview.summary.errors}</p>
-                          <p className="text-sm text-muted-foreground">Errors</p>
+                          <p className="text-sm text-muted-foreground">Invalid Email</p>
                         </div>
                       </div>
                       
@@ -1111,7 +1112,7 @@ const AdminDashboard = () => {
                               <TableHead>Name</TableHead>
                               <TableHead>Email</TableHead>
                               <TableHead>Phone</TableHead>
-                              <TableHead>Status</TableHead>
+                              <TableHead>CA Status</TableHead>
                               <TableHead>Action</TableHead>
                             </TableRow>
                           </TableHeader>
