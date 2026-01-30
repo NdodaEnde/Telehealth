@@ -397,6 +397,18 @@ frontend:
         agent: "testing"
         comment: "⚠️ NOT TESTED: Admin dashboard requires admin authentication. Route exists and is properly protected. Cannot test functionality without admin credentials."
 
+  - task: "Bulk Student Import UI"
+    implemented: true
+    working: "NA"
+    file: "frontend/src/pages/AdminDashboard.tsx, frontend/src/lib/api.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "NEW: Campus Africa bulk import UI in Admin Dashboard Management tab. Features: File upload with drag-and-drop, password field for protected files, 4-step flow (upload→preview→importing→complete), preview table showing first 10 rows with validation status, import progress tracking, summary report with imported/skipped/duplicate/error counts, detailed results table. Uses bulkImportAPI.preview() and bulkImportAPI.importStudents()."
+
   - task: "Prescription PDF Download"
     implemented: true
     working: "NA"
