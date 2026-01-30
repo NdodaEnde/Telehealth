@@ -140,16 +140,23 @@ async def create_supabase_user(email: str, user_data: dict) -> dict:
         }
     }
     
-    async with httpx.AsyncClient() as client:
-        response = await client.post(url, json=payload, headers=headers)
-        
-        if response.status_code in [200, 201]:
-            return {"success": True, "user": response.json()}
-        elif response.status_code == 422 and "already been registered" in response.text:
-            return {"success": False, "error": "Email already registered", "duplicate": True}
-        else:
-            logger.error(f"Supabase user creation failed: {response.status_code} - {response.text}")
-            return {"success": False, "error": f"Auth error: {response.status_code}"}
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(url, json=payload, headers=headers)
+            
+            if response.status_code in [200, 201]:
+                return {"success": True, "user": response.json()}
+            elif response.status_code == 422 and "already been registered" in response.text:
+                return {"success": False, "error": "Email already registered", "duplicate": True}
+            else:
+                logger.error(f"Supabase user creation failed: {response.status_code} - {response.text}")
+                return {"success": False, "error": f"Auth error: {response.status_code}"}
+    except httpx.TimeoutException:
+        logger.error(f"Timeout creating user {email}")
+        return {"success": False, "error": "Connection timeout to Supabase"}
+    except Exception as e:
+        logger.error(f"Error creating user {email}: {e}")
+        return {"success": False, "error": str(e)}
 
 
 # ============ API Endpoints ============
