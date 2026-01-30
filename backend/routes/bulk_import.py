@@ -185,7 +185,7 @@ async def preview_import(
                     ms_file.decrypt(decrypted)
                     decrypted.seek(0)
                     workbook = openpyxl.load_workbook(decrypted, read_only=True, data_only=True)
-                except Exception as e:
+                except Exception:
                     raise HTTPException(status_code=400, detail="Invalid password for encrypted file")
             else:
                 file_stream.seek(0)
