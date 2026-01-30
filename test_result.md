@@ -339,6 +339,18 @@ backend:
         agent: "main"
         comment: "NEW: Admin-only analytics dashboard API. GET /api/admin/analytics/summary (booking stats, daily trends, hourly distribution, service breakdown, clinician performance), GET /api/admin/analytics/peak-times (peak/off-peak analysis by day and hour), GET /api/admin/analytics/cancellation-reasons (cancellation stats), GET /api/admin/analytics/export/csv (CSV export). All endpoints require admin role."
 
+  - task: "Bulk Student Import API"
+    implemented: true
+    working: "NA"
+    file: "backend/routes/bulk_import.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "NEW: Campus Africa bulk student import. POST /api/admin/bulk-import/preview (preview Excel file with validation), POST /api/admin/bulk-import/students (execute import, create Supabase auth users and profiles), GET /api/admin/bulk-import/template (expected column format). Supports password-protected Excel files via msoffcrypto-tool. Validates SA ID numbers, skips rows with Status='ExistingUser', skips duplicate emails. Creates users with auto-confirmed email (no welcome email sent). Students use 'Forgot Password' to set credentials."
+
 frontend:
   - task: "API Service Layer"
     implemented: true
