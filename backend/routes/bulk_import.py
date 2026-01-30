@@ -479,108 +479,108 @@ async def import_students(
                 results['duplicates'] += 1
                 results['details'].append({
                     'row': row_idx,
+                    'email': email,
+                    'status': 'duplicate',
+                    'reason': 'Email already exists'
+                })
+                continue
+            
+            # Prepare user data
+            first_name = str(row_data.get('first_name', '')).strip() if row_data.get('first_name') else ''
+            last_name = str(row_data.get('last_name', '')).strip() if row_data.get('last_name') else ''
+            id_number = str(row_data.get('id_number', '')).strip() if row_data.get('id_number') else ''
+            phone = normalize_phone(str(row_data.get('phone', ''))) if row_data.get('phone') else ''
+            
+            # Parse DOB from ID or directly
+            dob = None
+            gender = str(row_data.get('gender', '')).lower() if row_data.get('gender') else None
+            
+            if id_number:
+                id_validation = validate_sa_id(id_number)
+                if id_validation['valid']:
+                    dob = id_validation['date_of_birth']
+                    gender = id_validation['gender']
+            
+            if not dob:
+                dob = parse_date(row_data.get('date_of_birth'))
+            
+            user_data = {
+                'first_name': first_name,
+                'last_name': last_name,
+                'id_number': id_number,
+                'phone': phone,
+                'date_of_birth': dob,
+                'gender': gender,
+                'employer': row_data.get('employer', 'Campus Africa'),
+                'account_number': row_data.get('account_number', '')
+            }
+            
+            # Create Supabase auth user
+            auth_result = await create_supabase_user(email, user_data)
+            
+            if not auth_result['success']:
+                if auth_result.get('duplicate'):
+                    results['duplicates'] += 1
+                    existing_emails.add(email)  # Add to local set
+                else:
+                    results['errors'] += 1
+                results['details'].append({
+                    'row': row_idx,
+                    'email': email,
+                    'status': 'error' if not auth_result.get('duplicate') else 'duplicate',
+                    'reason': auth_result['error']
+                })
+                continue
+            
+            # Get user ID from auth response
+            new_user_id = auth_result['user']['id']
+            
+            # Create/update profile
+            profile_data = {
+                'id': new_user_id,
                 'email': email,
-                'status': 'duplicate',
-                'reason': 'Email already exists'
-            })
-            continue
-        
-        # Prepare user data
-        first_name = str(row_data.get('first_name', '')).strip() if row_data.get('first_name') else ''
-        last_name = str(row_data.get('last_name', '')).strip() if row_data.get('last_name') else ''
-        id_number = str(row_data.get('id_number', '')).strip() if row_data.get('id_number') else ''
-        phone = normalize_phone(str(row_data.get('phone', ''))) if row_data.get('phone') else ''
-        
-        # Parse DOB from ID or directly
-        dob = None
-        gender = str(row_data.get('gender', '')).lower() if row_data.get('gender') else None
-        
-        if id_number:
-            id_validation = validate_sa_id(id_number)
-            if id_validation['valid']:
-                dob = id_validation['date_of_birth']
-                gender = id_validation['gender']
-        
-        if not dob:
-            dob = parse_date(row_data.get('date_of_birth'))
-        
-        user_data = {
-            'first_name': first_name,
-            'last_name': last_name,
-            'id_number': id_number,
-            'phone': phone,
-            'date_of_birth': dob,
-            'gender': gender,
-            'employer': row_data.get('employer', 'Campus Africa'),
-            'account_number': row_data.get('account_number', '')
-        }
-        
-        # Create Supabase auth user
-        auth_result = await create_supabase_user(email, user_data)
-        
-        if not auth_result['success']:
-            if auth_result.get('duplicate'):
-                results['duplicates'] += 1
-                existing_emails.add(email)  # Add to local set
-            else:
+                'first_name': first_name,
+                'last_name': last_name,
+                'phone': phone,
+                'id_number': id_number,
+                'date_of_birth': dob,
+                'created_at': datetime.utcnow().isoformat(),
+                'updated_at': datetime.utcnow().isoformat()
+            }
+            
+            # Insert profile
+            profile_result = await supabase.insert('profiles', profile_data)
+            
+            if not profile_result:
+                logger.error(f"Failed to create profile for {email}")
                 results['errors'] += 1
+                results['details'].append({
+                    'row': row_idx,
+                    'email': email,
+                    'status': 'error',
+                    'reason': 'Failed to create profile (auth user created)'
+                })
+                continue
+            
+            # Create user role
+            role_data = {
+                'id': str(uuid.uuid4()),
+                'user_id': new_user_id,
+                'role': 'patient'
+            }
+            
+            await supabase.insert('user_roles', role_data)
+            
+            # Success
+            results['imported'] += 1
+            existing_emails.add(email)  # Prevent duplicates in same batch
             results['details'].append({
                 'row': row_idx,
                 'email': email,
-                'status': 'error' if not auth_result.get('duplicate') else 'duplicate',
-                'reason': auth_result['error']
+                'name': f"{first_name} {last_name}",
+                'status': 'imported',
+                'reason': 'Successfully created'
             })
-            continue
-        
-        # Get user ID from auth response
-        new_user_id = auth_result['user']['id']
-        
-        # Create/update profile
-        profile_data = {
-            'id': new_user_id,
-            'email': email,
-            'first_name': first_name,
-            'last_name': last_name,
-            'phone': phone,
-            'id_number': id_number,
-            'date_of_birth': dob,
-            'created_at': datetime.utcnow().isoformat(),
-            'updated_at': datetime.utcnow().isoformat()
-        }
-        
-        # Insert profile
-        profile_result = await supabase.insert('profiles', profile_data)
-        
-        if not profile_result:
-            logger.error(f"Failed to create profile for {email}")
-            results['errors'] += 1
-            results['details'].append({
-                'row': row_idx,
-                'email': email,
-                'status': 'error',
-                'reason': 'Failed to create profile (auth user created)'
-            })
-            continue
-        
-        # Create user role
-        role_data = {
-            'id': str(uuid.uuid4()),
-            'user_id': new_user_id,
-            'role': 'patient'
-        }
-        
-        await supabase.insert('user_roles', role_data)
-        
-        # Success
-        results['imported'] += 1
-        existing_emails.add(email)  # Prevent duplicates in same batch
-        results['details'].append({
-            'row': row_idx,
-            'email': email,
-            'name': f"{first_name} {last_name}",
-            'status': 'imported',
-            'reason': 'Successfully created'
-        })
     
     except Exception as e:
         logger.error(f"Bulk import error at row processing: {e}")
