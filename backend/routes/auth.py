@@ -1,12 +1,148 @@
 from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel, EmailStr
 from schemas import PasswordResetRequest, PasswordResetConfirm, APIResponse
 from supabase_client import supabase
-from config import SUPABASE_URL, SUPABASE_ANON_KEY
+from config import SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_KEY
 import httpx
 import logging
+import os
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/auth", tags=["Authentication"])
+
+# Environment toggle for sending emails (disabled during testing)
+SEND_VERIFICATION_EMAILS = os.environ.get('SEND_VERIFICATION_EMAILS', 'false').lower() == 'true'
+
+
+class CheckAccountRequest(BaseModel):
+    email: EmailStr
+
+
+class SendSetupLinkRequest(BaseModel):
+    email: EmailStr
+
+
+@router.post("/check-account")
+async def check_account(data: CheckAccountRequest):
+    """
+    Check if an account exists and its status.
+    Used by login page to detect bulk-imported users who need to set password.
+    """
+    try:
+        email = data.email.lower().strip()
+        
+        # Check if user exists in auth (using admin API)
+        url = f"{SUPABASE_URL}/auth/v1/admin/users"
+        headers = {
+            'apikey': SUPABASE_SERVICE_KEY,
+            'Authorization': f'Bearer {SUPABASE_SERVICE_KEY}'
+        }
+        
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.get(url, headers=headers)
+            
+            if response.status_code != 200:
+                logger.error(f"Failed to fetch users: {response.status_code}")
+                return APIResponse(
+                    success=True,
+                    data={'exists': False, 'needs_password_setup': False}
+                )
+            
+            users = response.json().get('users', [])
+            
+            # Find user by email
+            user = next((u for u in users if u.get('email', '').lower() == email), None)
+            
+            if not user:
+                return APIResponse(
+                    success=True,
+                    data={
+                        'exists': False,
+                        'needs_password_setup': False
+                    }
+                )
+            
+            # Check if this is a bulk-imported user (has metadata flag and no password set)
+            metadata = user.get('user_metadata', {})
+            is_bulk_imported = metadata.get('imported_from') == 'campus_africa_bulk'
+            
+            # Get user's profile to retrieve their name
+            profile = await supabase.select('profiles', 'first_name,last_name', {'id': user['id']})
+            first_name = profile[0].get('first_name', '') if profile else ''
+            
+            # Check if user has ever signed in (indicates password was set)
+            last_sign_in = user.get('last_sign_in_at')
+            needs_password = is_bulk_imported and last_sign_in is None
+            
+            return APIResponse(
+                success=True,
+                data={
+                    'exists': True,
+                    'needs_password_setup': needs_password,
+                    'first_name': first_name,
+                    'is_bulk_imported': is_bulk_imported
+                }
+            )
+            
+    except Exception as e:
+        logger.error(f"Check account error: {e}")
+        return APIResponse(
+            success=True,
+            data={'exists': False, 'needs_password_setup': False}
+        )
+
+
+@router.post("/send-setup-link")
+async def send_setup_link(data: SendSetupLinkRequest):
+    """
+    Send a password setup link to a bulk-imported user.
+    Uses Supabase's password recovery flow which sends a magic link.
+    """
+    try:
+        email = data.email.lower().strip()
+        
+        if not SEND_VERIFICATION_EMAILS:
+            # During testing, don't actually send emails
+            logger.info(f"[TEST MODE] Would send setup link to {email}")
+            return APIResponse(
+                success=True,
+                message="Setup link will be sent when the system goes live. For testing, please contact admin.",
+                data={'email_sent': False, 'test_mode': True}
+            )
+        
+        # Use Supabase password recovery to send magic link
+        url = f"{SUPABASE_URL}/auth/v1/recover"
+        headers = {
+            'apikey': SUPABASE_ANON_KEY,
+            'Content-Type': 'application/json'
+        }
+        
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(
+                url,
+                json={'email': email},
+                headers=headers
+            )
+            
+            if response.status_code in [200, 204]:
+                return APIResponse(
+                    success=True,
+                    message="A link to set your password has been sent to your email.",
+                    data={'email_sent': True}
+                )
+            else:
+                logger.error(f"Send setup link failed: {response.text}")
+                return APIResponse(
+                    success=False,
+                    message="Failed to send setup link. Please try again."
+                )
+                
+    except Exception as e:
+        logger.error(f"Send setup link error: {e}")
+        return APIResponse(
+            success=False,
+            message="Failed to send setup link. Please try again."
+        )
 
 
 @router.post("/password/reset-request")
