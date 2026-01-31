@@ -237,6 +237,76 @@ const Auth = () => {
         {/* Password Reset View */}
         {showPasswordReset ? (
           <PasswordReset onBack={() => setShowPasswordReset(false)} />
+        ) : bulkImportedUser ? (
+          /* Bulk-imported user welcome screen */
+          <Card className="border-border/50 shadow-xl">
+            <CardHeader className="text-center">
+              <div className="flex justify-center mb-4">
+                <div className="p-4 rounded-full bg-primary/10">
+                  <UserCheck className="w-10 h-10 text-primary" />
+                </div>
+              </div>
+              <CardTitle className="text-2xl">
+                Welcome, {bulkImportedUser.firstName}!
+              </CardTitle>
+              <CardDescription className="mt-2">
+                Your account has been pre-registered by <strong>Campus Africa</strong>.
+                <br />
+                Please set a password to get started.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="bg-muted/50 rounded-lg p-4 text-sm">
+                <p className="text-muted-foreground">
+                  Your email: <strong>{bulkImportedUser.email}</strong>
+                </p>
+              </div>
+              
+              <Button 
+                onClick={handleSendSetupLink} 
+                className="w-full" 
+                size="lg"
+                disabled={isSendingLink}
+              >
+                {isSendingLink ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <Mail className="w-4 h-4 mr-2" />
+                    Send Password Setup Link
+                  </>
+                )}
+              </Button>
+              
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-card px-2 text-muted-foreground">or</span>
+                </div>
+              </div>
+              
+              <Button
+                variant="outline"
+                onClick={() => setShowPasswordReset(true)}
+                className="w-full"
+              >
+                Use Forgot Password
+              </Button>
+              
+              <button
+                type="button"
+                onClick={() => setBulkImportedUser(null)}
+                className="w-full text-sm text-muted-foreground hover:text-foreground"
+              >
+                ← Back to login
+              </button>
+            </CardContent>
+          </Card>
         ) : (
         <Card className="border-border/50 shadow-xl">
           <CardHeader className="text-center">
