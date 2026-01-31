@@ -114,6 +114,29 @@ const Auth = () => {
 
   const handleLogin = async (data: LoginFormData) => {
     setIsSubmitting(true);
+    
+    // First check if this is a bulk-imported user who needs to set password
+    try {
+      setIsCheckingAccount(true);
+      const checkResult = await authAPI.checkAccount(data.email);
+      setIsCheckingAccount(false);
+      
+      if (checkResult?.data?.needs_password_setup) {
+        // This is a bulk-imported user who hasn't set their password yet
+        setBulkImportedUser({
+          email: data.email,
+          firstName: checkResult.data.first_name || 'there',
+        });
+        setIsSubmitting(false);
+        return;
+      }
+    } catch (err) {
+      console.error("Account check failed:", err);
+      // Continue with normal login if check fails
+    }
+    setIsCheckingAccount(false);
+    
+    // Normal login flow
     const { error } = await signIn(data.email, data.password);
     setIsSubmitting(false);
 
@@ -126,6 +149,40 @@ const Auth = () => {
           : error.message,
       });
     }
+  };
+
+  const handleSendSetupLink = async () => {
+    if (!bulkImportedUser) return;
+    
+    setIsSendingLink(true);
+    try {
+      const result = await authAPI.sendSetupLink(bulkImportedUser.email);
+      
+      if (result?.data?.test_mode) {
+        toast({
+          title: "Testing Mode",
+          description: "Email sending is disabled during testing. Please use 'Forgot Password' to set your password, or contact your administrator.",
+        });
+      } else if (result?.data?.email_sent) {
+        toast({
+          title: "Email sent!",
+          description: "Check your inbox for a link to set your password.",
+        });
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Could not send email",
+          description: result?.message || "Please try again or use 'Forgot Password'.",
+        });
+      }
+    } catch (err) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Could not send setup link. Please try 'Forgot Password' instead.",
+      });
+    }
+    setIsSendingLink(false);
   };
 
   const handleSignup = async (data: SignupFormData) => {
