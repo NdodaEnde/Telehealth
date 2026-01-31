@@ -22,8 +22,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Eye, EyeOff, Mail, Lock, User, Phone, Shield } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, User, Phone, Shield, UserCheck, Loader2 } from "lucide-react";
 import { PasswordReset } from "@/components/auth/PasswordReset";
+import { authAPI } from "@/lib/api";
 import type { Database } from "@/integrations/supabase/types";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
