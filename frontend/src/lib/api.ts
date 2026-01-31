@@ -274,6 +274,22 @@ export const authAPI = {
   
   verifyToken: (token: string) =>
     apiRequest(`/api/auth/verify-token?token=${token}`),
+  
+  // Check if account exists and needs password setup (for bulk-imported users)
+  checkAccount: (email: string) =>
+    fetch(`${BACKEND_URL}/api/auth/check-account`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    }).then(res => res.json()),
+  
+  // Send password setup link for bulk-imported users
+  sendSetupLink: (email: string) =>
+    fetch(`${BACKEND_URL}/api/auth/send-setup-link`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    }).then(res => res.json()),
 };
 
 // ============ Analytics API ============
