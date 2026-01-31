@@ -65,6 +65,14 @@ const Auth = () => {
   const [selectedRole, setSelectedRole] = useState<AppRole>("patient");
   const [showPasswordReset, setShowPasswordReset] = useState(false);
   
+  // Bulk-imported user state
+  const [bulkImportedUser, setBulkImportedUser] = useState<{
+    email: string;
+    firstName: string;
+  } | null>(null);
+  const [isCheckingAccount, setIsCheckingAccount] = useState(false);
+  const [isSendingLink, setIsSendingLink] = useState(false);
+  
   const { signIn, signUp, user, role } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
