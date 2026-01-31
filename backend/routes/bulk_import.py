@@ -535,40 +535,33 @@ async def import_students(
             # Get user ID from auth response
             new_user_id = auth_result['user']['id']
             
-            # Create/update profile
+            # UPDATE profile with full data (profile already created by DB trigger)
             profile_data = {
-                'id': new_user_id,
                 'first_name': first_name,
                 'last_name': last_name,
                 'phone': phone,
                 'id_number': id_number,
                 'date_of_birth': dob,
-                'created_at': datetime.utcnow().isoformat(),
                 'updated_at': datetime.utcnow().isoformat()
             }
             
-            # Insert profile
-            profile_result = await supabase.insert('profiles', profile_data)
+            # Update profile (don't fail if update fails - profile exists from trigger)
+            profile_result = await supabase.update('profiles', profile_data, {'id': new_user_id})
             
             if not profile_result:
-                logger.error(f"Failed to create profile for {email}")
-                results['errors'] += 1
-                results['details'].append({
-                    'row': row_idx,
-                    'email': email,
-                    'status': 'error',
-                    'reason': 'Failed to create profile (auth user created)'
-                })
-                continue
+                logger.warning(f"Could not update profile for {email}, but user created")
             
-            # Create user role
-            role_data = {
-                'id': str(uuid.uuid4()),
-                'user_id': new_user_id,
-                'role': 'patient'
-            }
+            # Check if user_role already exists (may be created by trigger)
+            existing_role = await supabase.select('user_roles', 'id', {'user_id': new_user_id})
             
-            await supabase.insert('user_roles', role_data)
+            if not existing_role:
+                # Create user role only if it doesn't exist
+                role_data = {
+                    'id': str(uuid.uuid4()),
+                    'user_id': new_user_id,
+                    'role': 'patient'
+                }
+                await supabase.insert('user_roles', role_data)
             
             # Success
             results['imported'] += 1
