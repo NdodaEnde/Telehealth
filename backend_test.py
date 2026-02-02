@@ -1227,9 +1227,125 @@ def test_video_token_auth():
         print(f"❌ FAILED: Unexpected error - {str(e)}")
         return False
 
+# ============ BULK IMPORT API TESTS ============
+
+def test_bulk_import_jobs_auth():
+    """Test the bulk import jobs list endpoint (requires admin auth)"""
+    print("\n=== Testing Bulk Import Jobs List API (No Auth) ===")
+    
+    try:
+        response = requests.get(f"{BASE_URL}/admin/bulk-import/jobs", timeout=10)
+        print(f"Status Code: {response.status_code}")
+        
+        if response.status_code == 401:
+            print("✅ PASSED: Bulk import jobs list correctly requires admin authentication")
+            return True
+        else:
+            print(f"❌ FAILED: Expected status 401, got {response.status_code}")
+            print(f"Response: {response.text}")
+            return False
+            
+    except requests.exceptions.RequestException as e:
+        print(f"❌ FAILED: Request error - {str(e)}")
+        return False
+    except Exception as e:
+        print(f"❌ FAILED: Unexpected error - {str(e)}")
+        return False
+
+
+def test_bulk_import_corporate_clients_auth():
+    """Test the corporate clients list endpoint (requires admin auth)"""
+    print("\n=== Testing Bulk Import Corporate Clients API (No Auth) ===")
+    
+    try:
+        response = requests.get(f"{BASE_URL}/admin/bulk-import/corporate-clients", timeout=10)
+        print(f"Status Code: {response.status_code}")
+        
+        if response.status_code == 401:
+            print("✅ PASSED: Corporate clients list correctly requires admin authentication")
+            return True
+        else:
+            print(f"❌ FAILED: Expected status 401, got {response.status_code}")
+            print(f"Response: {response.text}")
+            return False
+            
+    except requests.exceptions.RequestException as e:
+        print(f"❌ FAILED: Request error - {str(e)}")
+        return False
+    except Exception as e:
+        print(f"❌ FAILED: Unexpected error - {str(e)}")
+        return False
+
+
+def test_bulk_import_template_auth():
+    """Test the import template endpoint (requires admin auth)"""
+    print("\n=== Testing Bulk Import Template API (No Auth) ===")
+    
+    try:
+        response = requests.get(f"{BASE_URL}/admin/bulk-import/template", timeout=10)
+        print(f"Status Code: {response.status_code}")
+        
+        if response.status_code == 401:
+            print("✅ PASSED: Import template correctly requires admin authentication")
+            return True
+        else:
+            print(f"❌ FAILED: Expected status 401, got {response.status_code}")
+            print(f"Response: {response.text}")
+            return False
+            
+    except requests.exceptions.RequestException as e:
+        print(f"❌ FAILED: Request error - {str(e)}")
+        return False
+    except Exception as e:
+        print(f"❌ FAILED: Unexpected error - {str(e)}")
+        return False
+
+
+def test_bulk_import_start_auth():
+    """Test the start import endpoint (requires admin auth)"""
+    print("\n=== Testing Bulk Import Start API (No Auth) ===")
+    
+    # Create a minimal test file data for the POST request
+    test_file_content = b"First Name,Last Name,Email\nJohn,Doe,john.doe@test.com"
+    
+    try:
+        # Prepare multipart form data
+        files = {
+            'file': ('test.csv', test_file_content, 'text/csv')
+        }
+        data = {
+            'corporate_client': 'Test Client',
+            'client_type': 'university'
+        }
+        
+        response = requests.post(
+            f"{BASE_URL}/admin/bulk-import/start",
+            files=files,
+            data=data,
+            timeout=10
+        )
+        
+        print(f"Status Code: {response.status_code}")
+        
+        if response.status_code == 401:
+            print("✅ PASSED: Start import correctly requires admin authentication")
+            return True
+        else:
+            print(f"❌ FAILED: Expected status 401, got {response.status_code}")
+            print(f"Response: {response.text}")
+            return False
+            
+    except requests.exceptions.RequestException as e:
+        print(f"❌ FAILED: Request error - {str(e)}")
+        return False
+    except Exception as e:
+        print(f"❌ FAILED: Unexpected error - {str(e)}")
+        return False
+
+
 def main():
     """Run all backend API tests"""
-    print("🚀 Starting HCF Telehealth Backend API Tests - Daily.co Video API Focus")
+    print("🚀 Starting HCF Telehealth Backend API Tests - Bulk Import Background Processing Focus")
     print(f"Backend URL: {BASE_URL}")
     print("=" * 60)
     
