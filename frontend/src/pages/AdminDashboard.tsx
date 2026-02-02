@@ -1572,6 +1572,206 @@ const AdminDashboard = () => {
                 </DialogContent>
               </Dialog>
 
+              {/* Welcome Emails Card */}
+              <Dialog open={showEmailDialog} onOpenChange={(open) => {
+                setShowEmailDialog(open);
+                if (!open) resetEmailDialog();
+                if (open) handleEmailPreview();
+              }}>
+                <DialogTrigger asChild>
+                  <Card className="hover:shadow-lg transition-shadow cursor-pointer border-blue-500/20 hover:border-blue-500 bg-blue-50/50 dark:bg-blue-900/10">
+                    <CardHeader className="flex flex-row items-center gap-4 pb-2">
+                      <div className="p-3 rounded-xl bg-blue-500/10">
+                        <Mail className="w-6 h-6 text-blue-600" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-lg">Welcome Emails</CardTitle>
+                        <CardDescription>Send to Campus Africa students</CardDescription>
+                      </div>
+                    </CardHeader>
+                  </Card>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                      <Mail className="w-5 h-5" />
+                      Send Welcome Emails
+                    </DialogTitle>
+                    <DialogDescription>
+                      Send personalized welcome emails to Campus Africa students who haven't logged in yet.
+                    </DialogDescription>
+                  </DialogHeader>
+                  
+                  {/* Preview Step */}
+                  {emailStep === 'preview' && (
+                    <div className="space-y-4 py-4">
+                      {emailLoading ? (
+                        <div className="flex items-center justify-center py-8">
+                          <Loader2 className="w-6 h-6 animate-spin mr-2" />
+                          Loading recipients...
+                        </div>
+                      ) : emailPreview ? (
+                        <>
+                          <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
+                            <div className="flex items-center gap-3 mb-2">
+                              <Users className="w-5 h-5 text-blue-600" />
+                              <span className="font-semibold text-lg">
+                                {emailPreview.total_eligible} students eligible
+                              </span>
+                            </div>
+                            <p className="text-sm text-muted-foreground">
+                              Students who were bulk-imported but haven't logged in yet
+                            </p>
+                          </div>
+                          
+                          {emailPreview.preview?.length > 0 && (
+                            <div className="space-y-2">
+                              <Label>Preview (first 20):</Label>
+                              <div className="border rounded-lg max-h-48 overflow-y-auto">
+                                <Table>
+                                  <TableHeader>
+                                    <TableRow>
+                                      <TableHead>Name</TableHead>
+                                      <TableHead>Email</TableHead>
+                                    </TableRow>
+                                  </TableHeader>
+                                  <TableBody>
+                                    {emailPreview.preview.map((student: any, i: number) => (
+                                      <TableRow key={i}>
+                                        <TableCell>{student.first_name} {student.last_name}</TableCell>
+                                        <TableCell className="text-sm text-muted-foreground">{student.email}</TableCell>
+                                      </TableRow>
+                                    ))}
+                                  </TableBody>
+                                </Table>
+                              </div>
+                            </div>
+                          )}
+                          
+                          <div className="flex items-center gap-2 pt-2">
+                            <input
+                              type="checkbox"
+                              id="test-mode"
+                              checked={emailTestMode}
+                              onChange={(e) => setEmailTestMode(e.target.checked)}
+                              className="rounded"
+                            />
+                            <Label htmlFor="test-mode" className="text-sm cursor-pointer">
+                              Test mode (send to first 5 students only)
+                            </Label>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="text-center py-8 text-muted-foreground">
+                          No data loaded
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
+                  {/* Sending Step */}
+                  {emailStep === 'sending' && emailProgress && (
+                    <div className="space-y-4 py-4">
+                      <div className="flex items-center gap-2 text-blue-600">
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        <span className="font-medium">Sending emails...</span>
+                      </div>
+                      
+                      <Progress value={emailProgress.progress_percent} className="h-3" />
+                      
+                      <div className="grid grid-cols-3 gap-4 text-center">
+                        <div className="p-3 bg-muted rounded-lg">
+                          <div className="text-2xl font-bold text-green-600">{emailProgress.sent}</div>
+                          <div className="text-xs text-muted-foreground">Sent</div>
+                        </div>
+                        <div className="p-3 bg-muted rounded-lg">
+                          <div className="text-2xl font-bold text-red-600">{emailProgress.failed}</div>
+                          <div className="text-xs text-muted-foreground">Failed</div>
+                        </div>
+                        <div className="p-3 bg-muted rounded-lg">
+                          <div className="text-2xl font-bold">{emailProgress.total}</div>
+                          <div className="text-xs text-muted-foreground">Total</div>
+                        </div>
+                      </div>
+                      
+                      <p className="text-sm text-muted-foreground text-center">
+                        {emailProgress.processed} of {emailProgress.total} processed ({emailProgress.progress_percent}%)
+                      </p>
+                    </div>
+                  )}
+                  
+                  {/* Complete Step */}
+                  {emailStep === 'complete' && emailProgress && (
+                    <div className="space-y-4 py-4">
+                      <div className="text-center">
+                        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-green-100 flex items-center justify-center">
+                          <CheckCircle className="w-8 h-8 text-green-600" />
+                        </div>
+                        <h3 className="text-lg font-semibold">Emails Sent!</h3>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg text-center">
+                          <div className="text-3xl font-bold text-green-600">{emailProgress.sent}</div>
+                          <div className="text-sm text-muted-foreground">Successfully Sent</div>
+                        </div>
+                        <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg text-center">
+                          <div className="text-3xl font-bold text-red-600">{emailProgress.failed}</div>
+                          <div className="text-sm text-muted-foreground">Failed</div>
+                        </div>
+                      </div>
+                      
+                      {emailProgress.errors?.length > 0 && (
+                        <div className="space-y-2">
+                          <Label className="text-red-600">Failed emails:</Label>
+                          <div className="border border-red-200 rounded-lg max-h-32 overflow-y-auto p-2">
+                            {emailProgress.errors.map((err: any, i: number) => (
+                              <div key={i} className="text-sm text-red-600">
+                                {err.email}: {err.error}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
+                  <DialogFooter className="gap-2">
+                    {emailStep === 'preview' && (
+                      <>
+                        <Button
+                          variant="outline"
+                          onClick={handleSendTestEmail}
+                          disabled={emailLoading}
+                        >
+                          <Send className="w-4 h-4 mr-2" />
+                          Send Test to Me
+                        </Button>
+                        <Button
+                          onClick={handleSendEmails}
+                          disabled={emailLoading || !emailPreview?.total_eligible}
+                        >
+                          {emailLoading ? (
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          ) : (
+                            <Mail className="w-4 h-4 mr-2" />
+                          )}
+                          Send {emailTestMode ? '5 Test' : emailPreview?.total_eligible || 0} Emails
+                        </Button>
+                      </>
+                    )}
+                    {emailStep === 'complete' && (
+                      <Button onClick={() => {
+                        setShowEmailDialog(false);
+                        resetEmailDialog();
+                      }}>
+                        Done
+                      </Button>
+                    )}
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+
               <Card className="hover:shadow-lg transition-shadow cursor-pointer border-primary/20 hover:border-primary">
                 <CardHeader className="flex flex-row items-center gap-4 pb-2">
                   <div className="p-3 rounded-xl bg-success/10">
