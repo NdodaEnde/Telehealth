@@ -350,6 +350,9 @@ backend:
       - working: "NA"
         agent: "main"
         comment: "NEW: Campus Africa bulk student import. POST /api/admin/bulk-import/preview (preview Excel file with validation), POST /api/admin/bulk-import/students (execute import, create Supabase auth users and profiles), GET /api/admin/bulk-import/template (expected column format). Supports password-protected Excel files via msoffcrypto-tool. Validates SA ID numbers, skips rows with Status='ExistingUser', skips duplicate emails. Creates users with auto-confirmed email (no welcome email sent). Students use 'Forgot Password' to set credentials."
+      - working: "NA"
+        agent: "main"
+        comment: "UPDATED: Added background processing for large imports. New endpoints: POST /api/admin/bulk-import/start (starts background job, returns job_id), GET /api/admin/bulk-import/jobs/{job_id} (poll for progress), POST /api/admin/bulk-import/jobs/{job_id}/cancel (cancel running job), GET /api/admin/bulk-import/jobs (list recent jobs). Uses JobManager class for in-memory job tracking with progress percentage, imported count, duplicate count, error count."
 
 frontend:
   - task: "API Service Layer"
