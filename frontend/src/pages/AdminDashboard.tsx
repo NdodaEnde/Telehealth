@@ -239,32 +239,42 @@ const AdminDashboard = () => {
     
     setImportLoading(true);
     setImportStep('importing');
+    setImportProgress(null);
+    
     try {
-      const result = await bulkImportAPI.importStudents(
+      // Start background import job
+      const result = await bulkImportAPI.startImport(
         importFile, 
         importPassword || undefined,
         clientName,
         selectedClientType
       );
-      setImportResult(result);
-      setImportStep('complete');
-      toast.success(`Import complete! ${result.summary.imported} patients imported to ${clientName}.`);
       
-      // Refresh corporate clients list (don't fail if this errors)
-      try {
-        const response = await bulkImportAPI.getCorporateClients();
-        if (response?.clients) {
-          setCorporateClients(response.clients);
-        }
-      } catch (refreshErr) {
-        console.log("Could not refresh clients list, but import succeeded");
+      if (result?.job_id) {
+        setImportJobId(result.job_id);
+        toast.success(`Import started for ${result.total_rows} rows. Processing in background...`);
+        // Progress will be updated via the polling useEffect
+      } else {
+        throw new Error("Failed to start import job");
       }
     } catch (err: any) {
       console.error("Import failed:", err);
-      toast.error(err.message || "Import failed");
+      toast.error(err.message || "Failed to start import");
       setImportStep('preview');
-    } finally {
       setImportLoading(false);
+    }
+  };
+
+  const handleCancelImport = async () => {
+    if (!importJobId) return;
+    
+    try {
+      await bulkImportAPI.cancelJob(importJobId);
+      toast.success("Import cancelled");
+      setImportStep('preview');
+      setImportLoading(false);
+    } catch (err) {
+      toast.error("Could not cancel import");
     }
   };
 
