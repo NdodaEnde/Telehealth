@@ -917,3 +917,379 @@ async def get_patient_analytics_by_client(
         },
         "by_client": analytics
     }
+
+
+# ============ Background Processing Endpoints ============
+
+async def process_import_background(
+    job_id: str,
+    rows: list,
+    mapped_headers: list,
+    corporate_client: str,
+    corporate_client_id: str
+):
+    """Background task to process the actual import"""
+    job = job_manager.get_job(job_id)
+    if not job:
+        logger.error(f"Job {job_id} not found")
+        return
+    
+    job.status = JobStatus.RUNNING
+    
+    # Get existing emails from auth.users
+    existing_emails = set()
+    try:
+        page = 1
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            while True:
+                response = await client.get(
+                    f"{SUPABASE_URL}/auth/v1/admin/users",
+                    params={'page': page, 'per_page': 100},
+                    headers={
+                        'apikey': SUPABASE_SERVICE_KEY,
+                        'Authorization': f'Bearer {SUPABASE_SERVICE_KEY}'
+                    }
+                )
+                if response.status_code != 200:
+                    break
+                users = response.json().get('users', [])
+                if not users:
+                    break
+                for u in users:
+                    if u.get('email'):
+                        existing_emails.add(u['email'].lower())
+                if len(users) < 100:
+                    break
+                page += 1
+        logger.info(f"Job {job_id}: Found {len(existing_emails)} existing emails")
+    except Exception as e:
+        logger.error(f"Job {job_id}: Error fetching existing emails: {e}")
+    
+    # Process rows
+    try:
+        for row_idx, row in enumerate(rows[1:], start=2):
+            # Check if job was cancelled
+            if job.status == JobStatus.CANCELLED:
+                logger.info(f"Job {job_id} was cancelled at row {row_idx}")
+                break
+            
+            row_data = dict(zip(mapped_headers, row))
+            email = str(row_data.get('email', '')).strip().lower() if row_data.get('email') else ''
+            
+            job.processed += 1
+            
+            # Validate email
+            if not email or not validate_email(email):
+                job.errors += 1
+                job_manager.add_detail(job_id, {
+                    'row': row_idx,
+                    'email': email or 'N/A',
+                    'status': 'error',
+                    'reason': 'Invalid or missing email'
+                })
+                continue
+            
+            # Check for duplicates
+            if email in existing_emails:
+                job.duplicates += 1
+                job_manager.add_detail(job_id, {
+                    'row': row_idx,
+                    'email': email,
+                    'status': 'duplicate',
+                    'reason': 'Email already exists'
+                })
+                continue
+            
+            # Extract all fields
+            first_name = str(row_data.get('first_name', '')).strip() if row_data.get('first_name') else ''
+            last_name = str(row_data.get('last_name', '')).strip() if row_data.get('last_name') else ''
+            id_number = str(row_data.get('id_number', '')).strip() if row_data.get('id_number') else ''
+            phone = normalize_phone(str(row_data.get('phone', ''))) if row_data.get('phone') else ''
+            title = str(row_data.get('title', '')).strip() if row_data.get('title') else None
+            account_number = str(row_data.get('account_number', '')).strip() if row_data.get('account_number') else None
+            employer = str(row_data.get('employer', '')).strip() if row_data.get('employer') else corporate_client
+            occupation = str(row_data.get('occupation', '')).strip() if row_data.get('occupation') else None
+            import_status = str(row_data.get('status', '')).strip() if row_data.get('status') else None
+            
+            # Parse DOB and gender from ID
+            dob = None
+            gender = str(row_data.get('gender', '')).lower() if row_data.get('gender') else None
+            
+            if id_number:
+                id_number = re.sub(r'[^\d]', '', id_number)  # Clean ID
+                id_validation = validate_sa_id(id_number)
+                if id_validation.get('valid'):
+                    dob = id_validation['date_of_birth']
+                    gender = id_validation['gender']
+            
+            if not dob:
+                dob = parse_date(row_data.get('date_of_birth'))
+            
+            # Create Supabase auth user
+            user_data = {
+                'first_name': first_name,
+                'last_name': last_name,
+                'id_number': id_number,
+                'phone': phone,
+                'date_of_birth': dob,
+                'gender': gender,
+            }
+            
+            auth_result = await create_supabase_user(email, user_data)
+            
+            if not auth_result['success']:
+                if auth_result.get('duplicate'):
+                    job.duplicates += 1
+                    existing_emails.add(email)
+                    job_manager.add_detail(job_id, {
+                        'row': row_idx,
+                        'email': email,
+                        'status': 'duplicate',
+                        'reason': auth_result['error']
+                    })
+                else:
+                    job.errors += 1
+                    job_manager.add_detail(job_id, {
+                        'row': row_idx,
+                        'email': email,
+                        'status': 'error',
+                        'reason': auth_result['error']
+                    })
+                continue
+            
+            # Get user ID and update profile
+            new_user_id = auth_result['user']['id']
+            
+            profile_data = {
+                'first_name': first_name,
+                'last_name': last_name,
+                'phone': phone,
+                'id_number': id_number,
+                'date_of_birth': dob,
+                'gender': gender,
+                'title': title,
+                'account_number': account_number,
+                'employer': employer,
+                'occupation': occupation,
+                'import_status': import_status,
+                'corporate_client_id': corporate_client_id,
+                'patient_type': 'corporate',
+                'updated_at': datetime.utcnow().isoformat()
+            }
+            
+            # Remove None values
+            profile_data = {k: v for k, v in profile_data.items() if v is not None}
+            
+            await supabase.update('profiles', profile_data, {'id': new_user_id})
+            
+            # Check/create user role
+            existing_role = await supabase.select('user_roles', 'id', {'user_id': new_user_id})
+            if not existing_role:
+                await supabase.insert('user_roles', {
+                    'id': str(uuid.uuid4()),
+                    'user_id': new_user_id,
+                    'role': 'patient'
+                })
+            
+            # Success
+            job.imported += 1
+            existing_emails.add(email)
+            job_manager.add_detail(job_id, {
+                'row': row_idx,
+                'email': email,
+                'name': f"{first_name} {last_name}",
+                'status': 'imported',
+                'reason': 'Successfully created'
+            })
+            
+            # Small delay to avoid overwhelming Supabase API
+            if job.processed % 10 == 0:
+                await asyncio.sleep(0.1)
+        
+        # Complete the job
+        job_manager.complete_job(job_id, success=True)
+        logger.info(f"Job {job_id} completed: {job.imported} imported, {job.duplicates} duplicates, {job.errors} errors")
+        
+    except Exception as e:
+        logger.error(f"Job {job_id} failed with error: {e}")
+        job_manager.complete_job(job_id, success=False, error_message=str(e))
+
+
+@router.post("/start")
+async def start_import(
+    file: UploadFile = File(...),
+    password: Optional[str] = Form(None),
+    corporate_client: Optional[str] = Form("Campus Africa"),
+    client_type: Optional[str] = Form("university"),
+    user: AuthenticatedUser = Depends(get_current_user)
+):
+    """
+    Start a background import job.
+    Returns immediately with a job_id that can be used to check progress.
+    """
+    # Check admin role
+    roles = await supabase.select('user_roles', 'role', {'user_id': user.id})
+    if not roles or roles[0].get('role') != 'admin':
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    # Get or create corporate client
+    corporate_client_id = await get_or_create_corporate_client(corporate_client, client_type)
+    if not corporate_client_id:
+        raise HTTPException(status_code=500, detail=f"Could not get/create corporate client: {corporate_client}")
+    
+    # Read and parse file
+    content = await file.read()
+    file_stream = io.BytesIO(content)
+    
+    try:
+        if password:
+            decrypted = io.BytesIO()
+            ms_file = msoffcrypto.OfficeFile(file_stream)
+            if ms_file.is_encrypted():
+                ms_file.load_key(password=password)
+                ms_file.decrypt(decrypted)
+                decrypted.seek(0)
+                workbook = openpyxl.load_workbook(decrypted, data_only=True)
+            else:
+                file_stream.seek(0)
+                workbook = openpyxl.load_workbook(file_stream, data_only=True)
+        else:
+            try:
+                workbook = openpyxl.load_workbook(file_stream, data_only=True)
+            except Exception:
+                file_stream.seek(0)
+                ms_file = msoffcrypto.OfficeFile(file_stream)
+                if ms_file.is_encrypted():
+                    raise HTTPException(
+                        status_code=400, 
+                        detail="File is password protected. Please provide the password."
+                    )
+                raise
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error opening Excel file: {e}")
+        raise HTTPException(status_code=400, detail=f"Cannot open file: {str(e)}")
+    
+    # Get sheet and parse
+    sheet = workbook.active
+    rows = list(sheet.iter_rows(values_only=True))
+    workbook.close()
+    
+    if len(rows) < 2:
+        raise HTTPException(status_code=400, detail="File must have headers and data")
+    
+    # Parse headers
+    headers = [str(h).strip().lower() if h else f"col_{i}" for i, h in enumerate(rows[0])]
+    
+    column_map = {
+        'quadcare account number': 'account_number',
+        'account number': 'account_number',
+        'title': 'title',
+        'first name': 'first_name',
+        'firstname': 'first_name',
+        'last name': 'last_name',
+        'lastname': 'last_name',
+        'surname': 'last_name',
+        'i.d number': 'id_number',
+        'id number': 'id_number',
+        'id_number': 'id_number',
+        'idnumber': 'id_number',
+        'dob': 'date_of_birth',
+        'date of birth': 'date_of_birth',
+        'gender': 'gender',
+        'sex': 'gender',
+        'cell': 'phone',
+        'phone': 'phone',
+        'mobile': 'phone',
+        'cellphone': 'phone',
+        'email': 'email',
+        'e-mail': 'email',
+        'employer': 'employer',
+        'company': 'employer',
+        'occupation': 'occupation',
+        'job': 'occupation',
+        'status': 'status'
+    }
+    
+    mapped_headers = [column_map.get(h, h) for h in headers]
+    total_rows = len(rows) - 1
+    
+    # Create job
+    job = job_manager.create_job(total_rows, corporate_client)
+    
+    # Start background processing
+    job_manager.start_task(
+        job.id,
+        process_import_background(
+            job.id,
+            rows,
+            mapped_headers,
+            corporate_client,
+            corporate_client_id
+        )
+    )
+    
+    return {
+        "success": True,
+        "message": f"Import job started for {total_rows} rows",
+        "job_id": job.id,
+        "total_rows": total_rows,
+        "corporate_client": corporate_client
+    }
+
+
+@router.get("/jobs/{job_id}")
+async def get_job_status(
+    job_id: str,
+    user: AuthenticatedUser = Depends(get_current_user)
+):
+    """Get the status of an import job"""
+    # Check admin role
+    roles = await supabase.select('user_roles', 'role', {'user_id': user.id})
+    if not roles or roles[0].get('role') != 'admin':
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    job = job_manager.get_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    
+    return {
+        "success": True,
+        "job": job.to_dict()
+    }
+
+
+@router.post("/jobs/{job_id}/cancel")
+async def cancel_job(
+    job_id: str,
+    user: AuthenticatedUser = Depends(get_current_user)
+):
+    """Cancel a running import job"""
+    # Check admin role
+    roles = await supabase.select('user_roles', 'role', {'user_id': user.id})
+    if not roles or roles[0].get('role') != 'admin':
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    success = job_manager.cancel_job(job_id)
+    if success:
+        return {"success": True, "message": "Job cancelled"}
+    else:
+        raise HTTPException(status_code=400, detail="Could not cancel job (may already be completed)")
+
+
+@router.get("/jobs")
+async def list_jobs(
+    user: AuthenticatedUser = Depends(get_current_user)
+):
+    """List recent import jobs"""
+    # Check admin role
+    roles = await supabase.select('user_roles', 'role', {'user_id': user.id})
+    if not roles or roles[0].get('role') != 'admin':
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    jobs = job_manager.list_jobs(limit=20)
+    return {
+        "success": True,
+        "jobs": jobs
+    }
