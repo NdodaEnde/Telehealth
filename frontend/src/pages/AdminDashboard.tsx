@@ -88,6 +88,25 @@ const AdminDashboard = () => {
   const [importLoading, setImportLoading] = useState(false);
   const [importResult, setImportResult] = useState<any>(null);
   const [importStep, setImportStep] = useState<'upload' | 'preview' | 'importing' | 'complete'>('upload');
+  const [corporateClients, setCorporateClients] = useState<any[]>([]);
+  const [selectedClient, setSelectedClient] = useState("Campus Africa");
+  const [selectedClientType, setSelectedClientType] = useState("university");
+  const [newClientName, setNewClientName] = useState("");
+
+  // Fetch corporate clients on mount
+  useEffect(() => {
+    const fetchClients = async () => {
+      try {
+        const response = await bulkImportAPI.getCorporateClients();
+        if (response?.clients) {
+          setCorporateClients(response.clients);
+        }
+      } catch (err) {
+        console.error("Failed to fetch corporate clients:", err);
+      }
+    };
+    fetchClients();
+  }, []);
 
   // Fetch report data when period changes
   useEffect(() => {
