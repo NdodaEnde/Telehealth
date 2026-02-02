@@ -1106,16 +1106,62 @@ const AdminDashboard = () => {
                         />
                       </div>
                       
+                      {/* Corporate Client Selection */}
+                      <div className="space-y-2">
+                        <Label htmlFor="corporate-client">Corporate Client</Label>
+                        <Select value={selectedClient} onValueChange={setSelectedClient}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select corporate client" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {corporateClients.map((client) => (
+                              <SelectItem key={client.id} value={client.name}>
+                                {client.name} ({client.code || client.type})
+                              </SelectItem>
+                            ))}
+                            <SelectItem value="__new__">+ Add New Client</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      {selectedClient === '__new__' && (
+                        <div className="space-y-2 pl-4 border-l-2 border-primary">
+                          <div className="space-y-2">
+                            <Label htmlFor="new-client-name">New Client Name</Label>
+                            <Input
+                              id="new-client-name"
+                              placeholder="e.g., Company XYZ"
+                              value={newClientName}
+                              onChange={(e) => setNewClientName(e.target.value)}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="client-type">Client Type</Label>
+                            <Select value={selectedClientType} onValueChange={setSelectedClientType}>
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="corporate">Corporate</SelectItem>
+                                <SelectItem value="university">University / College</SelectItem>
+                                <SelectItem value="government">Government</SelectItem>
+                                <SelectItem value="ngo">NGO / Non-Profit</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                      )}
+                      
                       <div className="bg-muted/50 rounded-lg p-4 text-sm space-y-2">
                         <p className="font-medium">Expected Columns:</p>
                         <p className="text-muted-foreground">
-                          Quadcare Account Number, Title, First Name, Last Name, I.D Number, DOB, Gender, Cell, Email, Employer, Occupation, Status
+                          Account Number, Title, First Name, Last Name, I.D Number, DOB, Gender, Cell, Email, Employer, Occupation, Status
                         </p>
                         <p className="text-xs text-muted-foreground mt-2">
-                          • All students (New and Existing at Campus Africa) will be imported<br/>
+                          • All patients will be linked to: <strong>{selectedClient === '__new__' ? newClientName || '(enter name above)' : selectedClient}</strong><br/>
                           • Rows with invalid/missing email will be skipped<br/>
                           • Duplicate emails (already in Quadcare) will be skipped<br/>
-                          • Students can use "Forgot Password" to set their login password
+                          • Patients can use "Forgot Password" to set their login password
                         </p>
                       </div>
                     </div>
@@ -1124,6 +1170,11 @@ const AdminDashboard = () => {
                   {/* Step 2: Preview */}
                   {importStep === 'preview' && importPreview && (
                     <div className="space-y-4 py-4">
+                      <div className="p-3 bg-primary/10 rounded-lg flex items-center gap-2 mb-4">
+                        <Building2 className="w-5 h-5 text-primary" />
+                        <span className="font-medium">Importing to: {selectedClient === '__new__' ? newClientName : selectedClient}</span>
+                      </div>
+                      
                       <div className="grid grid-cols-3 gap-4">
                         <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg text-center">
                           <p className="text-2xl font-bold text-green-600">{importPreview.summary.to_import}</p>
