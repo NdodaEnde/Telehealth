@@ -49,7 +49,8 @@ async def fetch_from_supabase(table: str, query_params: Dict = None, paginate: b
             
             try:
                 response = await client.get(url, headers=headers)
-                if response.status_code == 200:
+                # 200 = OK, 206 = Partial Content (more data available)
+                if response.status_code in [200, 206]:
                     data = response.json()
                     all_results.extend(data)
                     
