@@ -208,10 +208,14 @@ const AdminDashboard = () => {
       setImportStep('complete');
       toast.success(`Import complete! ${result.summary.imported} patients imported to ${clientName}.`);
       
-      // Refresh corporate clients list
-      const response = await bulkImportAPI.getCorporateClients();
-      if (response?.clients) {
-        setCorporateClients(response.clients);
+      // Refresh corporate clients list (don't fail if this errors)
+      try {
+        const response = await bulkImportAPI.getCorporateClients();
+        if (response?.clients) {
+          setCorporateClients(response.clients);
+        }
+      } catch (refreshErr) {
+        console.log("Could not refresh clients list, but import succeeded");
       }
     } catch (err: any) {
       console.error("Import failed:", err);
