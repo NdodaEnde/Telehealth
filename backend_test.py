@@ -1434,6 +1434,11 @@ def main():
         'video_health', 'video_room_auth', 'video_token_auth'
     ]
     
+    bulk_import_tests = [
+        'bulk_import_jobs_auth', 'bulk_import_corporate_clients_auth', 
+        'bulk_import_template_auth', 'bulk_import_start_auth'
+    ]
+    
     print("EXISTING APIs:")
     for test_name in existing_tests:
         if test_name in test_results:
