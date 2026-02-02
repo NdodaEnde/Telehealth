@@ -411,6 +411,9 @@ frontend:
       - working: "NA"
         agent: "main"
         comment: "NEW: Campus Africa bulk import UI in Admin Dashboard Management tab. Features: File upload with drag-and-drop, password field for protected files, 4-step flow (upload→preview→importing→complete), preview table showing first 10 rows with validation status, import progress tracking, summary report with imported/skipped/duplicate/error counts, detailed results table. Uses bulkImportAPI.preview() and bulkImportAPI.importStudents()."
+      - working: "NA"
+        agent: "main"
+        comment: "UPDATED: Added background processing support. New UI features: Real-time progress bar with percentage, polling every 2 seconds for job status updates, cancel button for running jobs, corporate client dropdown selection, ability to add new corporate clients. Uses bulkImportAPI.startImport() for background job, bulkImportAPI.getJobStatus() for polling, bulkImportAPI.cancelJob() to stop."
 
   - task: "Prescription PDF Download"
     implemented: true
