@@ -15,11 +15,11 @@ SEND_VERIFICATION_EMAILS = os.environ.get('SEND_VERIFICATION_EMAILS', 'false').l
 
 
 class CheckAccountRequest(BaseModel):
-    email: EmailStr
+    email: str  # Use str instead of EmailStr to allow .test domains during development
 
 
 class SendSetupLinkRequest(BaseModel):
-    email: EmailStr
+    email: str  # Use str instead of EmailStr to allow .test domains during development
 
 
 @router.post("/check-account")
