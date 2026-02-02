@@ -612,6 +612,7 @@ export const bulkImportAPI = {
     return response.json();
   },
   
+  // Legacy sync import (kept for backward compatibility)
   importStudents: async (file: File, password?: string, corporateClient?: string, clientType?: string) => {
     const token = await getAuthToken();
     const formData = new FormData();
@@ -641,6 +642,43 @@ export const bulkImportAPI = {
     
     return response.json();
   },
+  
+  // New background import (production-ready)
+  startImport: async (file: File, password?: string, corporateClient?: string, clientType?: string) => {
+    const token = await getAuthToken();
+    const formData = new FormData();
+    formData.append('file', file);
+    if (password) {
+      formData.append('password', password);
+    }
+    if (corporateClient) {
+      formData.append('corporate_client', corporateClient);
+    }
+    if (clientType) {
+      formData.append('client_type', clientType);
+    }
+    
+    const response = await fetch(`${BACKEND_URL}/api/admin/bulk-import/start`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      body: formData,
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new APIError(errorData.detail || 'Failed to start import', response.status);
+    }
+    
+    return response.json();
+  },
+  
+  getJobStatus: (jobId: string) => apiRequest(`/api/admin/bulk-import/jobs/${jobId}`),
+  
+  cancelJob: (jobId: string) => apiRequest(`/api/admin/bulk-import/jobs/${jobId}/cancel`, { method: 'POST' }),
+  
+  listJobs: () => apiRequest('/api/admin/bulk-import/jobs'),
   
   getTemplate: () => apiRequest('/api/admin/bulk-import/template'),
   
