@@ -693,6 +693,26 @@ export const bulkImportAPI = {
   getAnalyticsByClient: () => apiRequest('/api/admin/bulk-import/analytics/by-client'),
 };
 
+// Welcome Emails API
+export const welcomeEmailsAPI = {
+  preview: (corporateClientId?: string) => {
+    const params = corporateClientId ? `?corporate_client_id=${corporateClientId}` : '';
+    return apiRequest(`/api/admin/welcome-emails/preview${params}`);
+  },
+  
+  send: (data: { from_email?: string; login_url?: string; test_mode?: boolean; corporate_client_id?: string }) =>
+    apiRequest('/api/admin/welcome-emails/send', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  
+  getJobStatus: (jobId: string) => apiRequest(`/api/admin/welcome-emails/jobs/${jobId}`),
+  
+  listJobs: () => apiRequest('/api/admin/welcome-emails/jobs'),
+  
+  sendTest: () => apiRequest('/api/admin/welcome-emails/test', { method: 'POST' }),
+};
+
 // Export all APIs
 export const api = {
   user: userAPI,
@@ -707,6 +727,7 @@ export const api = {
   video: videoAPI,
   adminAnalytics: adminAnalyticsAPI,
   bulkImport: bulkImportAPI,
+  welcomeEmails: welcomeEmailsAPI,
 };
 
 export default api;
