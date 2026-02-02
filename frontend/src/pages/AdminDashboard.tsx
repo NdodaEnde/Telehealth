@@ -161,6 +161,30 @@ const AdminDashboard = () => {
     return () => clearInterval(pollInterval);
   }, [importJobId, importStep]);
 
+  // Poll for email job progress
+  useEffect(() => {
+    if (!emailJobId || emailStep !== 'sending') return;
+    
+    const pollInterval = setInterval(async () => {
+      try {
+        const response = await welcomeEmailsAPI.getJobStatus(emailJobId);
+        if (response?.job) {
+          setEmailProgress(response.job);
+          
+          if (response.job.status === 'completed') {
+            clearInterval(pollInterval);
+            setEmailStep('complete');
+            toast.success(`Emails sent! ${response.job.sent} delivered, ${response.job.failed} failed.`);
+          }
+        }
+      } catch (err) {
+        console.error("Error polling email job status:", err);
+      }
+    }, 2000);
+    
+    return () => clearInterval(pollInterval);
+  }, [emailJobId, emailStep]);
+
   // Fetch report data when period changes
   useEffect(() => {
     const fetchReportData = async () => {
