@@ -51,7 +51,9 @@ import {
   FileSpreadsheet,
   AlertCircle,
   CheckCircle2,
-  UserPlus
+  UserPlus,
+  Mail,
+  Send
 } from "lucide-react";
 import { useAnalytics } from "@/hooks/useAnalytics";
 import { AnalyticsOverviewCards } from "@/components/analytics/AnalyticsOverviewCards";
