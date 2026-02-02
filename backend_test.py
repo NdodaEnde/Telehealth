@@ -1395,6 +1395,16 @@ def main():
     test_results['video_room_auth'] = test_video_room_auth()
     test_results['video_token_auth'] = test_video_token_auth()
     
+    # Run Bulk Import API tests
+    print("\n" + "=" * 60)
+    print("🆕 BULK IMPORT BACKGROUND PROCESSING TESTING")
+    print("=" * 60)
+    
+    test_results['bulk_import_jobs_auth'] = test_bulk_import_jobs_auth()
+    test_results['bulk_import_corporate_clients_auth'] = test_bulk_import_corporate_clients_auth()
+    test_results['bulk_import_template_auth'] = test_bulk_import_template_auth()
+    test_results['bulk_import_start_auth'] = test_bulk_import_start_auth()
+    
     # Summary
     print("\n" + "=" * 60)
     print("📊 TEST SUMMARY")
