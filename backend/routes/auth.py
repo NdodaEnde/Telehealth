@@ -30,59 +30,91 @@ async def check_account(data: CheckAccountRequest):
     """
     try:
         email = data.email.lower().strip()
+        logger.info(f"Checking account for email: {email}")
         
-        # Check if user exists in auth (using admin API)
+        # Use Supabase Admin API to get user by email directly
+        # This is more efficient than fetching all users
         url = f"{SUPABASE_URL}/auth/v1/admin/users"
         headers = {
             'apikey': SUPABASE_SERVICE_KEY,
             'Authorization': f'Bearer {SUPABASE_SERVICE_KEY}'
         }
         
+        user = None
+        
         async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.get(url, headers=headers)
+            # Search through pages to find the user
+            page = 1
+            per_page = 1000  # Fetch more users per page for efficiency
             
-            if response.status_code != 200:
-                logger.error(f"Failed to fetch users: {response.status_code}")
-                return APIResponse(
-                    success=True,
-                    data={'exists': False, 'needs_password_setup': False}
+            while True:
+                response = await client.get(
+                    url, 
+                    params={'page': page, 'per_page': per_page},
+                    headers=headers
                 )
-            
-            users = response.json().get('users', [])
-            
-            # Find user by email
-            user = next((u for u in users if u.get('email', '').lower() == email), None)
-            
-            if not user:
-                return APIResponse(
-                    success=True,
-                    data={
-                        'exists': False,
-                        'needs_password_setup': False
-                    }
-                )
-            
-            # Check if this is a bulk-imported user (has metadata flag and no password set)
-            metadata = user.get('user_metadata', {})
-            is_bulk_imported = metadata.get('imported_from') == 'campus_africa_bulk'
-            
-            # Get user's profile to retrieve their name
-            profile = await supabase.select('profiles', 'first_name,last_name', {'id': user['id']})
-            first_name = profile[0].get('first_name', '') if profile else ''
-            
-            # Check if user has ever signed in (indicates password was set)
-            last_sign_in = user.get('last_sign_in_at')
-            needs_password = is_bulk_imported and last_sign_in is None
-            
+                
+                if response.status_code != 200:
+                    logger.error(f"Failed to fetch users: {response.status_code} - {response.text}")
+                    break
+                
+                users_data = response.json()
+                users = users_data.get('users', [])
+                
+                if not users:
+                    break
+                
+                # Find user by email in this page
+                user = next((u for u in users if u.get('email', '').lower() == email), None)
+                
+                if user:
+                    logger.info(f"Found user {email} on page {page}")
+                    break
+                
+                # If we got fewer users than requested, we've reached the end
+                if len(users) < per_page:
+                    break
+                    
+                page += 1
+                
+                # Safety limit to prevent infinite loops
+                if page > 10:
+                    logger.warning(f"Reached page limit while searching for {email}")
+                    break
+        
+        if not user:
+            logger.info(f"No account found for email: {email}")
             return APIResponse(
                 success=True,
                 data={
-                    'exists': True,
-                    'needs_password_setup': needs_password,
-                    'first_name': first_name,
-                    'is_bulk_imported': is_bulk_imported
+                    'exists': False,
+                    'needs_password_setup': False
                 }
             )
+        
+        # Check if this is a bulk-imported user (has metadata flag and no password set)
+        metadata = user.get('user_metadata', {})
+        is_bulk_imported = metadata.get('imported_from') == 'campus_africa_bulk'
+        
+        # Get user's profile to retrieve their name
+        profile = await supabase.select('profiles', 'first_name,last_name', {'id': user['id']})
+        first_name = profile[0].get('first_name', '') if profile else ''
+        
+        # Check if user has ever signed in (indicates password was set)
+        last_sign_in = user.get('last_sign_in_at')
+        needs_password = is_bulk_imported and last_sign_in is None
+        
+        logger.info(f"Account check result for {email}: exists=True, needs_password={needs_password}, is_bulk={is_bulk_imported}")
+        
+        return APIResponse(
+            success=True,
+            data={
+                'exists': True,
+                'needs_password_setup': needs_password,
+                'first_name': first_name,
+                'is_bulk_imported': is_bulk_imported
+            }
+        )
             
     except Exception as e:
         logger.error(f"Check account error: {e}")
