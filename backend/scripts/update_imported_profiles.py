@@ -1,7 +1,6 @@
 """
-Script to update profiles of bulk-imported users with their data from the Excel file.
-Run this AFTER fixing the bulk import code to update users who were imported
-but didn't get their profile data saved.
+Script to update profiles of bulk-imported users with their COMPLETE data from the Excel file.
+Run this to fix profiles that were imported but missing data.
 
 Usage:
     python update_imported_profiles.py --file /path/to/excel.xlsx --password yourpassword
@@ -28,11 +27,11 @@ from config import SUPABASE_URL, SUPABASE_SERVICE_KEY
 def normalize_phone(phone: str) -> str:
     """Normalize South African phone number"""
     if not phone:
-        return ""
+        return None
     phone = re.sub(r'[^\d+]', '', str(phone))
     if phone.startswith('0') and len(phone) == 10:
         phone = '+27' + phone[1:]
-    return phone
+    return phone if phone else None
 
 
 def parse_date(date_value) -> str:
@@ -142,7 +141,7 @@ async def main():
     args = parser.parse_args()
     
     print("=" * 60)
-    print("UPDATE IMPORTED PROFILES")
+    print("UPDATE IMPORTED PROFILES - FULL DATA")
     print("=" * 60)
     
     # Open Excel file
@@ -167,21 +166,42 @@ async def main():
     sheet = workbook.active
     rows = list(sheet.iter_rows(values_only=True))
     
-    # Parse headers
+    # Parse headers - be flexible with column names
     headers = [str(h).strip().lower() if h else f"col_{i}" for i, h in enumerate(rows[0])]
     
     column_map = {
-        'first name': 'first_name', 'firstname': 'first_name',
-        'last name': 'last_name', 'lastname': 'last_name', 'surname': 'last_name',
-        'i.d number': 'id_number', 'id number': 'id_number', 'id_number': 'id_number',
-        'dob': 'date_of_birth', 'date of birth': 'date_of_birth',
-        'gender': 'gender', 'sex': 'gender',
-        'cell': 'phone', 'phone': 'phone', 'mobile': 'phone',
-        'email': 'email', 'e-mail': 'email',
+        'quadcare account number': 'account_number',
+        'account number': 'account_number',
+        'title': 'title',
+        'first name': 'first_name',
+        'firstname': 'first_name',
+        'last name': 'last_name',
+        'lastname': 'last_name',
+        'surname': 'last_name',
+        'i.d number': 'id_number',
+        'id number': 'id_number',
+        'id_number': 'id_number',
+        'idnumber': 'id_number',
+        'dob': 'date_of_birth',
+        'date of birth': 'date_of_birth',
+        'gender': 'gender',
+        'sex': 'gender',
+        'cell': 'phone',
+        'phone': 'phone',
+        'mobile': 'phone',
+        'cellphone': 'phone',
+        'email': 'email',
+        'e-mail': 'email',
+        'employer': 'employer',
+        'company': 'employer',
+        'occupation': 'occupation',
+        'job': 'occupation',
+        'status': 'import_status'
     }
     
     mapped_headers = [column_map.get(h, h) for h in headers]
     
+    print(f"Found columns: {[h for h in mapped_headers if not h.startswith('col_')]}")
     print(f"Found {len(rows) - 1} data rows")
     
     # Get auth users
@@ -194,7 +214,7 @@ async def main():
     skipped = 0
     not_found = 0
     
-    for row in rows[1:]:
+    for row_idx, row in enumerate(rows[1:], start=2):
         row_data = dict(zip(mapped_headers, row))
         
         email = str(row_data.get('email', '')).strip().lower() if row_data.get('email') else ''
@@ -211,35 +231,48 @@ async def main():
         
         user_id = auth_user['id']
         
-        # Prepare profile data
-        first_name = str(row_data.get('first_name', '')).strip() if row_data.get('first_name') else ''
-        last_name = str(row_data.get('last_name', '')).strip() if row_data.get('last_name') else ''
-        id_number = str(row_data.get('id_number', '')).strip() if row_data.get('id_number') else ''
-        phone = normalize_phone(str(row_data.get('phone', ''))) if row_data.get('phone') else ''
+        # Extract ALL fields
+        first_name = str(row_data.get('first_name', '')).strip() if row_data.get('first_name') else None
+        last_name = str(row_data.get('last_name', '')).strip() if row_data.get('last_name') else None
+        id_number = str(row_data.get('id_number', '')).strip() if row_data.get('id_number') else None
+        phone = normalize_phone(str(row_data.get('phone', ''))) if row_data.get('phone') else None
+        title = str(row_data.get('title', '')).strip() if row_data.get('title') else None
+        account_number = str(row_data.get('account_number', '')).strip() if row_data.get('account_number') else None
+        employer = str(row_data.get('employer', '')).strip() if row_data.get('employer') else 'Campus Africa'
+        occupation = str(row_data.get('occupation', '')).strip() if row_data.get('occupation') else None
+        import_status = str(row_data.get('import_status', '')).strip() if row_data.get('import_status') else None
         
         # Parse DOB and gender from ID if available
         dob = None
         gender = str(row_data.get('gender', '')).lower() if row_data.get('gender') else None
         
         if id_number:
+            # Clean ID number (remove spaces, etc)
+            id_number = re.sub(r'[^\d]', '', id_number)
             id_validation = validate_sa_id(id_number)
-            if id_validation['valid']:
+            if id_validation.get('valid'):
                 dob = id_validation['date_of_birth']
                 gender = id_validation['gender']
         
         if not dob:
             dob = parse_date(row_data.get('date_of_birth'))
         
+        # Build profile data - only include non-None values
         profile_data = {
-            'first_name': first_name,
-            'last_name': last_name,
-            'phone': phone,
-            'id_number': id_number,
             'updated_at': datetime.utcnow().isoformat()
         }
         
-        if dob:
-            profile_data['date_of_birth'] = dob
+        if first_name: profile_data['first_name'] = first_name
+        if last_name: profile_data['last_name'] = last_name
+        if phone: profile_data['phone'] = phone
+        if id_number: profile_data['id_number'] = id_number
+        if dob: profile_data['date_of_birth'] = dob
+        if gender: profile_data['gender'] = gender
+        if title: profile_data['title'] = title
+        if account_number: profile_data['account_number'] = account_number
+        if employer: profile_data['employer'] = employer
+        if occupation: profile_data['occupation'] = occupation
+        if import_status: profile_data['import_status'] = import_status
         
         # Update profile
         success = await update_profile(user_id, profile_data)
