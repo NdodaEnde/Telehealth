@@ -582,7 +582,6 @@ metadata:
 
 test_plan:
   current_focus: 
-    - "Bulk Student Import API"
     - "Bulk Student Import UI"
   stuck_tasks: []
   test_all: false
