@@ -379,11 +379,7 @@ async def send_welcome_emails(
     if not RESEND_API_KEY:
         raise HTTPException(status_code=500, detail="Resend API key not configured")
     
-    # First, fetch all profiles with import_status = 'imported' in one query
-    profile_query = {'import_status': 'eq.imported'}
-    if data.corporate_client_id:
-        profile_query['corporate_client_id'] = f'eq.{data.corporate_client_id}'
-    
+    # Fetch all profiles that have a corporate_client_id (bulk-imported)
     profiles_url = f"{SUPABASE_URL}/rest/v1/profiles"
     profile_headers = {
         'apikey': SUPABASE_SERVICE_KEY,
@@ -398,9 +394,9 @@ async def send_welcome_emails(
         while True:
             params = {
                 'select': 'id,first_name',
-                'import_status': 'eq.imported',
-                'offset': offset,
-                'limit': limit
+                'corporate_client_id': 'not.is.null',
+                'offset': str(offset),
+                'limit': str(limit)
             }
             if data.corporate_client_id:
                 params['corporate_client_id'] = f'eq.{data.corporate_client_id}'
