@@ -504,6 +504,13 @@ async def import_students(
             if not dob:
                 dob = parse_date(row_data.get('date_of_birth'))
             
+            # Extract ALL fields from Excel
+            title = str(row_data.get('title', '')).strip() if row_data.get('title') else None
+            account_number = str(row_data.get('account_number', '')).strip() if row_data.get('account_number') else None
+            employer = str(row_data.get('employer', '')).strip() if row_data.get('employer') else 'Campus Africa'
+            occupation = str(row_data.get('occupation', '')).strip() if row_data.get('occupation') else None
+            import_status = str(row_data.get('status', '')).strip() if row_data.get('status') else None
+            
             user_data = {
                 'first_name': first_name,
                 'last_name': last_name,
@@ -511,8 +518,10 @@ async def import_students(
                 'phone': phone,
                 'date_of_birth': dob,
                 'gender': gender,
-                'employer': row_data.get('employer', 'Campus Africa'),
-                'account_number': row_data.get('account_number', '')
+                'title': title,
+                'account_number': account_number,
+                'employer': employer,
+                'occupation': occupation
             }
             
             # Create Supabase auth user
@@ -535,15 +544,24 @@ async def import_students(
             # Get user ID from auth response
             new_user_id = auth_result['user']['id']
             
-            # UPDATE profile with full data (profile already created by DB trigger)
+            # UPDATE profile with ALL data (profile already created by DB trigger)
             profile_data = {
                 'first_name': first_name,
                 'last_name': last_name,
                 'phone': phone,
                 'id_number': id_number,
                 'date_of_birth': dob,
+                'gender': gender,
+                'title': title,
+                'account_number': account_number,
+                'employer': employer,
+                'occupation': occupation,
+                'import_status': import_status,
                 'updated_at': datetime.utcnow().isoformat()
             }
+            
+            # Remove None values to avoid overwriting with nulls
+            profile_data = {k: v for k, v in profile_data.items() if v is not None}
             
             # Update profile (don't fail if update fails - profile exists from trigger)
             profile_result = await supabase.update('profiles', profile_data, {'id': new_user_id})
