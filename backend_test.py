@@ -1463,6 +1463,12 @@ def main():
             status = "✅ PASSED" if test_results[test_name] else "❌ FAILED"
             print(f"  {test_name.replace('_', ' ').title()}: {status}")
     
+    print("\nBULK IMPORT BACKGROUND PROCESSING APIs:")
+    for test_name in bulk_import_tests:
+        if test_name in test_results:
+            status = "✅ PASSED" if test_results[test_name] else "❌ FAILED"
+            print(f"  {test_name.replace('_', ' ').title()}: {status}")
+    
     print(f"\nOverall: {passed}/{total} tests passed")
     
     if passed == total:
