@@ -258,15 +258,22 @@ async def preview_import(
         logger.error(f"Error opening Excel file: {e}")
         raise HTTPException(status_code=400, detail=f"Cannot open file: {str(e)}")
     
+    # Get all sheet names for logging
+    sheet_names = workbook.sheetnames
+    logger.info(f"Excel file has {len(sheet_names)} sheet(s): {sheet_names}")
+    
     # Get first sheet
     sheet = workbook.active
     rows = list(sheet.iter_rows(values_only=True))
+    
+    logger.info(f"Active sheet '{sheet.title}' has {len(rows)} rows (including header)")
     
     if len(rows) < 2:
         raise HTTPException(status_code=400, detail="File must have headers and at least one data row")
     
     # Parse headers
     headers = [str(h).strip().lower() if h else f"col_{i}" for i, h in enumerate(rows[0])]
+    logger.info(f"Found headers: {headers}")
     
     # Map expected columns
     column_map = {
