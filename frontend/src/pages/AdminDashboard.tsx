@@ -1309,13 +1309,51 @@ const AdminDashboard = () => {
                   
                   {/* Step 3: Importing */}
                   {importStep === 'importing' && (
-                    <div className="space-y-4 py-8 text-center">
-                      <Loader2 className="w-12 h-12 mx-auto animate-spin text-primary" />
-                      <p className="text-lg font-medium">Importing students...</p>
-                      <p className="text-sm text-muted-foreground">
-                        This may take a few minutes for large files. Please don't close this dialog.
-                      </p>
-                      <Progress value={undefined} className="w-full" />
+                    <div className="space-y-4 py-8">
+                      <div className="text-center">
+                        <Loader2 className="w-12 h-12 mx-auto animate-spin text-primary" />
+                        <p className="text-lg font-medium mt-4">Importing patients...</p>
+                        <p className="text-sm text-muted-foreground">
+                          Processing in the background. You can close this dialog - the import will continue.
+                        </p>
+                      </div>
+                      
+                      {importProgress && (
+                        <div className="space-y-4">
+                          <div className="flex justify-between text-sm">
+                            <span>Progress: {importProgress.processed || 0} / {importProgress.total_rows || 0}</span>
+                            <span>{importProgress.progress_percent || 0}%</span>
+                          </div>
+                          <Progress value={importProgress.progress_percent || 0} className="w-full" />
+                          
+                          <div className="grid grid-cols-4 gap-2 text-center">
+                            <div className="p-2 bg-green-50 dark:bg-green-900/20 rounded">
+                              <p className="text-lg font-bold text-green-600">{importProgress.imported || 0}</p>
+                              <p className="text-xs text-muted-foreground">Imported</p>
+                            </div>
+                            <div className="p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded">
+                              <p className="text-lg font-bold text-yellow-600">{importProgress.skipped || 0}</p>
+                              <p className="text-xs text-muted-foreground">Skipped</p>
+                            </div>
+                            <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded">
+                              <p className="text-lg font-bold text-blue-600">{importProgress.duplicates || 0}</p>
+                              <p className="text-xs text-muted-foreground">Duplicates</p>
+                            </div>
+                            <div className="p-2 bg-red-50 dark:bg-red-900/20 rounded">
+                              <p className="text-lg font-bold text-red-600">{importProgress.errors || 0}</p>
+                              <p className="text-xs text-muted-foreground">Errors</p>
+                            </div>
+                          </div>
+                          
+                          <Button 
+                            variant="outline" 
+                            onClick={handleCancelImport}
+                            className="w-full"
+                          >
+                            Cancel Import
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   )}
                   
