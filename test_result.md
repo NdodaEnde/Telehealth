@@ -578,7 +578,9 @@ metadata:
   run_ui: true
 
 test_plan:
-  current_focus: []
+  current_focus: 
+    - "Bulk Student Import API"
+    - "Bulk Student Import UI"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
@@ -604,3 +606,5 @@ agent_communication:
     message: "✅ DAILY.CO VIDEO API TESTING COMPLETE: All Daily.co Video API endpoints tested successfully as requested. GET /api/video/health returns status 'ok' with domain 'quadcare-sa.daily.co' confirming Daily.co connectivity and proper configuration. POST /api/video/room correctly requires authentication (returns 401 without token). POST /api/video/token correctly requires authentication (returns 401 without token). All Daily.co video endpoints working as expected. Backend video integration is ready for frontend use. Minor note: Found one unrelated endpoint issue (/api/bookings/invoices/generate returns 405 - endpoint doesn't exist), but all Daily.co video functionality is working perfectly."
   - agent: "testing"
     message: "✅ DAILY.CO VIDEO CONSULTATION UI TESTING COMPLETE: The previous 406 blank screen error has been RESOLVED. Video consultation page loads correctly without errors. Route properly protected with authentication (redirects to /auth). Backend Daily.co integration confirmed working with GET /api/video/health returning status 'ok' and domain 'quadcare-sa.daily.co'. Daily.co SDK (@daily-co/daily-js v0.85.0) properly imported. Video consultation component structure verified with all required pre-join screen elements: 'Ready to Join?' screen, appointment info section, 'Before joining' tips, 'Room Ready' badge, 'Join Consultation' button, 'Cancel' button. DailyIframe.createFrame() implementation confirmed. The fix applied by main agent successfully resolved the blank screen issue. Full testing requires authentication but core functionality is working."
+  - agent: "main"
+    message: "BACKGROUND PROCESSING FOR BULK IMPORT IMPLEMENTED: Updated the bulk import to handle 1700+ student files without timeouts. New backend endpoints: POST /api/admin/bulk-import/start (starts async job, returns job_id), GET /api/admin/bulk-import/jobs/{job_id} (poll status with progress %), POST /api/admin/bulk-import/jobs/{job_id}/cancel, GET /api/admin/bulk-import/jobs (list jobs). Frontend updated with real-time progress bar, polling every 2 seconds. Uses JobManager class for in-memory state. Please test: 1) GET /api/admin/bulk-import/jobs (requires admin auth), 2) Verify background job endpoints return proper 401 without auth, 3) Test frontend progress UI by navigating to Admin Dashboard > Management > Bulk Import."
