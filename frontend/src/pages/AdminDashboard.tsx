@@ -228,6 +228,9 @@ const AdminDashboard = () => {
     setImportPreview(null);
     setImportResult(null);
     setImportStep('upload');
+    setSelectedClient("Campus Africa");
+    setSelectedClientType("university");
+    setNewClientName("");
   };
 
   return (
