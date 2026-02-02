@@ -2,17 +2,20 @@
 Bulk Import API for Corporate Client Patient Registration
 Handles password-protected Excel files and creates Supabase auth users
 Supports multiple corporate clients with proper segmentation
+Uses background processing for large imports with progress tracking
 """
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, BackgroundTasks
 from typing import Optional, List, Dict, Any
 from pydantic import BaseModel
 from auth import get_current_user, AuthenticatedUser
 from supabase_client import supabase
 from config import SUPABASE_URL, SUPABASE_SERVICE_KEY
+from job_manager import job_manager, JobStatus
 import logging
 import uuid
 import io
 import re
+import asyncio
 from datetime import datetime
 import httpx
 
