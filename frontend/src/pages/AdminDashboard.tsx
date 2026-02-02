@@ -97,6 +97,15 @@ const AdminDashboard = () => {
   const [importJobId, setImportJobId] = useState<string | null>(null);
   const [importProgress, setImportProgress] = useState<any>(null);
 
+  // Welcome Emails state
+  const [showEmailDialog, setShowEmailDialog] = useState(false);
+  const [emailPreview, setEmailPreview] = useState<any>(null);
+  const [emailLoading, setEmailLoading] = useState(false);
+  const [emailJobId, setEmailJobId] = useState<string | null>(null);
+  const [emailProgress, setEmailProgress] = useState<any>(null);
+  const [emailStep, setEmailStep] = useState<'preview' | 'sending' | 'complete'>('preview');
+  const [emailTestMode, setEmailTestMode] = useState(false);
+
   // Fetch corporate clients on mount
   useEffect(() => {
     const fetchClients = async () => {
