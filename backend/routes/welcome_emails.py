@@ -383,8 +383,48 @@ async def send_welcome_emails(
     if not RESEND_API_KEY:
         raise HTTPException(status_code=500, detail="Resend API key not configured")
     
-    # Get eligible students (same logic as preview)
-    url = f"{SUPABASE_URL}/auth/v1/admin/users"
+    # First, fetch all profiles with import_status = 'imported' in one query
+    profile_query = {'import_status': 'eq.imported'}
+    if data.corporate_client_id:
+        profile_query['corporate_client_id'] = f'eq.{data.corporate_client_id}'
+    
+    profiles_url = f"{SUPABASE_URL}/rest/v1/profiles"
+    profile_headers = {
+        'apikey': SUPABASE_SERVICE_KEY,
+        'Authorization': f'Bearer {SUPABASE_SERVICE_KEY}'
+    }
+    
+    all_profiles = []
+    offset = 0
+    limit = 1000
+    
+    async with httpx.AsyncClient(timeout=60.0) as client:
+        while True:
+            params = {
+                'select': 'id,first_name',
+                'import_status': 'eq.imported',
+                'offset': offset,
+                'limit': limit
+            }
+            if data.corporate_client_id:
+                params['corporate_client_id'] = f'eq.{data.corporate_client_id}'
+            
+            response = await client.get(profiles_url, params=params, headers=profile_headers)
+            
+            if response.status_code not in [200, 206]:
+                break
+            
+            profiles = response.json()
+            all_profiles.extend(profiles)
+            
+            if len(profiles) < limit:
+                break
+            offset += limit
+    
+    profile_map = {p['id']: p for p in all_profiles}
+    
+    # Get auth users who haven't signed in
+    auth_url = f"{SUPABASE_URL}/auth/v1/admin/users"
     headers = {
         'apikey': SUPABASE_SERVICE_KEY,
         'Authorization': f'Bearer {SUPABASE_SERVICE_KEY}'
@@ -397,7 +437,7 @@ async def send_welcome_emails(
     async with httpx.AsyncClient(timeout=60.0) as client:
         while True:
             response = await client.get(
-                url,
+                auth_url,
                 params={'page': page, 'per_page': per_page},
                 headers=headers
             )
@@ -410,24 +450,23 @@ async def send_welcome_emails(
                 break
             
             for u in users:
-                metadata = u.get('user_metadata', {})
-                is_bulk_imported = metadata.get('imported_from') == 'campus_africa_bulk'
-                has_not_signed_in = u.get('last_sign_in_at') is None
+                user_id = u['id']
                 
-                if is_bulk_imported and has_not_signed_in:
-                    profile = await supabase.select('profiles', 'first_name,last_name,corporate_client_id', {'id': u['id']})
-                    
-                    if data.corporate_client_id:
-                        if not profile or profile[0].get('corporate_client_id') != data.corporate_client_id:
-                            continue
-                    
-                    eligible_students.append({
-                        "email": u.get('email'),
-                        "first_name": profile[0].get('first_name', 'Student') if profile else 'Student',
-                    })
+                if user_id not in profile_map:
+                    continue
+                
+                if u.get('last_sign_in_at') is not None:
+                    continue
+                
+                profile = profile_map[user_id]
+                eligible_students.append({
+                    "email": u.get('email'),
+                    "first_name": profile.get('first_name', 'Student'),
+                })
             
             if len(users) < per_page:
                 break
+            page += 1
             page += 1
     
     if not eligible_students:
