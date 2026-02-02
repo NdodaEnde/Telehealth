@@ -336,15 +336,15 @@ const Auth = () => {
               <CardTitle className="text-2xl">
                 Welcome{accountStatus.first_name ? `, ${accountStatus.first_name}` : ''}!
               </CardTitle>
-              <CardDescription className="mt-2 space-y-2">
-                <div className="flex items-center justify-center gap-2 text-sm">
-                  <Building2 className="w-4 h-4" />
-                  <span>Pre-registered by <strong>Campus Africa</strong></span>
-                </div>
-                <p>Set a password to activate your account.</p>
+              <CardDescription className="mt-2">
+                Set a password to activate your account.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              <div className="flex items-center justify-center gap-2 text-sm p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                <Building2 className="w-4 h-4 text-green-600" />
+                <span>Pre-registered by <strong>Campus Africa</strong></span>
+              </div>
               <div className="bg-muted/50 rounded-lg p-3 text-sm flex items-center gap-2">
                 <Mail className="w-4 h-4 text-muted-foreground" />
                 <span className="text-muted-foreground">{email}</span>
