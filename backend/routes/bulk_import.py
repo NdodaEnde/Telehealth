@@ -692,10 +692,10 @@ async def get_import_template(
     
     return {
         "expected_columns": [
-            {"name": "Quadcare Account Number", "required": False, "description": "Student account ID (e.g., BM-0001)"},
+            {"name": "Quadcare Account Number", "required": False, "description": "Patient account ID (e.g., BM-0001)"},
             {"name": "Title", "required": False, "description": "Mr, Ms, Mrs, etc."},
-            {"name": "First Name", "required": True, "description": "Student's first name"},
-            {"name": "Last Name", "required": True, "description": "Student's last name"},
+            {"name": "First Name", "required": True, "description": "Patient's first name"},
+            {"name": "Last Name", "required": True, "description": "Patient's last name"},
             {"name": "I.D Number", "required": False, "description": "SA ID (13 digits) or Passport"},
             {"name": "DOB", "required": False, "description": "Date of birth (YYYY/MM/DD)"},
             {"name": "Gender", "required": False, "description": "male/female"},
@@ -703,13 +703,153 @@ async def get_import_template(
             {"name": "Email", "required": True, "description": "Email address (must be unique)"},
             {"name": "Employer", "required": False, "description": "Company/Institution name"},
             {"name": "Occupation", "required": False, "description": "Student, Staff, etc."},
-            {"name": "Status", "required": False, "description": "ExistingUser = skip import"}
+            {"name": "Status", "required": False, "description": "New/Existing at the organization"}
         ],
         "notes": [
-            "Rows with Status='ExistingUser' will be skipped",
+            "All rows with valid emails will be imported",
             "Duplicate emails will be skipped",
             "SA ID numbers will be validated and DOB/gender extracted",
             "Password-protected Excel files are supported (provide password)",
-            "Students can use 'Forgot Password' to set their login password"
+            "Patients can use 'Forgot Password' to set their login password",
+            "Patients will be linked to the specified corporate client"
         ]
+    }
+
+
+@router.get("/corporate-clients")
+async def list_corporate_clients(
+    user: AuthenticatedUser = Depends(get_current_user)
+):
+    """
+    List all corporate clients for selection during bulk import.
+    """
+    # Check admin role
+    roles = await supabase.select('user_roles', 'role', {'user_id': user.id})
+    if not roles or roles[0].get('role') != 'admin':
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    clients = await supabase.select(
+        'corporate_clients', 
+        'id,name,code,type,status,contact_person,contact_email,created_at',
+        {}
+    )
+    
+    return {
+        "success": True,
+        "clients": clients or []
+    }
+
+
+@router.post("/corporate-clients")
+async def create_corporate_client(
+    data: CorporateClientCreate,
+    user: AuthenticatedUser = Depends(get_current_user)
+):
+    """
+    Create a new corporate client.
+    """
+    # Check admin role
+    roles = await supabase.select('user_roles', 'role', {'user_id': user.id})
+    if not roles or roles[0].get('role') != 'admin':
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    # Check if client already exists
+    existing = await supabase.select('corporate_clients', 'id', {'name': data.name})
+    if existing:
+        raise HTTPException(status_code=400, detail="Corporate client with this name already exists")
+    
+    # Create client
+    code = data.code or ''.join(word[0].upper() for word in data.name.split()[:3])
+    client_data = {
+        'id': str(uuid.uuid4()),
+        'name': data.name,
+        'code': code,
+        'type': data.type,
+        'contact_person': data.contact_person,
+        'contact_email': data.contact_email,
+        'contact_phone': data.contact_phone,
+        'status': 'active',
+        'created_at': datetime.utcnow().isoformat(),
+        'updated_at': datetime.utcnow().isoformat()
+    }
+    
+    result = await supabase.insert('corporate_clients', client_data)
+    
+    if result:
+        return {
+            "success": True,
+            "message": f"Corporate client '{data.name}' created successfully",
+            "client": client_data
+        }
+    else:
+        raise HTTPException(status_code=500, detail="Failed to create corporate client")
+
+
+@router.get("/analytics/by-client")
+async def get_patient_analytics_by_client(
+    user: AuthenticatedUser = Depends(get_current_user)
+):
+    """
+    Get patient analytics segmented by corporate client.
+    Foundation for population health analytics.
+    """
+    # Check admin role
+    roles = await supabase.select('user_roles', 'role', {'user_id': user.id})
+    if not roles or roles[0].get('role') != 'admin':
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    # Get all clients with patient counts
+    clients = await supabase.select(
+        'corporate_clients',
+        'id,name,code,type,status',
+        {}
+    )
+    
+    analytics = []
+    total_patients = 0
+    
+    for client in (clients or []):
+        # Count patients for this client
+        patients = await supabase.select(
+            'profiles',
+            'id,gender,date_of_birth',
+            {'corporate_client_id': client['id']}
+        )
+        
+        patient_count = len(patients) if patients else 0
+        total_patients += patient_count
+        
+        # Calculate demographics
+        male_count = sum(1 for p in (patients or []) if p.get('gender') == 'male')
+        female_count = sum(1 for p in (patients or []) if p.get('gender') == 'female')
+        
+        analytics.append({
+            'client_id': client['id'],
+            'client_name': client['name'],
+            'client_code': client['code'],
+            'client_type': client['type'],
+            'status': client['status'],
+            'total_patients': patient_count,
+            'male_count': male_count,
+            'female_count': female_count,
+            'unknown_gender': patient_count - male_count - female_count
+        })
+    
+    # Also count unassigned patients
+    unassigned = await supabase.select(
+        'profiles',
+        'id',
+        {'corporate_client_id': None}
+    )
+    unassigned_count = len(unassigned) if unassigned else 0
+    
+    return {
+        "success": True,
+        "summary": {
+            "total_patients": total_patients + unassigned_count,
+            "corporate_patients": total_patients,
+            "unassigned_patients": unassigned_count,
+            "total_clients": len(clients) if clients else 0
+        },
+        "by_client": analytics
     }
