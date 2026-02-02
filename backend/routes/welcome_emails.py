@@ -261,12 +261,7 @@ async def preview_recipients(
     if not roles or roles[0].get('role') != 'admin':
         raise HTTPException(status_code=403, detail="Admin access required")
     
-    # First, fetch all profiles with import_status = 'imported' in one query
-    # This is much faster than individual lookups
-    profile_query = {'import_status': 'eq.imported'}
-    if corporate_client_id:
-        profile_query['corporate_client_id'] = f'eq.{corporate_client_id}'
-    
+    # Fetch all profiles that have a corporate_client_id (bulk-imported)
     profiles_url = f"{SUPABASE_URL}/rest/v1/profiles"
     profile_headers = {
         'apikey': SUPABASE_SERVICE_KEY,
@@ -281,17 +276,18 @@ async def preview_recipients(
         while True:
             params = {
                 'select': 'id,first_name,last_name,corporate_client_id',
-                'import_status': 'eq.imported',
-                'offset': offset,
-                'limit': limit
+                'corporate_client_id': 'not.is.null',
+                'offset': str(offset),
+                'limit': str(limit)
             }
+            # Filter by specific corporate client if provided
             if corporate_client_id:
                 params['corporate_client_id'] = f'eq.{corporate_client_id}'
             
             response = await client.get(profiles_url, params=params, headers=profile_headers)
             
             if response.status_code not in [200, 206]:
-                logger.error(f"Failed to fetch profiles: {response.status_code}")
+                logger.error(f"Failed to fetch profiles: {response.status_code} - {response.text}")
                 break
             
             profiles = response.json()
@@ -303,7 +299,7 @@ async def preview_recipients(
     
     # Create a lookup dict for profiles
     profile_map = {p['id']: p for p in all_profiles}
-    logger.info(f"Found {len(profile_map)} imported profiles")
+    logger.info(f"Found {len(profile_map)} bulk-imported profiles with corporate_client_id")
     
     # Now get auth users who haven't signed in
     auth_url = f"{SUPABASE_URL}/auth/v1/admin/users"
@@ -334,7 +330,7 @@ async def preview_recipients(
             for u in users:
                 user_id = u['id']
                 
-                # Check if this user is in our imported profiles
+                # Check if this user is in our bulk-imported profiles
                 if user_id not in profile_map:
                     continue
                 
