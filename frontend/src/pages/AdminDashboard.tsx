@@ -62,13 +62,6 @@ import { ClinicianPerformanceTable } from "@/components/analytics/ClinicianPerfo
 import { PatientGrowthChart } from "@/components/analytics/PatientGrowthChart";
 import { adminAnalyticsAPI, bulkImportAPI } from "@/lib/api";
 import { toast } from "sonner";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 const AdminDashboard = () => {
   const { profile, signOut } = useAuth();
