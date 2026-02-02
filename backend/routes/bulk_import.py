@@ -312,9 +312,34 @@ async def preview_import(
         mapped = column_map.get(h, h)
         mapped_headers.append(mapped)
     
-    # Get existing emails for duplicate check
-    existing_users = await supabase.select('profiles', 'email', {})
-    existing_emails = {u['email'].lower() for u in existing_users if u.get('email')}
+    # Get existing emails for duplicate check (from auth.users, not profiles)
+    existing_emails = set()
+    try:
+        page = 1
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            while True:
+                response = await client.get(
+                    f"{SUPABASE_URL}/auth/v1/admin/users",
+                    params={'page': page, 'per_page': 100},
+                    headers={
+                        'apikey': SUPABASE_SERVICE_KEY,
+                        'Authorization': f'Bearer {SUPABASE_SERVICE_KEY}'
+                    }
+                )
+                if response.status_code != 200:
+                    break
+                users = response.json().get('users', [])
+                if not users:
+                    break
+                for u in users:
+                    if u.get('email'):
+                        existing_emails.add(u['email'].lower())
+                if len(users) < 100:
+                    break
+                page += 1
+        logger.info(f"Found {len(existing_emails)} existing emails in database")
+    except Exception as e:
+        logger.error(f"Error fetching existing emails: {e}")
     
     # First pass: Count ALL rows for summary
     total_rows = len(rows) - 1  # Exclude header
@@ -322,17 +347,21 @@ async def preview_import(
     total_duplicate_count = 0
     total_error_count = 0
     
+    # Track emails seen in this file to detect duplicates within the file
+    seen_emails_in_file = set()
+    
     for row in rows[1:]:  # All data rows
         row_data = dict(zip(mapped_headers, row))
         email = str(row_data.get('email', '')).strip().lower() if row_data.get('email') else ''
         
-        # Only skip if email is missing/invalid OR already in our database
+        # Only skip if email is missing/invalid OR already in our database OR duplicate in file
         if not email or not validate_email(email):
             total_error_count += 1
-        elif email in existing_emails:
+        elif email in existing_emails or email in seen_emails_in_file:
             total_duplicate_count += 1
         else:
             total_new_count += 1
+            seen_emails_in_file.add(email)
     
     # Second pass: Build preview rows (first 10 data rows)
     preview_rows = []
