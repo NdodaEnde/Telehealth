@@ -207,6 +207,9 @@ app.include_router(admin_analytics_router, prefix="/api")
 # Phase 5: Bulk Import for Corporate Clients
 app.include_router(bulk_import_router, prefix="/api")
 
+# Phase 6: Welcome Emails for Corporate Students
+app.include_router(welcome_emails_router, prefix="/api")
+
 
 # ============ Middleware ============
 
