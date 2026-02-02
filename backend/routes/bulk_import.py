@@ -1,9 +1,11 @@
 """
-Bulk Import API for Campus Africa Student Registration
+Bulk Import API for Corporate Client Patient Registration
 Handles password-protected Excel files and creates Supabase auth users
+Supports multiple corporate clients with proper segmentation
 """
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from typing import Optional, List, Dict, Any
+from pydantic import BaseModel
 from auth import get_current_user, AuthenticatedUser
 from supabase_client import supabase
 from config import SUPABASE_URL, SUPABASE_SERVICE_KEY
@@ -22,7 +24,46 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/admin/bulk-import", tags=["Bulk Import"])
 
 
+# ============ Models ============
+
+class CorporateClientCreate(BaseModel):
+    name: str
+    code: Optional[str] = None
+    type: str = "corporate"
+    contact_person: Optional[str] = None
+    contact_email: Optional[str] = None
+    contact_phone: Optional[str] = None
+
+
 # ============ Helper Functions ============
+
+async def get_or_create_corporate_client(name: str, client_type: str = "corporate") -> Optional[str]:
+    """Get existing corporate client by name or create if doesn't exist"""
+    # Try to find existing client
+    existing = await supabase.select('corporate_clients', 'id,name', {'name': name})
+    
+    if existing and len(existing) > 0:
+        return existing[0]['id']
+    
+    # Create new client
+    code = ''.join(word[0].upper() for word in name.split()[:3])  # Generate code from name initials
+    client_data = {
+        'id': str(uuid.uuid4()),
+        'name': name,
+        'code': code,
+        'type': client_type,
+        'status': 'active',
+        'created_at': datetime.utcnow().isoformat(),
+        'updated_at': datetime.utcnow().isoformat()
+    }
+    
+    result = await supabase.insert('corporate_clients', client_data)
+    if result:
+        logger.info(f"Created new corporate client: {name} (ID: {client_data['id']})")
+        return client_data['id']
+    
+    return None
+
 
 def validate_sa_id(id_number: str) -> dict:
     """Validate South African ID number and extract date of birth"""
