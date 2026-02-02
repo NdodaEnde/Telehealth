@@ -92,6 +92,8 @@ const AdminDashboard = () => {
   const [selectedClient, setSelectedClient] = useState("Campus Africa");
   const [selectedClientType, setSelectedClientType] = useState("university");
   const [newClientName, setNewClientName] = useState("");
+  const [importJobId, setImportJobId] = useState<string | null>(null);
+  const [importProgress, setImportProgress] = useState<any>(null);
 
   // Fetch corporate clients on mount
   useEffect(() => {
@@ -107,6 +109,46 @@ const AdminDashboard = () => {
     };
     fetchClients();
   }, []);
+
+  // Poll for import job progress
+  useEffect(() => {
+    if (!importJobId || importStep !== 'importing') return;
+    
+    const pollInterval = setInterval(async () => {
+      try {
+        const response = await bulkImportAPI.getJobStatus(importJobId);
+        if (response?.job) {
+          setImportProgress(response.job);
+          
+          // Check if job is complete
+          if (response.job.status === 'completed' || response.job.status === 'failed') {
+            clearInterval(pollInterval);
+            setImportResult({
+              summary: {
+                imported: response.job.imported,
+                duplicates: response.job.duplicates,
+                errors: response.job.errors,
+                skipped: response.job.skipped,
+                total_processed: response.job.processed
+              },
+              details: response.job.details
+            });
+            setImportStep('complete');
+            
+            if (response.job.status === 'completed') {
+              toast.success(`Import complete! ${response.job.imported} patients imported.`);
+            } else {
+              toast.error(`Import failed: ${response.job.error_message || 'Unknown error'}`);
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Error polling job status:", err);
+      }
+    }, 2000); // Poll every 2 seconds
+    
+    return () => clearInterval(pollInterval);
+  }, [importJobId, importStep]);
 
   // Fetch report data when period changes
   useEffect(() => {
