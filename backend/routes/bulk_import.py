@@ -535,9 +535,34 @@ async def import_students(
     
     mapped_headers = [column_map.get(h, h) for h in headers]
     
-    # Get existing emails
-    existing_users = await supabase.select('profiles', 'email', {})
-    existing_emails = {u['email'].lower() for u in existing_users if u.get('email')}
+    # Get existing emails from auth.users (not profiles table)
+    existing_emails = set()
+    try:
+        page = 1
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            while True:
+                response = await client.get(
+                    f"{SUPABASE_URL}/auth/v1/admin/users",
+                    params={'page': page, 'per_page': 100},
+                    headers={
+                        'apikey': SUPABASE_SERVICE_KEY,
+                        'Authorization': f'Bearer {SUPABASE_SERVICE_KEY}'
+                    }
+                )
+                if response.status_code != 200:
+                    break
+                users = response.json().get('users', [])
+                if not users:
+                    break
+                for u in users:
+                    if u.get('email'):
+                        existing_emails.add(u['email'].lower())
+                if len(users) < 100:
+                    break
+                page += 1
+        logger.info(f"Found {len(existing_emails)} existing emails in database for import check")
+    except Exception as e:
+        logger.error(f"Error fetching existing emails for import: {e}")
     
     # Process all rows
     results = {
