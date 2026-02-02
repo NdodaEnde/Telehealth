@@ -287,6 +287,9 @@ const AdminDashboard = () => {
     setSelectedClient("Campus Africa");
     setSelectedClientType("university");
     setNewClientName("");
+    setImportJobId(null);
+    setImportProgress(null);
+    setImportLoading(false);
   };
 
   return (
