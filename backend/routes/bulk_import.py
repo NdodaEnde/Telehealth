@@ -601,6 +601,7 @@ async def import_students(
             new_user_id = auth_result['user']['id']
             
             # UPDATE profile with ALL data (profile already created by DB trigger)
+            # Include corporate_client_id for proper segmentation
             profile_data = {
                 'first_name': first_name,
                 'last_name': last_name,
@@ -613,6 +614,8 @@ async def import_students(
                 'employer': employer,
                 'occupation': occupation,
                 'import_status': import_status,
+                'corporate_client_id': corporate_client_id,  # Link to corporate client
+                'patient_type': 'corporate',  # Mark as corporate patient
                 'updated_at': datetime.utcnow().isoformat()
             }
             
