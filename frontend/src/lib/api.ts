@@ -612,12 +612,18 @@ export const bulkImportAPI = {
     return response.json();
   },
   
-  importStudents: async (file: File, password?: string) => {
+  importStudents: async (file: File, password?: string, corporateClient?: string, clientType?: string) => {
     const token = await getAuthToken();
     const formData = new FormData();
     formData.append('file', file);
     if (password) {
       formData.append('password', password);
+    }
+    if (corporateClient) {
+      formData.append('corporate_client', corporateClient);
+    }
+    if (clientType) {
+      formData.append('client_type', clientType);
     }
     
     const response = await fetch(`${BACKEND_URL}/api/admin/bulk-import/students`, {
@@ -637,6 +643,16 @@ export const bulkImportAPI = {
   },
   
   getTemplate: () => apiRequest('/api/admin/bulk-import/template'),
+  
+  getCorporateClients: () => apiRequest('/api/admin/bulk-import/corporate-clients'),
+  
+  createCorporateClient: (data: { name: string; code?: string; type?: string }) =>
+    apiRequest('/api/admin/bulk-import/corporate-clients', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  
+  getAnalyticsByClient: () => apiRequest('/api/admin/bulk-import/analytics/by-client'),
 };
 
 // Export all APIs
