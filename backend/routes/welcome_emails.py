@@ -261,8 +261,52 @@ async def preview_recipients(
     if not roles or roles[0].get('role') != 'admin':
         raise HTTPException(status_code=403, detail="Admin access required")
     
-    # Get all bulk-imported users from auth who haven't signed in
-    url = f"{SUPABASE_URL}/auth/v1/admin/users"
+    # First, fetch all profiles with import_status = 'imported' in one query
+    # This is much faster than individual lookups
+    profile_query = {'import_status': 'eq.imported'}
+    if corporate_client_id:
+        profile_query['corporate_client_id'] = f'eq.{corporate_client_id}'
+    
+    profiles_url = f"{SUPABASE_URL}/rest/v1/profiles"
+    profile_headers = {
+        'apikey': SUPABASE_SERVICE_KEY,
+        'Authorization': f'Bearer {SUPABASE_SERVICE_KEY}'
+    }
+    
+    all_profiles = []
+    offset = 0
+    limit = 1000
+    
+    async with httpx.AsyncClient(timeout=60.0) as client:
+        while True:
+            params = {
+                'select': 'id,first_name,last_name,corporate_client_id',
+                'import_status': 'eq.imported',
+                'offset': offset,
+                'limit': limit
+            }
+            if corporate_client_id:
+                params['corporate_client_id'] = f'eq.{corporate_client_id}'
+            
+            response = await client.get(profiles_url, params=params, headers=profile_headers)
+            
+            if response.status_code not in [200, 206]:
+                logger.error(f"Failed to fetch profiles: {response.status_code}")
+                break
+            
+            profiles = response.json()
+            all_profiles.extend(profiles)
+            
+            if len(profiles) < limit:
+                break
+            offset += limit
+    
+    # Create a lookup dict for profiles
+    profile_map = {p['id']: p for p in all_profiles}
+    logger.info(f"Found {len(profile_map)} imported profiles")
+    
+    # Now get auth users who haven't signed in
+    auth_url = f"{SUPABASE_URL}/auth/v1/admin/users"
     headers = {
         'apikey': SUPABASE_SERVICE_KEY,
         'Authorization': f'Bearer {SUPABASE_SERVICE_KEY}'
@@ -275,7 +319,7 @@ async def preview_recipients(
     async with httpx.AsyncClient(timeout=60.0) as client:
         while True:
             response = await client.get(
-                url,
+                auth_url,
                 params={'page': page, 'per_page': per_page},
                 headers=headers
             )
@@ -288,30 +332,30 @@ async def preview_recipients(
                 break
             
             for u in users:
-                metadata = u.get('user_metadata', {})
-                is_bulk_imported = metadata.get('imported_from') == 'campus_africa_bulk'
-                has_not_signed_in = u.get('last_sign_in_at') is None
+                user_id = u['id']
                 
-                if is_bulk_imported and has_not_signed_in:
-                    # Get profile for name
-                    profile = await supabase.select('profiles', 'first_name,last_name,corporate_client_id', {'id': u['id']})
-                    
-                    # Filter by corporate client if specified
-                    if corporate_client_id:
-                        if not profile or profile[0].get('corporate_client_id') != corporate_client_id:
-                            continue
-                    
-                    eligible_students.append({
-                        "id": u['id'],
-                        "email": u.get('email'),
-                        "first_name": profile[0].get('first_name', '') if profile else '',
-                        "last_name": profile[0].get('last_name', '') if profile else '',
-                        "created_at": u.get('created_at')
-                    })
+                # Check if this user is in our imported profiles
+                if user_id not in profile_map:
+                    continue
+                
+                # Check if user hasn't signed in
+                if u.get('last_sign_in_at') is not None:
+                    continue
+                
+                profile = profile_map[user_id]
+                eligible_students.append({
+                    "id": user_id,
+                    "email": u.get('email'),
+                    "first_name": profile.get('first_name', ''),
+                    "last_name": profile.get('last_name', ''),
+                    "created_at": u.get('created_at')
+                })
             
             if len(users) < per_page:
                 break
             page += 1
+    
+    logger.info(f"Found {len(eligible_students)} eligible students for welcome emails")
     
     return {
         "success": True,
