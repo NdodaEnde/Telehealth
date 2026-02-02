@@ -15,30 +15,57 @@ from models import (
 SUPABASE_URL = os.environ.get('SUPABASE_URL', '')
 SUPABASE_KEY = os.environ.get('SUPABASE_SERVICE_KEY', '')
 
-async def fetch_from_supabase(table: str, query_params: Dict = None) -> List[Dict]:
-    """Fetch data from Supabase"""
+async def fetch_from_supabase(table: str, query_params: Dict = None, paginate: bool = True) -> List[Dict]:
+    """Fetch data from Supabase with pagination support"""
     if not SUPABASE_URL or not SUPABASE_KEY:
         return []
     
     headers = {
         'apikey': SUPABASE_KEY,
         'Authorization': f'Bearer {SUPABASE_KEY}',
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Prefer': 'count=exact'  # Get total count in response headers
     }
     
-    url = f"{SUPABASE_URL}/rest/v1/{table}"
-    if query_params:
-        params = '&'.join([f"{k}={v}" for k, v in query_params.items()])
-        url = f"{url}?{params}"
+    all_results = []
+    offset = 0
+    limit = 1000  # Supabase max per request
     
     async with httpx.AsyncClient() as client:
-        try:
-            response = await client.get(url, headers=headers)
-            if response.status_code == 200:
-                return response.json()
-        except Exception as e:
-            print(f"Error fetching from Supabase: {e}")
-    return []
+        while True:
+            url = f"{SUPABASE_URL}/rest/v1/{table}"
+            params_list = []
+            
+            if query_params:
+                params_list = [f"{k}={v}" for k, v in query_params.items()]
+            
+            # Add pagination
+            if paginate:
+                params_list.append(f"offset={offset}")
+                params_list.append(f"limit={limit}")
+            
+            if params_list:
+                url = f"{url}?{'&'.join(params_list)}"
+            
+            try:
+                response = await client.get(url, headers=headers)
+                if response.status_code == 200:
+                    data = response.json()
+                    all_results.extend(data)
+                    
+                    # If we got fewer results than the limit, we've reached the end
+                    if not paginate or len(data) < limit:
+                        break
+                    
+                    offset += limit
+                else:
+                    print(f"Error fetching from Supabase: {response.status_code} - {response.text}")
+                    break
+            except Exception as e:
+                print(f"Error fetching from Supabase: {e}")
+                break
+    
+    return all_results
 
 async def get_analytics_overview(start_date: Optional[str] = None, end_date: Optional[str] = None) -> AnalyticsOverview:
     """Get overview analytics"""
