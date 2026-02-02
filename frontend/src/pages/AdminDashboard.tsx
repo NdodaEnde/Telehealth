@@ -327,6 +327,68 @@ const AdminDashboard = () => {
     setImportLoading(false);
   };
 
+  // Welcome Email handlers
+  const handleEmailPreview = async () => {
+    setEmailLoading(true);
+    try {
+      const response = await welcomeEmailsAPI.preview();
+      setEmailPreview(response);
+      setEmailStep('preview');
+    } catch (err) {
+      console.error("Failed to preview emails:", err);
+      toast.error("Failed to load email recipients");
+    } finally {
+      setEmailLoading(false);
+    }
+  };
+
+  const handleSendEmails = async () => {
+    setEmailLoading(true);
+    setEmailStep('sending');
+    setEmailProgress(null);
+    
+    try {
+      const response = await welcomeEmailsAPI.send({
+        test_mode: emailTestMode,
+      });
+      
+      if (response?.job_id) {
+        setEmailJobId(response.job_id);
+        toast.success(`Sending emails to ${response.total_recipients} students...`);
+      } else {
+        throw new Error("Failed to start email job");
+      }
+    } catch (err: any) {
+      console.error("Email send failed:", err);
+      toast.error(err.message || "Failed to send emails");
+      setEmailStep('preview');
+    } finally {
+      setEmailLoading(false);
+    }
+  };
+
+  const handleSendTestEmail = async () => {
+    setEmailLoading(true);
+    try {
+      const response = await welcomeEmailsAPI.sendTest();
+      if (response?.success) {
+        toast.success(response.message || "Test email sent to your email!");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to send test email");
+    } finally {
+      setEmailLoading(false);
+    }
+  };
+
+  const resetEmailDialog = () => {
+    setEmailPreview(null);
+    setEmailProgress(null);
+    setEmailStep('preview');
+    setEmailJobId(null);
+    setEmailTestMode(false);
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
