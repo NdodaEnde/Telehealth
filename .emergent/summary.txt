@@ -1,160 +1,162 @@
 <analysis>**original_problem_statement:**
-The initial goal was to build a telehealth platform, which has pivoted to a receptionist-mediated, chat-based booking system for a client named Quadcare.
+The initial goal was to build a telehealth platform, which pivoted to a receptionist-mediated, chat-based booking system for Quadcare. The user wants to implement a bulk import feature to pre-register 1,700 students for a corporate client, Campus Africa. The import must handle a password-protected Excel file, populate all student data into the database, and provide a seamless onboarding experience for the pre-registered students.
 
-The user's most recent requests are:
-1.  Implement WhatsApp notifications for patients, starting with appointment reminders.
-2.  Implement a feature for receptionists to cancel bookings.
-3.  Create an admin dashboard with detailed analytics on bookings, cancellations, peak times, and other metrics.
-4.  Build a bulk import feature to pre-register 1,700 students for a corporate client, Campus Africa.
-5.  Create documentation for the new analytics features for an executive presentation.
+The user has also raised the need for a scalable, multi-tenant architecture to ring-fence data for different corporate clients to enable population health analytics.
+
+PRODUCT REQUIREMENTS:
+1.  **Bulk Student Import**: An admin must be able to upload a spreadsheet (CSV/Excel), including password-protected ones, to bulk-create student accounts.
+2.  **Data Integrity**: All columns from the spreadsheet (e.g., Account Number, Name, ID, DOB, Phone, Employer) must be correctly saved to the database.
+3.  **Scalability**: The import process must handle large files (1,700+ rows) without timing out. The user explicitly approved a background processing approach for this.
+4.  **User Experience**: Pre-registered students should have a simple set password flow on their first login, without needing to re-enter their details.
+5.  **Data Segmentation**: Implement a proper multi-tenant architecture where patients are linked to a specific corporate client (e.g., Campus Africa, Individual / Walk-in). This is crucial for future analytics.
+6.  **Security**: For production, the onboarding flow for bulk-imported users must involve email verification. For testing, this can be disabled via a toggle.
 
 **User's preferred language**: English
 
 **what currently exists?**
-A full-stack application with a React/TypeScript frontend and a FastAPI/Python backend, using Supabase for the database, authentication, and real-time messaging. The application has been rebranded to Quadcare and uses Daily.co for video consultations.
+A full-stack application with a React/TypeScript frontend and a FastAPI/Python backend using Supabase. The core features (booking, video calls, admin dashboard) are functional.
 
-Key features are functional:
--   User registration for different roles (Patient, Clinician, Receptionist, Admin).
--   Chat-based booking workflow.
--   Video consultations via Daily.co.
--   Clinical notes and PDF invoice generation.
--   Real-time updates on the patient dashboard for new bookings.
--   Timezone support for South Africa (SAST, GMT+2).
--   Clickable prescription and invoice cards that open detailed view dialogs.
--   A comprehensive Admin Dashboard with multiple analytics reports.
--   A cancellation flow for receptionists via a dedicated Bookings tab.
+A multi-tenant database architecture has been implemented to support corporate clients:
+-   A  table has been created.
+-   The  table has been extended with a  foreign key and other columns to match the user's spreadsheet (, , , etc.).
+-   SQL scripts were provided to the user to apply these schema changes.
+-   The bulk import UI now includes a dropdown to select a corporate client.
+
+The previous import attempt was partially successful but failed due to server timeouts and incorrect data mapping. The user has since deleted the partially imported data for a clean start.
 
 **Last working item**:
--   Last item agent was working: The agent was gathering requirements for the **Campus Africa Bulk Student Import** feature. The user provided a screenshot of a spreadsheet, and the agent responded with clarifying questions to understand the full data structure and desired workflow.
--   Status: **BLOCKED**
--   Agent Testing Done: N/A
--   Which testing method agent to use? N/A (requirements gathering phase)
--   User Testing Done: N/A
+-   Last item agent was working: The agent was implementing a **background processing system** for the bulk import feature to handle the 1,700+ student list without timeouts. This was a user-approved, production-ready solution. The agent created a  for the backend, added new API endpoints (, ), and modified the frontend to poll for progress and display a progress bar.
+-   Status: **IN PROGRESS**
+-   Agent Testing Done: N
+-   Which testing method agent to use? Both. The backend background job functionality needs to be verified, and the frontend progress UI needs to be checked.
+-   User Testing Done: N
 
 **All Pending/In progress Issue list**:
-There are no pending bugs or issues. All current work is focused on new feature development.
+-   **Issue 1: Bulk import fails for large files due to timeouts. (P0)**
+    -   **Attempted fixes**: The initial implementation that processed the file in a single HTTP request failed with  errors and timeouts.
+    -   **Next debug checklist**: The current fix in progress is to use background jobs. The agent needs to:
+        1.  Build the modified frontend ().
+        2.  Restart all services (nginx-code-proxy: stopped
+mongodb: stopped
+backend: stopped
+backend: started
+frontend: started
+mongodb: started
+nginx-code-proxy: started
+code-server: started).
+        3.  Test the full flow: upload a file, confirm the background job starts, poll the status endpoint, and verify the UI shows progress.
+        4.  Confirm that all 1,700+ users are created correctly in the database with all columns populated and linked to the 'Campus Africa' corporate client.
+    -   **Why fix this issue and what will be achieved with the fix?**: This will provide a reliable and scalable way for the user to import thousands of records, which is a core requirement.
+    -   **Status**: IN PROGRESS
+    -   **Is recurring issue?** Y
+    -   **Should Test frontend/backend/both after fix?** both
+    -   **Blocked on other issue:** None.
 
 **In progress Task List**:
--   **Task 1: Build Campus Africa Bulk Student Import Feature (P0)**
-    -   **Where to resume:** The task is blocked waiting for user input. The next agent must re-engage the user with the questions asked in the last message regarding the student import file:
-        1.  The complete list of columns in the spreadsheet (e.g., First Name, Last Name, Email, Student ID).
-        2.  The desired file format (CSV or Excel).
-        3.  The preferred authentication method for new students (e.g., temporary password, password reset flow).
-        4.  A sample row of data (anonymized).
-    -   **What will be achieved with this?** An admin will be able to upload a file to bulk-create student accounts, linking them to the Campus Africa corporate client.
-    -   **Status:** BLOCKED
+-   **Task 1: Complete and Test the Background Processing for Bulk Import (P0)**
+    -   **Where to resume**: The agent has written the code for the backend and frontend. The next step is to build, restart, and test the new asynchronous import flow.
+    -   **What will be achieved with this?**: A robust bulk import feature that handles large datasets without timeouts and provides real-time progress feedback to the user.
+    -   **Status**: IN PROGRESS
     -   **Should Test frontend/backend/both after fix?** both
-    -   **Blocked on something:** User response with required details for the import file.
+    -   **Blocked on something**: None.
 
 **Upcoming and Future Tasks**
 -   **Upcoming Tasks:**
-    -   **P1: Implement WhatsApp Notifications:**
-        -   The agent has the Twilio playbook but is blocked on receiving credentials.
-        -   The first notification to implement is the appointment reminder.
-        -   **Action:** Re-ask the user for their Twilio credentials (, , ).
-    -   **P2: AI Scribing for Clinical Notes:** Integrate OpenAI to provide real-time transcription and generate editable SOAP notes from consultation audio.
+    -   **P1: Update Regular Patient Signup Flow**: The current registration flow for individual (walk-in) patients needs to be updated to link them to the default Individual / Walk-in corporate client to ensure data consistency with the new architecture.
+    -   **P2: WhatsApp Notifications**: This is blocked on the user providing Twilio credentials. The agent must re-ask for the , , and .
 -   **Future Tasks:**
-    -   **Enhance Admin Dashboard:** Implement Phase 2/3 metrics (chat response times, video quality metrics from Daily.co, uptime monitoring).
-    -   **Production Roadmap:** Execute tasks from  (enhanced testing, CI/CD, security hardening).
-    -   **Multi-Clinic UI:** Expose the existing multi-tenant backend functionality in the frontend UI.
-    -   **Campus Africa Admin Role:** Create a view for corporate clients to see anonymized usage data.
+    -   **Analytics Dashboard Enhancement**: Add filtering capabilities to the admin dashboard to segment analytics by corporate client.
+    -   **AI Scribing**: Integrate OpenAI for real-time transcription of clinical notes.
+    -   **Production Roadmap**: Execute tasks from .
+    -   **Corporate Client Admin Role**: Create a dedicated view for corporate clients to see their anonymized usage data.
 
 **Completed work in this session**
--   **Daily.co Video Fix:** Resolved the blank screen 406 error by rewriting the frontend component to use the  SDK instead of a raw iframe. The overlay issue was also fixed.
--   **Navigation Fixes:** Corrected Not Found errors after calls by routing users to the correct patient and clinician dashboards. The clinical notes button now correctly opens the notes dialog.
--   **Real-time & Timezone Fixes:** New bookings now appear on the patient dashboard instantly (real-time  listener). All timestamps in the UI and chat messages now correctly display in South African Standard Time (SAST).
--   **UI Enhancements:** Made prescription and invoice cards on the patient dashboard clickable, opening a detailed dialog view for each.
--   **Receptionist Cancellation Flow:** Added a Bookings tab to the Receptionist Dashboard, allowing them to view a list of all appointments and cancel upcoming ones. Fixed a 405 API error related to this feature.
--   **Admin Dashboard & Analytics:**
-    -   Fixed 401/403/520 errors preventing the dashboard from loading.
-    -   Implemented several new analytics reports requested by the user, including a Conversion Funnel, No-Show Analysis, Receptionist Workload, and detailed Timestamp Trends with charts and a heatmap.
--   **Code Cleanup:** Removed deprecated WebRTC code.
--   **Documentation:** Created  and an updated  for the user's executive presentation.
+-   **Corporate Client Architecture**: Designed and implemented a scalable multi-tenant DB schema with a  table and updated the  table.
+-   **Database Cleanup**: Created and executed scripts to delete over 1,700 partially imported users to ensure a clean slate for the corrected import process.
+-   **Data Integrity**: Added all missing columns from the user's Excel file to the  table via SQL migration (, , , etc.).
+-   **Secure Onboarding Flow**: Implemented a set password flow for pre-registered users on the login page, which detects accounts without a password and prompts for setup.
+-   **Bug Fixes**:
+    -   Corrected backend logic that was checking for  (which doesn't exist) to correctly query .
+    -   Fixed a duplicate component import error () in .
+    -   Fixed  error that occurred after a successful import when refreshing the client list.
 
 **Earlier issues found/mentioned but not fixed**
 -   An  configuration issue () was noted but has been ignored as it does not affect the application build.
 
 **Known issue recurrence from previous fork**
--   API endpoints requiring a trailing slash have caused 405 Method Not Allowed errors. This happened with  and was fixed on the frontend. This is a recurring pattern to watch for.
+-   None observed in this session.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Frontend**: React, TypeScript, Vite, TailwindCSS, shadcn/ui, Recharts
--   **Backend**: FastAPI, Python
+-   **Frontend**: React, TypeScript, Vite, TailwindCSS, shadcn/ui
+-   **Backend**: FastAPI, Python, Background Tasks
 -   **Database**: Supabase (PostgreSQL)
--   **Authentication**: Supabase Auth (JWT)
--   **Real-time**: Supabase Realtime
--   **Video**: Daily.co
--   **Key Libraries**: , 
+-   **File Parsing**: , 
 
 **key DB schema**
--   No schema changes were made in this session. All new analytics query existing tables like , , , and .
+-   **corporate_clients**: uid=0(root) gid=0(root) groups=0(root) (PK), , , , 
+-   **profiles**: Added  (FK to ), , , , , , , .
 
 **changes in tech stack**
--   No changes to the core tech stack.  was utilized for the new analytics visualizations.
+-   No changes to the core tech stack. Added  and  for file handling.
 
 **All files of reference**
--   : Contains all logic for the new admin reports.
--   : The UI for all new analytics reports.
--   : Contains the new Bookings tab for cancellations.
--   : Contains fixes for real-time updates, timezones, and clickable cards.
--   : The fixed Daily.co video component.
--   : New documentation for the analytics features.
--   : The updated main project documentation.
+-   : Contains the core logic for starting and monitoring the background import job.
+-   : A new file to manage the state of background jobs in memory.
+-   : Contains the UI for file upload, corporate client selection, and the new progress bar.
+-   : Contains the logic to detect pre-registered users and guide them to set a password.
+-   : The SQL script used to create the multi-tenant database structure.
 
 **key api endpoints**
--   : Updated to include a SAST timestamp in the confirmation message.
--   : Used by the receptionist dashboard to list all bookings.
--   : New endpoint for the conversion funnel report.
--   : New endpoint for the no-show report.
--   : New endpoint for the receptionist performance report.
--   : New endpoint for detailed time-based analytics.
+-   : **(New)** Starts the background import job and returns a .
+-   : **(New)** Polls for the progress of a background import job.
+-   : Previews the contents of an uploaded file.
+-   : Lists available corporate clients for the dropdown.
+-   : Checks if a user account exists and if it was bulk-imported without a password.
 
 **Critical Info for New Agent**
--   Your immediate task is to unblock the **Campus Africa Bulk Student Import** feature. Re-engage the user for the spreadsheet format and authentication details they prefer. This is the highest priority.
--   The second priority is **WhatsApp Notifications**. This is blocked on the user providing Twilio credentials. You must ask for these again.
--   Admin accounts are not created by default. A new user must be created via the signup form, and then their role updated to 'admin' manually in the Supabase database. The user seems to be using .
+-   **Your immediate task is to finalize and test the background processing for the bulk import.** This is the highest priority and the solution to the user's primary problem of importing 1,700+ records.
+-   The database schema has changed significantly. A  table was added, and the  table was extended. The user has already run the provided SQL migration.
+-   The user has already deleted all previously imported test users. The database is clean and ready for a full, correct import.
+-   The user is technically aware and understands concepts like background processing and data segmentation. Clear architectural explanations are appreciated.
 
 **documents and test reports created in this job**
 -   
 -   
--    was updated by the agent.
+-   
+-   
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User**: Asks for admin credentials and provides requirements for a bulk student import feature for Campus Africa. (/)
-2.  **User**: Reports that the admin dashboard has auth errors (401/403). ()
-3.  **User**: Reports that the admin dashboard now shows a 520 error related to . ()
-4.  **User**: Confirms analytics are working and provides a list of desired new metrics (response times, conversion rates, etc.). ()
-5.  **Agent**: Proposes a phased implementation for the new metrics and asks to proceed with Phase 1.
-6.  **User**: proceed. ()
-7.  **User**: Asks for more granular timestamp trend data in the admin dashboard. ()
-8.  **User**: Asks for a write-up of the analytics features for a presentation. ()
-9.  **Agent**: Confirms creation of  and .
-10. **User**: Provides a spreadsheet snippet for the bulk student import feature. ()
-11. **Agent**: Asks clarifying questions about the spreadsheet columns, file format, and authentication method to proceed with the bulk import. (**This is the pending message awaiting user response**).
+1.  **User**: Asks why only 14 users were loaded instead of 1700+. (Pending)
+2.  **Agent**: Investigates and suggests the cause is likely a server timeout.
+3.  **User**: Confirms the preview shows the correct count (1731 to import), meaning the file reading is correct, but the import itself is failing. (Resolved)
+4.  **Agent**: Identifies the root cause as server timeouts and a bug in the duplicate check ( column does not exist).
+5.  **User**: Agrees to implement the better approach of background processing for a production-ready solution. (Pending)
+6.  **Agent**: Begins implementing the background job architecture.
+7.  **Agent**: Provides the SQL to create the  schema and asks the user to run it.
+8.  **User**: Reports a  in the frontend. (Resolved)
+9.  **Agent**: Fixes the duplicate import and asks the user to run the SQL again.
+10. **User**: Confirms the SQL ran successfully, but the subsequent import only loaded 60 users before showing a  error. (Resolved)
 
 **Project Health Check:**
--   **Broken**: None.
--   **Mocked**:
-    -   **HealthBridge Service**: All interactions are still manual.
-    -   **WhatsApp Notifications**: Planned but not built.
+-   **Broken**: The primary bulk import functionality for large files is currently non-functional and awaiting the completion of the background processing task.
+-   **Mocked**: WhatsApp notifications (awaiting Twilio credentials).
 
 **3rd Party Integrations**
 -   **Supabase**: Used for PostgreSQL database, user authentication (JWT), and real-time messaging. Requires user-provided keys.
 -   **Daily.co**: Used for video consultations. Requires a User-provided API Key.
--   **OpenAI**: Integrated for a parked feature. Requires a User-provided API Key.
 -   **Twilio for WhatsApp**: Planned integration. Will require User-provided API Keys.
 
 **Testing status**
--   Testing agent used after significant changes: YES (for the Daily.co fix).
+-   Testing agent used after significant changes: NO
 -   Troubleshoot agent used after agent stuck in loop: NO
--   Test files created: None.
+-   Test files created: None. Agent has relied on user-provided files.
 -   Known regressions: None.
 
 **Credentials to test flow:**
--   To test admin functionality, sign up a new user and manually update their role to  in the  table in the Supabase database. The user has mentioned using  successfully.
+-   Admin access is required to test the bulk import. A user with the  role (e.g., ) is needed.
 
 **What agent forgot to execute**
--   The agent did not persist in asking for the Twilio credentials after the user gave a generic proceed response. The WhatsApp notification task, a key user requirement, remains blocked because of this. The next agent must proactively re-ask for these credentials.</analysis>
+-   After creating the new corporate client architecture, the agent has not yet modified the standard patient registration flow to assign new individual users to the default Individual / Walk-in client. This is a remaining loose end.</analysis>
