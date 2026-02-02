@@ -396,16 +396,31 @@ async def preview_import(
 async def import_students(
     file: UploadFile = File(...),
     password: Optional[str] = Form(None),
+    corporate_client: Optional[str] = Form("Campus Africa"),
+    client_type: Optional[str] = Form("university"),
     user: AuthenticatedUser = Depends(get_current_user)
 ):
     """
-    Import students from Excel file.
-    Creates Supabase auth users and profiles for new students.
+    Import students/patients from Excel file.
+    Creates Supabase auth users and profiles, linked to a corporate client.
+    
+    Args:
+        file: Excel file with patient data
+        password: Excel file password if protected
+        corporate_client: Name of the corporate client (default: Campus Africa)
+        client_type: Type of client - corporate, university, government, individual
     """
     # Check admin role
     roles = await supabase.select('user_roles', 'role', {'user_id': user.id})
     if not roles or roles[0].get('role') != 'admin':
         raise HTTPException(status_code=403, detail="Admin access required")
+    
+    # Get or create corporate client
+    corporate_client_id = await get_or_create_corporate_client(corporate_client, client_type)
+    if not corporate_client_id:
+        logger.warning(f"Could not get/create corporate client: {corporate_client}")
+    
+    logger.info(f"Importing patients for corporate client: {corporate_client} (ID: {corporate_client_id})")
     
     # Read file
     content = await file.read()
