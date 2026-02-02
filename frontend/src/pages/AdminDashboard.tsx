@@ -62,7 +62,7 @@ import { ConsultationTypesChart } from "@/components/analytics/ConsultationTypes
 import { StatusDistributionChart } from "@/components/analytics/StatusDistributionChart";
 import { ClinicianPerformanceTable } from "@/components/analytics/ClinicianPerformanceTable";
 import { PatientGrowthChart } from "@/components/analytics/PatientGrowthChart";
-import { adminAnalyticsAPI, bulkImportAPI } from "@/lib/api";
+import { adminAnalyticsAPI, bulkImportAPI, welcomeEmailsAPI } from "@/lib/api";
 import { toast } from "sonner";
 
 const AdminDashboard = () => {
