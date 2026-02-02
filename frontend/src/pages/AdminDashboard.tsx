@@ -189,13 +189,30 @@ const AdminDashboard = () => {
   const handleImport = async () => {
     if (!importFile) return;
     
+    const clientName = selectedClient === '__new__' ? newClientName : selectedClient;
+    if (!clientName) {
+      toast.error("Please select or enter a corporate client name");
+      return;
+    }
+    
     setImportLoading(true);
     setImportStep('importing');
     try {
-      const result = await bulkImportAPI.importStudents(importFile, importPassword || undefined);
+      const result = await bulkImportAPI.importStudents(
+        importFile, 
+        importPassword || undefined,
+        clientName,
+        selectedClientType
+      );
       setImportResult(result);
       setImportStep('complete');
-      toast.success(`Import complete! ${result.summary.imported} students imported.`);
+      toast.success(`Import complete! ${result.summary.imported} patients imported to ${clientName}.`);
+      
+      // Refresh corporate clients list
+      const response = await bulkImportAPI.getCorporateClients();
+      if (response?.clients) {
+        setCorporateClients(response.clients);
+      }
     } catch (err: any) {
       console.error("Import failed:", err);
       toast.error(err.message || "Import failed");
