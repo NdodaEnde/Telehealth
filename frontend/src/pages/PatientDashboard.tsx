@@ -274,6 +274,9 @@ const PatientDashboardContent = () => {
         userName={profile?.first_name || "there"}
       />
 
+      {/* Guided Tour for First-Time Users */}
+      <PatientGuidedTour />
+
       {/* Header */}
       <header className="border-b border-border bg-card sticky top-0 z-40">
         <div className="container mx-auto px-4 py-3 sm:py-4 flex items-center justify-between">
@@ -289,6 +292,20 @@ const PatientDashboardContent = () => {
             <span className="text-sm text-muted-foreground">
               Welcome, {profile?.first_name || "Patient"}
             </span>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => {
+                if (user) {
+                  const tourKey = `quadcare_patient_tour_completed_${user.id}`;
+                  localStorage.removeItem(tourKey);
+                  window.location.reload();
+                }
+              }}
+              title="Show tour again"
+            >
+              <HelpCircle className="w-4 h-4" />
+            </Button>
             <Button variant="ghost" size="sm" onClick={signOut}>
               <LogOut className="w-4 h-4 mr-2" />
               Sign Out
