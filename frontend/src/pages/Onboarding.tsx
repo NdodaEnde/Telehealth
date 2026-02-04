@@ -8,8 +8,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PatientOnboarding } from "@/components/onboarding/PatientOnboarding";
-import { ArrowLeft, CheckCircle2, User, FileText, Heart, Loader2, Search, AlertCircle, Globe } from "lucide-react";
+import { SelfieCapture } from "@/components/auth/SelfieCapture";
+import { ArrowLeft, CheckCircle2, User, FileText, Heart, Loader2, Search, AlertCircle, Globe, Camera } from "lucide-react";
 import { toast } from "sonner";
+import { profilePhotoAPI } from "@/lib/api";
 
 const BACKEND_URL = import.meta.env.REACT_APP_BACKEND_URL || '';
 
