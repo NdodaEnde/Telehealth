@@ -266,6 +266,13 @@ const PatientDashboardContent = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Photo Prompt for First-Time Corporate Users */}
+      <FirstLoginPhotoPrompt
+        isOpen={showPhotoPrompt}
+        onComplete={() => setShowPhotoPrompt(false)}
+        userName={profile?.first_name || "there"}
+      />
+
       {/* Header */}
       <header className="border-b border-border bg-card sticky top-0 z-40">
         <div className="container mx-auto px-4 py-3 sm:py-4 flex items-center justify-between">
