@@ -713,6 +713,19 @@ export const welcomeEmailsAPI = {
   sendTest: () => apiRequest('/api/admin/welcome-emails/test', { method: 'POST' }),
 };
 
+// Profile Photo API
+export const profilePhotoAPI = {
+  upload: (imageData: string) =>
+    apiRequest('/api/profile-photo/upload', {
+      method: 'POST',
+      body: JSON.stringify({ image_data: imageData }),
+    }),
+  
+  getUrl: (userId: string) => apiRequest(`/api/profile-photo/url/${userId}`),
+  
+  delete: () => apiRequest('/api/profile-photo/', { method: 'DELETE' }),
+};
+
 // Export all APIs
 export const api = {
   user: userAPI,
@@ -728,6 +741,7 @@ export const api = {
   adminAnalytics: adminAnalyticsAPI,
   bulkImport: bulkImportAPI,
   welcomeEmails: welcomeEmailsAPI,
+  profilePhoto: profilePhotoAPI,
 };
 
 export default api;
