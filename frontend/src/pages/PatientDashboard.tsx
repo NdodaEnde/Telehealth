@@ -59,6 +59,10 @@ const PatientDashboardContent = () => {
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
   const [downloadingInvoiceId, setDownloadingInvoiceId] = useState<string | null>(null);
 
+  // Photo prompt state for first-time users
+  const [showPhotoPrompt, setShowPhotoPrompt] = useState(false);
+  const [checkingPhoto, setCheckingPhoto] = useState(true);
+
   // Function to view invoice details
   const handleViewInvoice = (invoice: Invoice) => {
     setSelectedInvoice(invoice);
