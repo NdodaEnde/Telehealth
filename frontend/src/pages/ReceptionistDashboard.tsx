@@ -585,7 +585,11 @@ const ReceptionistDashboardContent = () => {
                             </Button>
                             <Button 
                               onClick={handleCreateBooking} 
-                              disabled={isCreatingBooking || !bookingForm.clinician_id}
+                              disabled={
+                                isCreatingBooking || 
+                                !bookingForm.clinician_id ||
+                                (bookingForm.billing_type === 'medical_aid' && !bookingForm.authorization_number.trim())
+                              }
                             >
                               {isCreatingBooking ? (
                                 <>
