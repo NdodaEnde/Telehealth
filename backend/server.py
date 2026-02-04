@@ -211,6 +211,9 @@ app.include_router(bulk_import_router, prefix="/api")
 # Phase 6: Welcome Emails for Corporate Students
 app.include_router(welcome_emails_router, prefix="/api")
 
+# Phase 7: Profile Photo Upload (Selfie Verification)
+app.include_router(profile_photo_router, prefix="/api")
+
 
 # ============ Middleware ============
 
