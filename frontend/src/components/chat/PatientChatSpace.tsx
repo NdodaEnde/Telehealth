@@ -180,7 +180,7 @@ export const PatientChatSpace: React.FC<PatientChatSpaceProps> = ({ onStartBooki
             <p className="text-muted-foreground mb-4">
               Start a conversation to book a consultation or ask questions
             </p>
-            <Button onClick={() => setShowNewChat(true)}>
+            <Button onClick={() => setShowNewChat(true)} data-tour="new-chat-button">
               <Plus className="w-4 h-4 mr-2" />
               Start New Conversation
             </Button>
