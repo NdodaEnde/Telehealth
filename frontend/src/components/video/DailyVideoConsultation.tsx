@@ -391,6 +391,55 @@ export const DailyVideoConsultation = () => {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
+          {/* Patient Identity Verification (Clinician View Only) */}
+          {role !== "patient" && (
+            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
+              <div className="flex items-center gap-2 mb-3">
+                <ShieldCheck className="w-5 h-5 text-blue-600" />
+                <h4 className="font-medium text-blue-900 dark:text-blue-100">Patient Identity Verification</h4>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="relative">
+                  <Avatar className="w-20 h-20 border-2 border-blue-300">
+                    {loadingPatientPhoto ? (
+                      <AvatarFallback className="bg-blue-100">
+                        <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+                      </AvatarFallback>
+                    ) : patientPhotoUrl ? (
+                      <AvatarImage src={patientPhotoUrl} alt={appointment?.patient_name} />
+                    ) : (
+                      <AvatarFallback className="bg-blue-100">
+                        <User className="w-8 h-8 text-blue-600" />
+                      </AvatarFallback>
+                    )}
+                  </Avatar>
+                  {!patientPhotoUrl && !loadingPatientPhoto && (
+                    <div className="absolute -bottom-1 -right-1 bg-amber-500 rounded-full p-1" title="No verification photo on file">
+                      <ShieldAlert className="w-3 h-3 text-white" />
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1">
+                  <p className="font-semibold text-lg">{appointment?.patient_name}</p>
+                  {patientPhotoUrl ? (
+                    <p className="text-sm text-green-600 flex items-center gap-1">
+                      <ShieldCheck className="w-4 h-4" />
+                      Verification photo on file
+                    </p>
+                  ) : (
+                    <p className="text-sm text-amber-600 flex items-center gap-1">
+                      <ShieldAlert className="w-4 h-4" />
+                      No verification photo
+                    </p>
+                  )}
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Please verify the patient's identity when the video connects
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Appointment Info */}
           <div className="bg-muted/50 rounded-lg p-4 space-y-3">
             <div className="flex items-center gap-3">
