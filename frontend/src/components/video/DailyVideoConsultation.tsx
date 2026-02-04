@@ -267,6 +267,22 @@ export const DailyVideoConsultation = () => {
         .from("appointments")
         .update({ status: "completed" })
         .eq("id", appointment.id);
+      
+      // Show rating modal for patients (check if not already rated)
+      if (role === "patient") {
+        try {
+          const ratingCheck = await ratingsAPI.check(appointment.id);
+          if (!ratingCheck?.exists) {
+            setShowRatingModal(true);
+          } else {
+            setHasRated(true);
+          }
+        } catch (err) {
+          console.error("Error checking rating:", err);
+          // Still show the modal on error
+          setShowRatingModal(true);
+        }
+      }
     }
   };
 
@@ -281,6 +297,12 @@ export const DailyVideoConsultation = () => {
     }
     setJoiningCall(false);
     handleCallEnded();
+  };
+
+  // Handle rating modal close
+  const handleRatingClose = () => {
+    setShowRatingModal(false);
+    setHasRated(true);
   };
 
   // Navigate to appropriate dashboard
