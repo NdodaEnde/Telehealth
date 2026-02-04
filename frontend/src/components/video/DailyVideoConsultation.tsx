@@ -37,6 +37,10 @@ export const DailyVideoConsultation = () => {
   const [isInCall, setIsInCall] = useState(false);
   const [callEnded, setCallEnded] = useState(false);
   
+  // Patient photo for identity verification (clinician view)
+  const [patientPhotoUrl, setPatientPhotoUrl] = useState<string | null>(null);
+  const [loadingPatientPhoto, setLoadingPatientPhoto] = useState(false);
+  
   const containerRef = useRef<HTMLDivElement>(null);
   const callFrameRef = useRef<DailyCall | null>(null);
 
