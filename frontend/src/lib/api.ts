@@ -745,6 +745,52 @@ export const ratingsAPI = {
     apiRequest(`/api/ratings/admin/recent?limit=${limit}`),
 };
 
+// AI Clinical Notes API
+export const aiClinicalNotesAPI = {
+  transcribe: async (audioBlob: Blob, appointmentId: string) => {
+    const formData = new FormData();
+    formData.append('audio', audioBlob, 'recording.webm');
+    formData.append('appointment_id', appointmentId);
+    
+    const token = await getAuthToken();
+    const response = await fetch(`${BACKEND_URL}/api/ai-clinical-notes/transcribe`, {
+      method: 'POST',
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+      body: formData,
+    });
+    
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.detail || 'Transcription failed');
+    }
+    
+    return response.json();
+  },
+  
+  generateSoap: (appointmentId: string, transcript: string) =>
+    apiRequest('/api/ai-clinical-notes/generate-soap', {
+      method: 'POST',
+      body: JSON.stringify({ appointment_id: appointmentId, transcript }),
+    }),
+  
+  save: (data: {
+    appointment_id: string;
+    transcript: string;
+    soap_subjective: string;
+    soap_objective: string;
+    soap_assessment: string;
+    soap_plan: string;
+    additional_notes?: string;
+  }) =>
+    apiRequest('/api/ai-clinical-notes/save', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  
+  getNotes: (appointmentId: string) => 
+    apiRequest(`/api/ai-clinical-notes/notes/${appointmentId}`),
+};
+
 // Export all APIs
 export const api = {
   user: userAPI,
