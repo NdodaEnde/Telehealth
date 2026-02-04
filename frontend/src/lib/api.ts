@@ -808,6 +808,7 @@ export const api = {
   welcomeEmails: welcomeEmailsAPI,
   profilePhoto: profilePhotoAPI,
   ratings: ratingsAPI,
+  aiClinicalNotes: aiClinicalNotesAPI,
 };
 
 export default api;
