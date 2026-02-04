@@ -235,6 +235,7 @@ const ReceptionistDashboardContent = () => {
         service_type: bookingForm.service_type,
         billing_type: bookingForm.billing_type,
         notes: bookingForm.notes || undefined,
+        authorization_number: bookingForm.billing_type === 'medical_aid' ? bookingForm.authorization_number : undefined,
       });
 
       toast({ title: "Booking created", description: "The patient has been notified" });
@@ -245,6 +246,7 @@ const ReceptionistDashboardContent = () => {
         service_type: "teleconsultation",
         billing_type: "cash",
         notes: "",
+        authorization_number: "",
       });
       
       // Refresh conversation
