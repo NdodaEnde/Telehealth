@@ -353,15 +353,39 @@ export const DailyVideoConsultation = () => {
   if (callEnded) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        {/* Rating Modal (patients only) */}
+        {role === "patient" && appointment && (
+          <ConsultationRatingModal
+            isOpen={showRatingModal}
+            onClose={handleRatingClose}
+            appointmentId={appointment.id}
+            clinicianName={appointment.clinician_name || "your clinician"}
+          />
+        )}
+        
         <Card className="max-w-md w-full">
           <CardHeader className="text-center">
             <Video className="w-12 h-12 text-primary mx-auto mb-2" />
             <CardTitle>Consultation Ended</CardTitle>
             <CardDescription>
               Your video consultation has ended successfully.
+              {role === "patient" && !hasRated && !showRatingModal && (
+                <span className="block mt-2 text-primary">
+                  Please rate your experience!
+                </span>
+              )}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {role === "patient" && !hasRated && (
+              <Button 
+                variant="outline" 
+                className="w-full"
+                onClick={() => setShowRatingModal(true)}
+              >
+                ⭐ Rate This Consultation
+              </Button>
+            )}
             {role !== "patient" && (
               <Button 
                 variant="outline" 
