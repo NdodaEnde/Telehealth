@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { 
   Calendar, Clock, FileText, Video, User, LogOut, 
-  MessageCircle, Receipt, Menu, X, Settings, Download, Loader2
+  MessageCircle, Receipt, Menu, X, Settings, Download, Loader2, HelpCircle
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -23,6 +23,7 @@ import { formatSAST } from "@/lib/timezone";
 import { PatientPrescriptionHistory } from "@/components/prescriptions/PatientPrescriptionHistory";
 import { PatientChatSpace } from "@/components/chat/PatientChatSpace";
 import { FirstLoginPhotoPrompt } from "@/components/auth/FirstLoginPhotoPrompt";
+import { PatientGuidedTour } from "@/components/onboarding/PatientGuidedTour";
 import { bookingsAPI, profilePhotoAPI } from "@/lib/api";
 import { toast } from "sonner";
 
