@@ -726,6 +726,25 @@ export const profilePhotoAPI = {
   delete: () => apiRequest('/api/profile-photo/', { method: 'DELETE' }),
 };
 
+// Ratings API
+export const ratingsAPI = {
+  submit: (data: { appointment_id: string; rating: number; feedback?: string }) =>
+    apiRequest('/api/ratings/', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  
+  check: (appointmentId: string) => apiRequest(`/api/ratings/check/${appointmentId}`),
+  
+  getMyRatings: () => apiRequest('/api/ratings/my-ratings'),
+  
+  // Admin only
+  getStats: () => apiRequest('/api/ratings/admin/stats'),
+  
+  getRecentFeedback: (limit: number = 20) => 
+    apiRequest(`/api/ratings/admin/recent?limit=${limit}`),
+};
+
 // Export all APIs
 export const api = {
   user: userAPI,
@@ -742,6 +761,7 @@ export const api = {
   bulkImport: bulkImportAPI,
   welcomeEmails: welcomeEmailsAPI,
   profilePhoto: profilePhotoAPI,
+  ratings: ratingsAPI,
 };
 
 export default api;
