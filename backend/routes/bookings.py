@@ -124,6 +124,7 @@ class BookingResponse(BaseModel):
     service_name: str
     service_price: float
     billing_type: str
+    authorization_number: Optional[str] = None
     status: str
     notes: Optional[str] = None
     created_by: str
