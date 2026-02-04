@@ -330,15 +330,15 @@ const PatientDashboardContent = () => {
         {/* Main Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
           <TabsList className="grid w-full grid-cols-3 lg:w-[400px]">
-            <TabsTrigger value="chat" className="flex items-center gap-2">
+            <TabsTrigger value="chat" className="flex items-center gap-2" data-tour="chat-tab">
               <MessageCircle className="w-4 h-4" />
               <span className="hidden sm:inline">Chat</span>
             </TabsTrigger>
-            <TabsTrigger value="consultations" className="flex items-center gap-2">
+            <TabsTrigger value="consultations" className="flex items-center gap-2" data-tour="consultations-tab">
               <Video className="w-4 h-4" />
               <span className="hidden sm:inline">Consultations</span>
             </TabsTrigger>
-            <TabsTrigger value="profile" className="flex items-center gap-2">
+            <TabsTrigger value="profile" className="flex items-center gap-2" data-tour="profile-tab">
               <User className="w-4 h-4" />
               <span className="hidden sm:inline">Profile</span>
             </TabsTrigger>
