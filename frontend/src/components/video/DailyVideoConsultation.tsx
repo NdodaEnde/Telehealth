@@ -94,6 +94,19 @@ export const DailyVideoConsultation = () => {
             : "Clinician",
         });
 
+        // Fetch patient photo for clinician identity verification
+        if (isClinician || isStaff) {
+          setLoadingPatientPhoto(true);
+          try {
+            const photoResponse = await profilePhotoAPI.getUrl(aptData.patient_id);
+            setPatientPhotoUrl(photoResponse?.photo_url || null);
+          } catch (photoErr) {
+            console.error("Error fetching patient photo:", photoErr);
+          } finally {
+            setLoadingPatientPhoto(false);
+          }
+        }
+
         // Create room and token
         const roomResponse = await videoAPI.createRoom(appointmentId);
         const userName = profile 
