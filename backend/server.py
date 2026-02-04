@@ -28,6 +28,7 @@ from routes.admin_analytics import router as admin_analytics_router
 from routes.bulk_import import router as bulk_import_router
 from routes.welcome_emails import router as welcome_emails_router
 from routes.profile_photo import router as profile_photo_router
+from routes.ratings import router as ratings_router
 
 # Analytics (existing)
 from analytics_service import get_full_analytics_dashboard, get_analytics_overview
