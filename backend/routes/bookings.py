@@ -280,6 +280,14 @@ async def create_booking(
     if role not in ["admin", "nurse", "doctor", "receptionist"]:
         raise HTTPException(status_code=403, detail="Not authorized to create bookings")
     
+    # Validate authorization number for medical aid bookings
+    if data.billing_type == PatientBillingType.MEDICAL_AID:
+        if not data.authorization_number or not data.authorization_number.strip():
+            raise HTTPException(
+                status_code=400, 
+                detail="Authorization number is required for medical aid bookings"
+            )
+    
     # Get patient info
     patient_profile = await get_user_profile(data.patient_id, user.access_token)
     if not patient_profile:
@@ -333,6 +341,7 @@ async def create_booking(
         "duration_minutes": data.duration_minutes,
         "service_type": data.service_type.value,
         "billing_type": data.billing_type.value,
+        "authorization_number": data.authorization_number.strip() if data.authorization_number else None,
         "status": BookingStatus.CONFIRMED.value,
         "notes": data.notes,
         "created_by": user.id,
