@@ -108,6 +108,7 @@ class BookingCreate(BaseModel):
     billing_type: PatientBillingType
     notes: Optional[str] = None
     duration_minutes: int = 30
+    authorization_number: Optional[str] = None  # Required for medical_aid billing type
 
 class BookingResponse(BaseModel):
     id: str
