@@ -7,10 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Loader2, Video, VideoOff, ArrowLeft, AlertCircle, Clock, User, Camera, ShieldCheck, ShieldAlert } from "lucide-react";
+import { Loader2, Video, VideoOff, ArrowLeft, AlertCircle, Clock, User, Camera, ShieldCheck, ShieldAlert, FileText, Mic } from "lucide-react";
 import { toast } from "sonner";
 import DailyIframe, { DailyCall } from "@daily-co/daily-js";
 import { ConsultationRatingModal } from "./ConsultationRatingModal";
+import { AIClinicalNotesEditor } from "./AIClinicalNotesEditor";
 
 interface AppointmentInfo {
   id: string;
