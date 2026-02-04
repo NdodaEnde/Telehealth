@@ -215,6 +215,9 @@ app.include_router(welcome_emails_router, prefix="/api")
 # Phase 7: Profile Photo Upload (Selfie Verification)
 app.include_router(profile_photo_router, prefix="/api")
 
+# Phase 8: Consultation Ratings
+app.include_router(ratings_router, prefix="/api")
+
 
 # ============ Middleware ============
 
