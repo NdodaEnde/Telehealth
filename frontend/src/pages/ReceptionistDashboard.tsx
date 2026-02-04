@@ -457,15 +457,43 @@ const ReceptionistDashboardContent = () => {
               <>
                 <CardHeader className="pb-2 border-b">
                   <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="text-lg">
-                        {currentConversation.patient_name}
-                      </CardTitle>
-                      <div className="flex items-center gap-2 mt-1">
-                        <Badge variant="outline">{currentConversation.status.replace('_', ' ')}</Badge>
-                        {currentConversation.patient_type && (
-                          <Badge variant="secondary">{currentConversation.patient_type.replace('_', ' ')}</Badge>
+                    <div className="flex items-center gap-4">
+                      {/* Patient Photo */}
+                      <div className="relative">
+                        <Avatar className="w-14 h-14 border-2 border-border">
+                          {loadingPatientPhoto ? (
+                            <AvatarFallback>
+                              <Loader2 className="w-5 h-5 animate-spin" />
+                            </AvatarFallback>
+                          ) : patientPhotoUrl ? (
+                            <AvatarImage src={patientPhotoUrl} alt={currentConversation.patient_name} />
+                          ) : (
+                            <AvatarFallback className="bg-muted">
+                              <User className="w-6 h-6 text-muted-foreground" />
+                            </AvatarFallback>
+                          )}
+                        </Avatar>
+                        {!patientPhotoUrl && !loadingPatientPhoto && (
+                          <div className="absolute -bottom-1 -right-1 bg-amber-500 rounded-full p-1" title="No verification photo">
+                            <Camera className="w-3 h-3 text-white" />
+                          </div>
                         )}
+                      </div>
+                      <div>
+                        <CardTitle className="text-lg">
+                          {currentConversation.patient_name}
+                        </CardTitle>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Badge variant="outline">{currentConversation.status.replace('_', ' ')}</Badge>
+                          {currentConversation.patient_type && (
+                            <Badge variant="secondary">{currentConversation.patient_type.replace('_', ' ')}</Badge>
+                          )}
+                          {!patientPhotoUrl && !loadingPatientPhoto && (
+                            <Badge variant="outline" className="text-amber-600 border-amber-300 bg-amber-50">
+                              No Photo
+                            </Badge>
+                          )}
+                        </div>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
