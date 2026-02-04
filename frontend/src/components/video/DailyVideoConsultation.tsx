@@ -42,6 +42,10 @@ export const DailyVideoConsultation = () => {
   const [patientPhotoUrl, setPatientPhotoUrl] = useState<string | null>(null);
   const [loadingPatientPhoto, setLoadingPatientPhoto] = useState(false);
   
+  // Rating modal state (for patients after call ends)
+  const [showRatingModal, setShowRatingModal] = useState(false);
+  const [hasRated, setHasRated] = useState(false);
+  
   const containerRef = useRef<HTMLDivElement>(null);
   const callFrameRef = useRef<DailyCall | null>(null);
 
