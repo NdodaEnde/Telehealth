@@ -75,6 +75,7 @@ const ReceptionistDashboardContent = () => {
     service_type: "teleconsultation",
     billing_type: "cash",
     notes: "",
+    authorization_number: "",
   });
   const [isCreatingBooking, setIsCreatingBooking] = useState(false);
   
