@@ -41,7 +41,7 @@ interface Country {
 const OnboardingPage = () => {
   const navigate = useNavigate();
   const { profile, onboardingComplete, refreshProfile, isLoading } = useAuth();
-  const [step, setStep] = useState<"check" | "onboarding" | "confirm">("check");
+  const [step, setStep] = useState<"check" | "photo" | "onboarding" | "confirm">("check");
   
   // ID Type selection
   const [idType, setIdType] = useState<"sa_id" | "passport">("sa_id");
@@ -58,6 +58,10 @@ const OnboardingPage = () => {
   const [ehrData, setEhrData] = useState<EHRPatientData | null>(null);
   const [idValidation, setIdValidation] = useState<any>(null);
   const [countries, setCountries] = useState<Country[]>([]);
+  
+  // Photo capture state
+  const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   // Fetch countries list on mount
   useEffect(() => {
