@@ -206,10 +206,17 @@ export const DailyVideoConsultation = () => {
         console.log("Joined Daily meeting");
         toast.success("Connected to consultation");
         setIsInCall(true);
+        
+        // Start audio recording for clinicians
+        if (role !== "patient") {
+          startAudioRecording();
+        }
       });
 
       callFrame.on("left-meeting", () => {
         console.log("Left Daily meeting");
+        // Stop recording if active
+        stopAudioRecording();
         handleCallEnded();
       });
 
