@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { videoAPI, profilePhotoAPI } from "@/lib/api";
+import { videoAPI, profilePhotoAPI, ratingsAPI } from "@/lib/api";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Loader2, Video, VideoOff, ArrowLeft, AlertCircle, Clock, User, Camera, ShieldCheck, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 import DailyIframe, { DailyCall } from "@daily-co/daily-js";
+import { ConsultationRatingModal } from "./ConsultationRatingModal";
 
 interface AppointmentInfo {
   id: string;
