@@ -258,7 +258,58 @@ export const DailyVideoConsultation = () => {
       toast.error("Failed to join video call");
       setJoiningCall(false);
     }
-  }, [roomUrl, token]);
+  }, [roomUrl, token, role]);
+
+  // Audio recording for transcription (clinicians only)
+  const startAudioRecording = async () => {
+    try {
+      // Get audio stream from microphone
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+        }
+      });
+      
+      audioChunksRef.current = [];
+      
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType: MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4'
+      });
+      
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+      
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(audioChunksRef.current, { 
+          type: mediaRecorder.mimeType 
+        });
+        setAudioBlob(blob);
+        console.log(`Audio recording completed: ${blob.size} bytes`);
+        
+        // Stop all tracks
+        stream.getTracks().forEach(track => track.stop());
+      };
+      
+      mediaRecorderRef.current = mediaRecorder;
+      mediaRecorder.start(1000); // Collect data every second
+      console.log("Audio recording started");
+      
+    } catch (err) {
+      console.error("Failed to start audio recording:", err);
+      // Non-blocking - just log the error, clinical notes will be manual
+    }
+  };
+  
+  const stopAudioRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+      console.log("Audio recording stopped");
+    }
+  };
 
   // Handle call ended
   const handleCallEnded = async () => {
