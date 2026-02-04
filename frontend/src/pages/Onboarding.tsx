@@ -156,8 +156,8 @@ const OnboardingPage = () => {
               setEhrData(ehrResult);
               
               if (ehrResult.found) {
-                toast.success("We found your existing records! Please confirm your details.");
-                setStep("confirm");
+                toast.success("We found your existing records! Let's take a quick photo first.");
+                setStep("photo");
                 return;
               }
             }
@@ -167,9 +167,9 @@ const OnboardingPage = () => {
         }
       }
 
-      // No EHR record found or passport user - proceed to full onboarding
-      toast.info("Please complete your profile.");
-      setStep("onboarding");
+      // No EHR record found or passport user - proceed to photo then full onboarding
+      toast.info("Let's take a quick photo for identity verification.");
+      setStep("photo");
     } catch (error) {
       console.error("Validation failed:", error);
       toast.error("Could not validate identification. Please try again.");
