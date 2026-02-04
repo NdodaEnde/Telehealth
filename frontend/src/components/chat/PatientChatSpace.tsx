@@ -117,7 +117,7 @@ export const PatientChatSpace: React.FC<PatientChatSpaceProps> = ({ onStartBooki
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
             <CardTitle className="text-lg">Messages</CardTitle>
-            <Button size="sm" onClick={() => setShowNewChat(true)}>
+            <Button size="sm" onClick={() => setShowNewChat(true)} data-tour="new-chat-button">
               <Plus className="w-4 h-4 mr-1" />
               New
             </Button>
