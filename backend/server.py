@@ -219,6 +219,9 @@ app.include_router(profile_photo_router, prefix="/api")
 # Phase 8: Consultation Ratings
 app.include_router(ratings_router, prefix="/api")
 
+# Phase 9: AI Clinical Notes (Transcription + SOAP)
+app.include_router(ai_clinical_notes_router, prefix="/api")
+
 
 # ============ Middleware ============
 
