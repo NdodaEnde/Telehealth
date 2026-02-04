@@ -395,7 +395,90 @@ const OnboardingPage = () => {
     );
   }
 
-  // Step 2a: Confirm EHR data (if found)
+  // Step 2: Photo Capture
+  if (step === "photo") {
+    const handlePhotoCapture = async (imageData: string) => {
+      setCapturedPhoto(imageData);
+      setUploadingPhoto(true);
+      
+      try {
+        const response = await profilePhotoAPI.upload(imageData);
+        if (response?.success) {
+          toast.success("Photo saved successfully!");
+          // Proceed to next step based on EHR data
+          if (ehrData?.found) {
+            setStep("confirm");
+          } else {
+            setStep("onboarding");
+          }
+        } else {
+          toast.error("Failed to save photo. Please try again.");
+        }
+      } catch (err: any) {
+        console.error("Photo upload error:", err);
+        toast.error(err.message || "Failed to upload photo");
+      } finally {
+        setUploadingPhoto(false);
+      }
+    };
+
+    return (
+      <div className="min-h-screen bg-background">
+        <header className="border-b border-border bg-card sticky top-0 z-40">
+          <div className="container mx-auto px-4 py-3 sm:py-4 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl gradient-primary flex items-center justify-center">
+                <span className="text-primary-foreground font-bold text-sm sm:text-lg">H</span>
+              </div>
+              <span className="font-bold text-base sm:text-lg hidden xs:block">Quadcare Telehealth</span>
+            </div>
+            <Button variant="ghost" size="sm" onClick={() => setStep("check")}>
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back
+            </Button>
+          </div>
+        </header>
+
+        <main className="container mx-auto px-4 py-8 max-w-lg">
+          {uploadingPhoto ? (
+            <Card>
+              <CardContent className="py-12">
+                <div className="flex flex-col items-center justify-center">
+                  <Loader2 className="w-8 h-8 animate-spin text-primary mb-4" />
+                  <p className="text-muted-foreground">Saving your photo...</p>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <>
+              <div className="text-center mb-6">
+                <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                  <Camera className="w-8 h-8 text-primary" />
+                </div>
+                <h2 className="text-xl font-bold">Identity Verification Photo</h2>
+                <p className="text-muted-foreground text-sm mt-2">
+                  This photo helps us verify your identity during consultations and protects your healthcare benefits.
+                </p>
+              </div>
+              
+              <SelfieCapture
+                onCapture={handlePhotoCapture}
+                required={true}
+                title="Take a Selfie"
+                description="Position your face clearly in the frame and ensure good lighting."
+              />
+              
+              <p className="text-xs text-center text-muted-foreground mt-4">
+                Your photo is stored securely and only visible to Quadcare healthcare staff for identity verification.
+              </p>
+            </>
+          )}
+        </main>
+      </div>
+    );
+  }
+
+  // Step 3a: Confirm EHR data (if found)
   if (step === "confirm" && ehrData?.found) {
     return (
       <div className="min-h-screen bg-background">
