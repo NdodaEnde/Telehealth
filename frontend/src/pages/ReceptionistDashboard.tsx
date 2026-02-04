@@ -86,6 +86,33 @@ const ReceptionistDashboardContent = () => {
   const [currentBookingDetails, setCurrentBookingDetails] = useState<any>(null);
   const [selectedBookingToCancel, setSelectedBookingToCancel] = useState<any>(null);
 
+  // Patient photo state
+  const [patientPhotoUrl, setPatientPhotoUrl] = useState<string | null>(null);
+  const [loadingPatientPhoto, setLoadingPatientPhoto] = useState(false);
+
+  // Fetch patient photo when conversation changes
+  useEffect(() => {
+    const fetchPatientPhoto = async () => {
+      if (!currentConversation?.patient_id) {
+        setPatientPhotoUrl(null);
+        return;
+      }
+      
+      setLoadingPatientPhoto(true);
+      try {
+        const response = await profilePhotoAPI.getUrl(currentConversation.patient_id);
+        setPatientPhotoUrl(response?.photo_url || null);
+      } catch (error) {
+        console.error("Error fetching patient photo:", error);
+        setPatientPhotoUrl(null);
+      } finally {
+        setLoadingPatientPhoto(false);
+      }
+    };
+    
+    fetchPatientPhoto();
+  }, [currentConversation?.patient_id]);
+
   // Fetch booking details when conversation changes
   useEffect(() => {
     const fetchBookingDetails = async () => {
