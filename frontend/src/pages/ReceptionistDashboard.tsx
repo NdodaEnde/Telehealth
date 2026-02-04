@@ -531,7 +531,7 @@ const ReceptionistDashboardContent = () => {
                               <Label>Billing Type</Label>
                               <Select
                                 value={bookingForm.billing_type}
-                                onValueChange={(v) => setBookingForm(f => ({ ...f, billing_type: v }))}
+                                onValueChange={(v) => setBookingForm(f => ({ ...f, billing_type: v, authorization_number: "" }))}
                               >
                                 <SelectTrigger>
                                   <SelectValue />
@@ -544,6 +544,23 @@ const ReceptionistDashboardContent = () => {
                                 </SelectContent>
                               </Select>
                             </div>
+
+                            {bookingForm.billing_type === 'medical_aid' && (
+                              <div className="space-y-2">
+                                <Label>
+                                  Authorization Number <span className="text-destructive">*</span>
+                                </Label>
+                                <Input
+                                  value={bookingForm.authorization_number}
+                                  onChange={(e) => setBookingForm(f => ({ ...f, authorization_number: e.target.value }))}
+                                  placeholder="Enter medical aid authorization number"
+                                  className={!bookingForm.authorization_number ? "border-destructive" : ""}
+                                />
+                                <p className="text-xs text-muted-foreground">
+                                  Required for medical aid billing. Obtain from HealthBridge system.
+                                </p>
+                              </div>
+                            )}
 
                             <div className="space-y-2">
                               <Label>Notes (optional)</Label>
