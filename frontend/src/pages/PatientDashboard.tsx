@@ -100,6 +100,43 @@ const PatientDashboardContent = () => {
     }
   }, [isLoading, onboardingComplete, navigate, justOnboarded]);
 
+  // Check if user needs to add a profile photo (for bulk-imported users)
+  useEffect(() => {
+    const checkProfilePhoto = async () => {
+      if (!user) {
+        setCheckingPhoto(false);
+        return;
+      }
+
+      try {
+        // Check if user has a profile photo
+        const response = await profilePhotoAPI.getUrl(user.id);
+        
+        if (!response?.photo_url) {
+          // No photo - check if this is a corporate client user (bulk imported)
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('corporate_client_id, profile_photo_path')
+            .eq('id', user.id)
+            .single();
+          
+          // Show prompt if user is from a corporate client and has no photo
+          if (profileData?.corporate_client_id && !profileData?.profile_photo_path) {
+            setShowPhotoPrompt(true);
+          }
+        }
+      } catch (err) {
+        console.error("Error checking profile photo:", err);
+      } finally {
+        setCheckingPhoto(false);
+      }
+    };
+
+    if (!isLoading && onboardingComplete) {
+      checkProfilePhoto();
+    }
+  }, [user, isLoading, onboardingComplete]);
+
   // Function to fetch appointments
   const fetchAppointments = async () => {
     if (!user) return;
