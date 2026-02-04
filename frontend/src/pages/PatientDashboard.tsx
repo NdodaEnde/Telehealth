@@ -22,7 +22,8 @@ import { format } from "date-fns";
 import { formatSAST } from "@/lib/timezone";
 import { PatientPrescriptionHistory } from "@/components/prescriptions/PatientPrescriptionHistory";
 import { PatientChatSpace } from "@/components/chat/PatientChatSpace";
-import { bookingsAPI } from "@/lib/api";
+import { FirstLoginPhotoPrompt } from "@/components/auth/FirstLoginPhotoPrompt";
+import { bookingsAPI, profilePhotoAPI } from "@/lib/api";
 import { toast } from "sonner";
 
 interface Appointment {
