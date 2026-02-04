@@ -414,8 +414,23 @@ export const DailyVideoConsultation = () => {
     );
   }
 
-  // Call ended state
+  // Call ended state - Show AI Clinical Notes Editor for clinicians
   if (callEnded) {
+    // Show AI Clinical Notes editor for clinicians
+    if (showClinicalNotes && appointment && role !== "patient") {
+      return (
+        <div className="min-h-screen bg-background p-4 py-8">
+          <AIClinicalNotesEditor
+            appointmentId={appointment.id}
+            patientName={appointment.patient_name || "Patient"}
+            clinicianName={appointment.clinician_name || "Clinician"}
+            audioBlob={audioBlob}
+            onClose={goToDashboard}
+          />
+        </div>
+      );
+    }
+    
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
         {/* Rating Modal (patients only) */}
@@ -453,11 +468,19 @@ export const DailyVideoConsultation = () => {
             )}
             {role !== "patient" && (
               <Button 
-                variant="outline" 
                 className="w-full"
-                onClick={() => navigate(`/clinician?notes=${appointmentId}`)}
+                onClick={() => setShowClinicalNotes(true)}
               >
-                Complete Clinical Notes
+                <FileText className="w-4 h-4 mr-2" />
+                Generate Clinical Notes
+                {audioBlob && audioBlob.size > 0 && (
+                  <Badge variant="secondary" className="ml-2 text-xs">
+                    <Mic className="w-3 h-3 mr-1" />
+                    AI
+                  </Badge>
+                )}
+              </Button>
+            )}
               </Button>
             )}
             <Button onClick={goToDashboard} className="w-full">
