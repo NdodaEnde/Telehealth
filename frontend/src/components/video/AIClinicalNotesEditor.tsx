@@ -241,6 +241,16 @@ export const AIClinicalNotesEditor = ({
               <FileText className="w-4 h-4 mr-2" />
               Edit Notes
             </Button>
+            {patientId && (
+              <Button 
+                variant="outline" 
+                onClick={() => setShowHistory(true)}
+                className="flex-1"
+              >
+                <History className="w-4 h-4 mr-2" />
+                View Patient History
+              </Button>
+            )}
             <Button onClick={onClose} className="flex-1">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Return to Dashboard
@@ -250,6 +260,16 @@ export const AIClinicalNotesEditor = ({
           <p className="text-xs text-center text-muted-foreground">
             You can view and edit these notes later from the patient's clinical history.
           </p>
+          
+          {/* Patient History Dialog */}
+          {patientId && (
+            <PatientHistoryDialog
+              open={showHistory}
+              onOpenChange={setShowHistory}
+              patientId={patientId}
+              patientName={patientName}
+            />
+          )}
         </CardContent>
       </Card>
     );
