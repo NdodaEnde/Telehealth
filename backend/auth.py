@@ -25,15 +25,21 @@ async def get_current_user(
 ) -> AuthenticatedUser:
     """Extract and validate user from JWT token"""
     if not credentials:
+        logger.warning("Auth failed: No credentials provided")
         raise HTTPException(status_code=401, detail="Not authenticated")
     
     token = credentials.credentials
+    
+    # Log token prefix for debugging (don't log full token for security)
+    token_preview = token[:20] + "..." if len(token) > 20 else token
+    logger.debug(f"Attempting auth with token: {token_preview}")
     
     try:
         # Verify token with Supabase
         user_data = await supabase.get_user_from_token(token)
         
         if not user_data:
+            logger.warning(f"Auth failed: Supabase returned no user data for token: {token_preview}")
             raise HTTPException(status_code=401, detail="Invalid or expired token")
         
         user_id = user_data.get('id')
