@@ -74,8 +74,10 @@ async def get_current_user(
     except JWTError as e:
         logger.error(f"JWT validation error: {e}")
         raise HTTPException(status_code=401, detail="Invalid token")
+    except HTTPException:
+        raise  # Re-raise HTTP exceptions as-is
     except Exception as e:
-        logger.error(f"Auth error: {e}")
+        logger.error(f"Auth error: {type(e).__name__}: {e}")
         raise HTTPException(status_code=401, detail="Authentication failed")
 
 
