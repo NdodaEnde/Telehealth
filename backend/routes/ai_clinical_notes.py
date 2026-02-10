@@ -308,41 +308,27 @@ async def save_clinical_notes(
     if appointment['clinician_id'] != user.id and user_role != 'admin':
         raise HTTPException(status_code=403, detail="Access denied")
     
-    # Create clinical note record
+    # Create clinical note record - map SOAP notes to existing schema
+    # Schema uses: chief_complaint, history_of_present_illness, examination_findings, 
+    # diagnosis, treatment_plan, follow_up_instructions
     note_data = {
         'id': str(uuid.uuid4()),
         'appointment_id': data.appointment_id,
         'patient_id': appointment['patient_id'],
         'clinician_id': appointment['clinician_id'],
-        'note_type': 'consultation',
-        'content': f"""TRANSCRIPT:
-{data.transcript}
-
----
-
-SOAP NOTES:
-
-SUBJECTIVE:
-{data.soap_subjective}
-
-OBJECTIVE:
-{data.soap_objective}
-
-ASSESSMENT:
-{data.soap_assessment}
-
-PLAN:
-{data.soap_plan}
-
-{f"ADDITIONAL NOTES:{chr(10)}{data.additional_notes}" if data.additional_notes else ""}
-""",
-        'soap_subjective': data.soap_subjective,
-        'soap_objective': data.soap_objective,
-        'soap_assessment': data.soap_assessment,
-        'soap_plan': data.soap_plan,
-        'transcript': data.transcript,
-        'is_ai_generated': True,
-        'created_by': user.id,
+        # Map SOAP to existing fields:
+        # Subjective -> chief_complaint + history_of_present_illness
+        'chief_complaint': data.soap_subjective[:500] if data.soap_subjective else None,
+        'history_of_present_illness': f"[AI Transcribed]\n{data.transcript}\n\n[Subjective Notes]\n{data.soap_subjective}" if data.transcript else data.soap_subjective,
+        # Objective -> examination_findings
+        'examination_findings': data.soap_objective,
+        # Assessment -> diagnosis (as list)
+        'diagnosis': [data.soap_assessment] if data.soap_assessment else None,
+        # Plan -> treatment_plan + follow_up_instructions
+        'treatment_plan': data.soap_plan,
+        'follow_up_instructions': data.additional_notes if data.additional_notes else None,
+        'status': 'draft',
+        'created_at': datetime.utcnow().isoformat(),
     }
     
     result = await supabase.insert('clinical_notes', note_data, user.access_token)
