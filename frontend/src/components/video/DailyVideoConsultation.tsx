@@ -422,6 +422,7 @@ export const DailyVideoConsultation = () => {
         <div className="min-h-screen bg-background p-4 py-8">
           <AIClinicalNotesEditor
             appointmentId={appointment.id}
+            patientId={appointment.patient_id}
             patientName={appointment.patient_name || "Patient"}
             clinicianName={appointment.clinician_name || "Clinician"}
             audioBlob={audioBlob}
