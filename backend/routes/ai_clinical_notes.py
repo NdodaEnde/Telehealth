@@ -98,12 +98,7 @@ async def generate_soap_notes(transcript: str) -> SOAPNotes:
         )
     
     try:
-        from emergentintegrations.llm.openai import OpenAILLM, OpenAIMessage
-        
-        llm = OpenAILLM(
-            api_key=EMERGENT_LLM_KEY,
-            model="gpt-4o-mini"  # Using gpt-4o-mini for cost efficiency
-        )
+        from emergentintegrations.llm.chat import LlmChat, UserMessage
         
         system_prompt = """You are a medical documentation assistant helping clinicians create SOAP notes from consultation transcripts.
 
@@ -126,15 +121,23 @@ PLAN:
 If any section has no relevant information from the transcript, write "Not documented in this consultation."
 """
         
-        messages = [
-            OpenAIMessage(role="system", content=system_prompt),
-            OpenAIMessage(role="user", content=f"Please generate SOAP notes from this consultation transcript:\n\n{transcript}")
-        ]
+        # Initialize LlmChat with emergent key
+        chat = LlmChat(
+            api_key=EMERGENT_LLM_KEY,
+            session_id=f"soap-{uuid.uuid4()}",
+            system_message=system_prompt
+        ).with_model("openai", "gpt-4o")  # Using gpt-4o for medical accuracy
         
-        response = await llm.chat(messages=messages, temperature=0.3)
+        # Create user message
+        user_message = UserMessage(
+            text=f"Please generate SOAP notes from this consultation transcript:\n\n{transcript}"
+        )
+        
+        # Send message and get response
+        response = await chat.send_message(user_message)
         
         # Parse the response into SOAP sections
-        soap_text = response.content if hasattr(response, 'content') else str(response)
+        soap_text = response if isinstance(response, str) else str(response)
         
         # Parse sections
         sections = {
