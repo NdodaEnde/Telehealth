@@ -163,6 +163,7 @@ class SupabaseClient:
             )
             if response.status_code == 200:
                 return response.json()
+            logger.warning(f"Token validation failed: {response.status_code} - {response.text[:200] if response.text else 'No response body'}")
             return None
 
 
