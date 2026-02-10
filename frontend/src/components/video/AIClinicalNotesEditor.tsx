@@ -8,13 +8,15 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Loader2, FileText, Mic, Wand2, Save, CheckCircle2, 
-  AlertCircle, ArrowLeft, RefreshCw, Sparkles 
+  AlertCircle, ArrowLeft, RefreshCw, Sparkles, History 
 } from "lucide-react";
 import { aiClinicalNotesAPI } from "@/lib/api";
 import { toast } from "sonner";
+import { PatientHistoryDialog } from "@/components/clinical/PatientHistoryDialog";
 
 interface AIClinicalNotesEditorProps {
   appointmentId: string;
+  patientId?: string;
   patientName: string;
   clinicianName: string;
   audioBlob?: Blob | null;
@@ -23,6 +25,7 @@ interface AIClinicalNotesEditorProps {
 
 export const AIClinicalNotesEditor = ({
   appointmentId,
+  patientId,
   patientName,
   clinicianName,
   audioBlob,
