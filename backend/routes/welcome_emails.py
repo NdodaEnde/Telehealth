@@ -25,7 +25,7 @@ RESEND_API_URL = "https://api.resend.com/emails"
 
 # Email Configuration - Update these for production
 DEFAULT_FROM_EMAIL = "Quadcare <onboarding@resend.dev>"  # Change to your verified domain
-LOGIN_URL = "https://quadcare-testing.preview.emergentagent.com/auth"  # Update for production
+LOGIN_URL = "https://audio-processing-fix.preview.emergentagent.com/auth"  # Update for production
 
 
 class EmailJobStatus:
