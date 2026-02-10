@@ -70,6 +70,8 @@ async function apiRequest<T = any>(
   
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
+  } else {
+    console.warn('[API] No auth token available for request to:', endpoint);
   }
   
   const response = await fetch(`${BACKEND_URL}${endpoint}`, {
@@ -79,6 +81,7 @@ async function apiRequest<T = any>(
   
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
+    console.error(`[API] Request failed: ${response.status}`, endpoint, errorData);
     throw new APIError(
       errorData.detail || errorData.message || 'API request failed',
       response.status
