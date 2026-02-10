@@ -27,8 +27,31 @@ class APIError extends Error {
 const getAuthToken = async (): Promise<string | null> => {
   // Import dynamically to avoid circular dependencies
   const { supabase } = await import('@/integrations/supabase/client');
-  const { data: { session } } = await supabase.auth.getSession();
-  return session?.access_token || null;
+  const { data: { session }, error } = await supabase.auth.getSession();
+  
+  if (error) {
+    console.error('[API] Error getting session:', error);
+    return null;
+  }
+  
+  if (!session) {
+    console.warn('[API] No active session found');
+    return null;
+  }
+  
+  // Check if token is expired
+  const expiresAt = session.expires_at;
+  if (expiresAt && expiresAt * 1000 < Date.now()) {
+    console.warn('[API] Session token expired, attempting refresh...');
+    const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+    if (refreshError || !refreshData.session) {
+      console.error('[API] Failed to refresh session:', refreshError);
+      return null;
+    }
+    return refreshData.session.access_token;
+  }
+  
+  return session.access_token;
 };
 
 /**
