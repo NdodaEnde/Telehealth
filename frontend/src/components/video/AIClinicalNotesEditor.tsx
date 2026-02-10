@@ -37,6 +37,7 @@ export const AIClinicalNotesEditor = ({
   const [isGeneratingSoap, setIsGeneratingSoap] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
   
   // SOAP fields
   const [subjective, setSubjective] = useState("");
