@@ -159,24 +159,93 @@ export const AIClinicalNotesEditor = ({
     );
   }
 
-  // Saved state
+  // Saved state - show summary of saved notes with option to view/edit
   if (step === 'saved') {
     return (
       <Card className="max-w-4xl mx-auto">
-        <CardContent className="py-12">
-          <div className="flex flex-col items-center justify-center">
-            <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mb-4">
-              <CheckCircle2 className="w-8 h-8 text-green-600" />
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
+              <CheckCircle2 className="w-6 h-6 text-green-600" />
             </div>
-            <h3 className="text-xl font-semibold">Clinical Notes Saved!</h3>
-            <p className="text-muted-foreground mt-2">
-              The consultation notes have been saved to the patient's record.
-            </p>
-            <Button onClick={onClose} className="mt-6">
+            <div>
+              <CardTitle>Clinical Notes Saved!</CardTitle>
+              <CardDescription>
+                Consultation with {patientName} • Notes saved to patient record
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        
+        <CardContent className="space-y-6">
+          {/* Summary of saved notes */}
+          <div className="bg-muted/50 rounded-lg p-4 space-y-4">
+            <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
+              Saved Notes Summary
+            </h4>
+            
+            <div className="grid gap-3">
+              {subjective && (
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="w-5 h-5 rounded bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-bold">S</span>
+                    <span className="font-medium text-sm">Subjective</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground pl-7 line-clamp-2">{subjective}</p>
+                </div>
+              )}
+              
+              {objective && (
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="w-5 h-5 rounded bg-green-100 text-green-700 flex items-center justify-center text-xs font-bold">O</span>
+                    <span className="font-medium text-sm">Objective</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground pl-7 line-clamp-2">{objective}</p>
+                </div>
+              )}
+              
+              {assessment && (
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="w-5 h-5 rounded bg-amber-100 text-amber-700 flex items-center justify-center text-xs font-bold">A</span>
+                    <span className="font-medium text-sm">Assessment</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground pl-7 line-clamp-2">{assessment}</p>
+                </div>
+              )}
+              
+              {plan && (
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="w-5 h-5 rounded bg-purple-100 text-purple-700 flex items-center justify-center text-xs font-bold">P</span>
+                    <span className="font-medium text-sm">Plan</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground pl-7 line-clamp-2">{plan}</p>
+                </div>
+              )}
+            </div>
+          </div>
+          
+          {/* Actions */}
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Button 
+              variant="outline" 
+              onClick={() => setStep('editing')}
+              className="flex-1"
+            >
+              <FileText className="w-4 h-4 mr-2" />
+              Edit Notes
+            </Button>
+            <Button onClick={onClose} className="flex-1">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Return to Dashboard
             </Button>
           </div>
+          
+          <p className="text-xs text-center text-muted-foreground">
+            You can view and edit these notes later from the patient's clinical history.
+          </p>
         </CardContent>
       </Card>
     );
