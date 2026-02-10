@@ -30,3 +30,5 @@ supabase>=2.0.0
 openai>=1.30.0
 openpyxl
 msoffcrypto-tool
+et-xmlfile==2.0.0
+olefile==0.47
